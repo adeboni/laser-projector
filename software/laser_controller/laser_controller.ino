@@ -209,6 +209,90 @@ void drawMeshWireframe(const long (*n)[2], const Mesh& m) {
   } while(i--);
 }
 
+void updateLineList(int& seenLines, long *sx1, long *sy1, long *sx2, long *sy2, long *lc,
+  const long x1, const long y1, const long x2, const long y2) {
+  for (int j = 0; j < seenLines; j++) {
+    if ((sx1[j] == x1 && sy1[j] == y1 && sx2[j] == x2 && sy2[j] == y2) || 
+        (sx1[j] == x2 && sy1[j] == y2 && sx2[j] == x1 && sy2[j] == y1)) {
+          lc[j]++;
+          return;
+        }
+  }
+
+  sx1[seenLines] = x1;
+  sy1[seenLines] = y1;
+  sx2[seenLines] = x2;
+  sy2[seenLines] = y2;
+  lc[seenLines]++;
+  
+  seenLines++;
+}
+
+void drawMeshWireframeOutline(const long (*n)[2], const Mesh& m) {
+  int t = m.numTriangles - 1;
+  int numLines = 0;
+  long x1[t*3], y1[t*3], x2[t*3], y2[t*3], lc[t*3];
+  memset(lc, 0, sizeof(lc));
+  
+  do {
+    if (!isFaceHidden(n, t, m)) {      
+      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][0]][0], n[m.triangles[t][0]][1], n[m.triangles[t][1]][0], n[m.triangles[t][1]][1]);
+      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][1]][0], n[m.triangles[t][1]][1], n[m.triangles[t][2]][0], n[m.triangles[t][2]][1]);
+      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][2]][0], n[m.triangles[t][2]][1], n[m.triangles[t][0]][0], n[m.triangles[t][0]][1]);
+    }
+  } while(t--);
+
+  int numEdgeLines = 0;
+  for (int i = 0; i < numLines; i++)
+    if (lc[i] == 1)
+      numEdgeLines++;
+  
+  int linesProcessed = 0;
+  long nx1[numEdgeLines], ny1[numEdgeLines], nx2[numEdgeLines], ny2[numEdgeLines];
+  bool seen[numLines];
+  memset(seen, 0, sizeof(seen));
+
+  for (int i = 0; i < numLines; i++) {
+    if (lc[i] == 1) {
+      seen[i] = true;
+      nx1[linesProcessed] = x1[i];
+      ny1[linesProcessed] = y1[i];
+      nx2[linesProcessed] = x2[i];
+      ny2[linesProcessed] = y2[i];
+      linesProcessed++;
+      break;
+    }
+  }
+  
+  while (linesProcessed < numEdgeLines) {
+    for (int i = 1; i < numLines; i++) {
+      if (seen[i] || lc[i] != 1) continue;
+      for (int j = 0; j < linesProcessed; j++) {
+        if (nx2[j] == x1[i] && ny2[j] == y1[i]) {
+          seen[i] = true;
+          nx1[linesProcessed] = x1[i];
+          ny1[linesProcessed] = y1[i];
+          nx2[linesProcessed] = x2[i];
+          ny2[linesProcessed] = y2[i];
+          linesProcessed++;
+          break;
+        } else if (nx2[j] == x2[i] && ny2[j] == y2[i]) {
+          seen[i] = true;
+          nx1[linesProcessed] = x2[i];
+          ny1[linesProcessed] = y2[i];
+          nx2[linesProcessed] = x1[i];
+          ny2[linesProcessed] = y1[i];
+          linesProcessed++;
+          break;
+        }
+      }
+    }
+  }
+
+  for (int i = 0; i < numEdgeLines; i++)
+    lasers[0].drawLine(nx1[i], ny1[i], nx2[i], ny2[i]);  
+}
+
 void cube() { 
   static double nextTick = millis();
   static Vector3 meshRotation = {0, 0, 0};
@@ -240,7 +324,8 @@ void cube() {
     nextTick += 20.0;
   }    
   
-  drawMeshWireframe(projNodes, cubeMesh);
+  //drawMeshWireframe(projNodes, cubeMesh);
+  drawMeshWireframeOutline(projNodes, cubeMesh);
 }
 
 void loop() {
