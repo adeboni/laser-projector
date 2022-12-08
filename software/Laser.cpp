@@ -1,16 +1,16 @@
 #include "Laser.h"
 
 Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacIndex, uint8_t yDacIndex) {
-	_redPin = redPin;
-	_greenPin = greenPin;
-	_bluePin = bluePin;
-	pinMode(redPin, OUTPUT);
-	pinMode(greenPin, OUTPUT);
-	pinMode(bluePin, OUTPUT);
+  _redPin = redPin;
+  _greenPin = greenPin;
+  _bluePin = bluePin;
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
   off();
 	
-	_xDacIndex = xDacIndex;
-	_yDacIndex = yDacIndex;
+  _xDacIndex = xDacIndex;
+  _yDacIndex = yDacIndex;
 }
 
 void Laser::setQuality(int quality) {

@@ -105,8 +105,7 @@ Matrix4 Matrix4::scale(const float ratio) {
   return mat;
 }
 
-Vector3 Matrix4::applyMatrix(const Matrix4& matrix, const Vector3& in)
-{
+Vector3 Matrix4::applyMatrix(const Matrix4& matrix, const Vector3& in) {
   Vector3 out;
   
   out.x = (matrix.m[0][0] * (in.x >> PSHIFT) +
