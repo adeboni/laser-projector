@@ -2,6 +2,7 @@
 #include "Laser.h"
 #include "AudioProcessor.h"
 #include "MeshLoader.h"
+#include <SerialTransfer.h>
 
 Laser lasers[4] = {
   Laser(0, 4, 8, 0, 1), 
@@ -10,6 +11,19 @@ Laser lasers[4] = {
   Laser(3, 7, 11, 6, 7)
 };
 
+struct {
+  char line1[41];
+  char line2[41];
+} txStruct;
+
+struct {
+  uint8_t nes;
+} rxStruct;
+
+const char* modeNames[] = {"Circle", "Linear FFT", "Circle FFT", "Square",
+  "Moving Square", "Cube", "Rotating Circle", "CV Values"};
+
+SerialTransfer uartTransfer;
 ADC *adc = new ADC();
 Gpio gpio;
 AudioProcessor audio;
@@ -28,8 +42,11 @@ void initDAC() {
 }
 
 void setup() {
-  initDAC();
   Serial.begin(9600);
+  Serial6.begin(115200);
+  uartTransfer.begin(Serial6);
+  
+  initDAC();
   if (!SD.begin(BUILTIN_SDCARD)) 
     gpio.displayError(1);
   audio.begin();
@@ -157,11 +174,12 @@ void linearFFT() {
 }
 
 void printCVs() {
-  for (int i = 0; i < 6; i++) {
-    Serial.print(gpio.getCV(i));
-    Serial.print('\t');
-  }
-  Serial.println();
+  sprintf(txStruct.line2, "%d %d %d %d %d %d", gpio.getCV(0), gpio.getCV(1),
+    gpio.getCV(2), gpio.getCV(3), gpio.getCV(4), gpio.getCV(5));
+  uartTransfer.sendDatum(txStruct);
+  Serial.println(txStruct.line2);
+  
+  delay(100);
 }
 
 bool isFaceHidden(const long (*n)[2], const uint8_t index, const Mesh& m) {
@@ -329,8 +347,29 @@ void cube() {
 }
 
 void loop() {
-  int mode = gpio.getMode();
+  static int lastMode = -1;
+  static int mode = 0;
+  static int lastKnobMode = 0;
+
+  if (uartTransfer.available()) {
+    uartTransfer.rxObj(rxStruct);
+    if (bitRead(rxStruct.nes, 0) == 0)
+      mode = min(mode + 1, 15);
+    else if (bitRead(rxStruct.nes, 1) == 0)
+      mode = max(mode - 1, 0);
+  }
+  
+  int knobMode = gpio.getMode();
+  if (knobMode != lastKnobMode)
+    mode = lastKnobMode = knobMode;
   gpio.setLEDs(mode);
+
+  if (lastMode != mode) {
+    lastMode = mode;
+    sprintf(txStruct.line1, modeNames[mode]);
+    sprintf(txStruct.line2, "");
+    uartTransfer.sendDatum(txStruct);
+  }
   
   switch (mode) {
     case 0: circle(); break;
@@ -340,6 +379,6 @@ void loop() {
     case 4: movingSquare(); break;
     case 5: cube(); break;
     case 6: rotatingCircle(); break;
-    case 15: printCVs(); break;
+    case 7: printCVs(); break;
   }
 }
