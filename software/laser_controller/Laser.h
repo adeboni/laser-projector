@@ -10,7 +10,7 @@ public:
   Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacIndex, uint8_t yDacIndex);
   void sendTo(long x, long y);
   void drawLine(long x1, long y1, long x2, long y2);
-  void setColorHSV(unsigned int hue, unsigned int saturation, unsigned int lightness);
+  void setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness);
   void setColorRGB(uint8_t red, uint8_t green, uint8_t blue);
   void off();
   void on();

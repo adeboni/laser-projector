@@ -200,7 +200,7 @@ unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
   return v1 * 60;
 }
 
-void Laser::setColorHSV(unsigned int hue, unsigned int saturation, unsigned int lightness) {
+void Laser::setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness) {
   unsigned int red, green, blue;
   unsigned int var1, var2;
 

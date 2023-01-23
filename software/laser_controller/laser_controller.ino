@@ -20,8 +20,10 @@ struct {
   uint8_t nes;
 } rxStruct;
 
-const char* modeNames[] = {"Circle", "Linear FFT", "Circle FFT", "Square",
-  "Moving Square", "Cube", "Rotating Circle", "CV Values"};
+const char* modeNames[] = {"Circle", "Circle 2", "Linear FFT", "Circle FFT", 
+                           "Square", "Moving Square", "Cube", "Rotating Circle", 
+                           "CV Values", "", "", "",
+                           "", "", "", ""};
 
 SerialTransfer uartTransfer;
 ADC *adc = new ADC();
@@ -105,6 +107,16 @@ void square() {
 void circle() {
   const int scale = 12;
   for (int r = 0; r <= 360; r += 5) {
+    lasers[0].setColorHSL(r, 100, 50); 
+    lasers[0].on();
+    lasers[0].sendTo(SIN(r)/scale + 2048, COS(r)/scale + 2048);
+  }
+  lasers[0].off();
+}
+
+void circle2() {
+  const int scale = 12;
+  for (int r = 0; r <= 360; r += 5) {
     if (r < 120)      { lasers[0].setColorRGB(255, 0, 0); lasers[0].on(); }
     else if (r < 240) { lasers[0].setColorRGB(0, 255, 0); lasers[0].on(); }
     else              { lasers[0].setColorRGB(0, 0, 255); lasers[0].on(); }
@@ -122,7 +134,7 @@ void rotatingCircle() {
   world = Matrix4::multiply(Matrix4::rotateZ(rotation.z), world);
   lasers[0].setEnable3D(true);
   lasers[0].setMatrix(world);
-  circle();
+  circle2();
   lasers[0].setEnable3D(false);
   
   rotation.x += 3;
@@ -342,8 +354,8 @@ void cube() {
     nextTick += 20.0;
   }    
   
-  //drawMeshWireframe(projNodes, cubeMesh);
-  drawMeshWireframeOutline(projNodes, cubeMesh);
+  drawMeshWireframe(projNodes, cubeMesh);
+  //drawMeshWireframeOutline(projNodes, cubeMesh);
 }
 
 void loop() {
@@ -373,12 +385,13 @@ void loop() {
   
   switch (mode) {
     case 0: circle(); break;
-    case 1: linearFFT(); break;
-    case 2: circleFFT(); break;
-    case 3: square(); break;
-    case 4: movingSquare(); break;
-    case 5: cube(); break;
-    case 6: rotatingCircle(); break;
-    case 7: printCVs(); break;
+    case 1: circle2(); break;
+    case 2: linearFFT(); break;
+    case 3: circleFFT(); break;
+    case 4: square(); break;
+    case 5: movingSquare(); break;
+    case 6: cube(); break;
+    case 7: rotatingCircle(); break;
+    case 8: printCVs(); break;
   }
 }
