@@ -5,6 +5,8 @@
 #include "Basics.h"
 #include <WireIMXRT.h>
 
+#define PWM_FREQ 375000
+
 class Laser {
 public:
   Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacIndex, uint8_t yDacIndex);

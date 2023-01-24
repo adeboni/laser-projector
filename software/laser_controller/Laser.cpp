@@ -7,6 +7,9 @@ Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacInde
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
+  analogWriteFrequency(redPin, PWM_FREQ);
+  analogWriteFrequency(greenPin, PWM_FREQ);
+  analogWriteFrequency(bluePin, PWM_FREQ);
   off();
 	
   _xDacIndex = xDacIndex;
