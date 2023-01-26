@@ -6,6 +6,7 @@
 #include <WireIMXRT.h>
 
 #define PWM_FREQ 375000
+#define LASER_DELAY_US 200
 
 class Laser {
 public:
@@ -25,6 +26,7 @@ public:
   void setMirroring(bool x, bool y, bool xy);
   void setMasterScale(float scaleX, float scaleY);
   void setMasterOffset(long offsetX, long offsetY);
+  void setScale(float scale);
   void setScale(float scaleX, float scaleY);
   void setOffset(long offsetX, long offsetY);
   void setClipArea(long xMin, long yMin, long xMax, long yMax);

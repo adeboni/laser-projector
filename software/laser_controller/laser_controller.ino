@@ -1,5 +1,8 @@
 #include "Gpio.h"
 #include "Laser.h"
+#include "Drawing.h"
+#include "Objects\Objects.h"
+#include "Objects\Logo.h"
 #include "AudioProcessor.h"
 #include "MeshLoader.h"
 #include <SerialTransfer.h>
@@ -380,6 +383,129 @@ void cube() {
     lasers[0].drawLine(orderedAllLines[i][0], orderedAllLines[i][1], orderedAllLines[i][2], orderedAllLines[i][3]); 
 }
 
+///////////////////////////////////////
+
+void countDown() {
+  static char j = '0';
+  static int i = 0;
+
+  lasers[0].setColorRGB(255, 0, 0);
+  Drawing::drawLetter(j, 2048, 2048);
+
+  if (i++ == 60) {
+    if (j == '9')
+      j = 'A';
+    else if (j == 'Z')
+      j = '0';
+    else 
+      j++;
+    i = 0;
+  }
+}
+
+void staticText() {
+  lasers[0].setColorRGB(255, 0, 0);
+  Drawing::drawString("HELLO WORLD", 1000, 2048, 0.25);
+}
+
+
+void drawScroller() {
+  lasers[0].setColorRGB(0, 0, 255);
+  String s = "HELLO WORLD";
+  int speed = 100;
+  float scale = 0.5;
+  
+  int charW = Drawing::advance('I');
+  int maxChar = (4096. / (charW * scale));
+  char buffer[100];
+  for (int j = 0; j < maxChar; j++)
+    buffer[j] = ' ';
+  
+  int scrollX = 0;
+  for (int c = 0; c < s.length() + maxChar; c++) {
+    int currentScroll = Drawing::advance(buffer[0]);
+    while (scrollX < currentScroll) {
+      long time = millis();
+      int x = -scrollX;;
+      bool somethingDrawn = false;
+      for (int i = 0;i<maxChar;i++) {
+        if (buffer[i] != ' ')
+          somethingDrawn = true;
+        
+        x += Drawing::drawLetter(buffer[i], x, 2048);
+
+        if (x > 4096 / scale)
+          break;
+      }
+      if (!somethingDrawn) 
+        scrollX = currentScroll; 
+      scrollX += speed / scale;
+      long elapsed = millis() - time;
+      if (elapsed < 50) 
+        delay(50 - elapsed); 
+    }
+    scrollX -= currentScroll;
+    for (int k = 0; k < maxChar - 1; k++)
+      buffer[k] = buffer[k+1];
+    
+    if (c < s.length())
+      buffer[maxChar-1] = s[c];
+    else
+      buffer[maxChar-1] = ' ';
+  }
+}
+
+void globe() {
+  lasers[0].setColorRGB(0, 0, 255);
+  lasers[0].on();
+  int pos = random(360)/5 * 5;
+  int diff1 = random(35);
+  int diff2 = random(35);
+  int diff3 = random(35);
+  for (int r = 0; r <= 360; r += 5) {    
+    lasers[0].sendTo(2048 + SIN(r)/16, 2048 + COS(r)/16);
+    if (r == pos) {    
+      lasers[0].sendTo(2048 + SIN(r+diff1)/32, 2048 + COS(r+diff2)/32);
+      lasers[0].sendTo(2048 + SIN(r+diff2)/64, 2048 + COS(r+diff3)/64);
+      lasers[0].sendTo(2048, 2048);
+      lasers[0].sendTo(2048 + SIN(r+diff3)/64, 2048 + COS(r+diff3)/64);
+      lasers[0].sendTo(2048 + SIN(r+diff2)/32, 2048 + COS(r+diff1)/32);
+      lasers[0].sendTo(2048 + SIN(r)/16, 2048 + COS(r)/16);
+    }
+  }
+}
+
+void drawPlaneRotate() {
+  static Vector3 rotation = {0, 0, 0};
+
+  rotation.x += 3;
+  rotation.y += 2;
+  rotation.z += 1;
+
+  if (rotation.x > 360) rotation.x = 0;
+  if (rotation.y > 360) rotation.y = 0;
+  if (rotation.z > 360) rotation.z = 0; 
+
+  lasers[0].setColorRGB(255, 0, 0);
+  long centerX, centerY, w, h;
+  Drawing::calcObjectBox(draw_plane, sizeof(draw_plane)/4, centerX, centerY, w, h);
+  Drawing::drawObjectRotated3D(draw_plane, sizeof(draw_plane)/4, 2048 - w/2, 2048 - h/2, rotation);
+}
+
+void drawPlane() {
+  lasers[0].setColorRGB(255, 0, 0);
+  Drawing::drawObject(draw_plane, sizeof(draw_plane)/4, 2048, 2048);
+}
+
+void drawBike() {
+  lasers[0].setColorRGB(255, 0, 0);
+  Drawing::drawObject(draw_bike, sizeof(draw_bike)/4, 2048, 2048);
+}
+
+
+///////////////////////////////////////
+
+
 void loop() {
   static int lastMode = -1;
   static int mode = 0;
@@ -408,12 +534,21 @@ void loop() {
   switch (mode) {
     case 0: circle(); break;
     case 1: circle2(); break;
-    case 2: linearFFT(); break;
-    case 3: circleFFT(); break;
-    case 4: square(); break;
-    case 5: movingSquare(); break;
-    case 6: cube(); break;
-    case 7: rotatingCircle(); break;
-    //case 8: printCVs(); break;
+    case 2: rotatingCircle(); break;
+    case 3: linearFFT(); break;
+    case 4: circleFFT(); break;
+    case 5: square(); break;
+    case 6: movingSquare(); break;
+    case 7: cube(); break;
+    
+    case 8: countDown(); break;
+    case 9: staticText(); break;
+    case 10: drawScroller(); break;
+    case 11: globe(); break;
+    case 12: drawPlane(); break;
+    case 13: drawBike(); break;
+    case 14: drawPlaneRotate(); break;
+    
+    //case 15: printCVs(); break;
   }
 }

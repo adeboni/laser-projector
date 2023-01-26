@@ -26,6 +26,11 @@ void Laser::setMirroring(bool x, bool y, bool xy) {
   _mirrorXY = xy;
 }
 
+void Laser::setScale(float scale) { 
+  _scaleX = FROM_FLOAT(scale);
+  _scaleY = FROM_FLOAT(scale);
+}
+
 void Laser::setScale(float scaleX, float scaleY) { 
   _scaleX = FROM_FLOAT(scaleX);
   _scaleY = FROM_FLOAT(scaleY);
@@ -188,7 +193,7 @@ void Laser::sendToRaw(long xNew, long yNew) {
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
-  delayMicroseconds(100); //TODO: fine tune this
+  delayMicroseconds(LASER_DELAY_US);
 }
 
 void Laser::drawLine(long x1, long y1, long x2, long y2) {
