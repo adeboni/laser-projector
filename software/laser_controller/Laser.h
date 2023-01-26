@@ -39,6 +39,8 @@ private:
   FIXPT _quality = FROM_FLOAT(1.0 / 32.0);
   Color _color;
 
+  long _sentX = 0;
+  long _sentY = 0;
   long _x = 0; 
   long _y = 0;
   long _oldX = 0;

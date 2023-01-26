@@ -140,6 +140,9 @@ bool Laser::clipLine(long& x0, long& y0, long& x1, long& y1) {
 }
 
 void Laser::sendTo(long xpos, long ypos) {
+  _sentX = xpos;
+  _sentY = ypos;
+  
   if (_enable3D) {
     Vector3 p1 = {FROM_INT(xpos - 2048), FROM_INT(ypos - 2048), 0};
     Vector3 p = Matrix4::applyMatrix(_matrix, p1);
@@ -166,7 +169,7 @@ void Laser::sendToRaw(long xNew, long yNew) {
   // divide into equal parts, using _quality
   long fdiffx = xNew - _x;
   long fdiffy = yNew - _y;
-  long diffx = TO_INT(abs(fdiffx) * _quality); //TODO: adjust quality based on length?
+  long diffx = TO_INT(abs(fdiffx) * _quality);
   long diffy = TO_INT(abs(fdiffy) * _quality);
 
   // use the bigger direction
@@ -185,10 +188,11 @@ void Laser::sendToRaw(long xNew, long yNew) {
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
+  delayMicroseconds(100); //TODO: fine tune this
 }
 
 void Laser::drawLine(long x1, long y1, long x2, long y2) {
-  if (_x != x1 || _y != y1) {
+  if (_sentX != x1 || _sentY != y1) {
     off();
     sendTo(x1, y1);
   }

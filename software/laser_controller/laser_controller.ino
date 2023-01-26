@@ -203,125 +203,134 @@ bool isFaceHidden(const long (*n)[2], const uint8_t index, const Mesh& m) {
              (n[m.triangles[index][0]][0] * n[m.triangles[index][2]][1])   ) ) < 0 ? false : true;
 }
 
-void drawMeshLine(int& seenLines, long *sx1, long *sy1, long *sx2, long *sy2, 
-  const long x1, const long y1, const long x2, const long y2) {
-  bool found = false;
-  for (int j = 0; j < seenLines; j++) {
-    if ((sx1[j] == x1 && sy1[j] == y1 && sx2[j] == x2 && sy2[j] == y2) || 
-        (sx1[j] == x2 && sy1[j] == y2 && sx2[j] == x1 && sy2[j] == y1)) {
-          found = true;
-          break;
-        }
-  }
-
-  if (found) return;
-
-  sx1[seenLines] = x1;
-  sy1[seenLines] = y1;
-  sx2[seenLines] = x2;
-  sy2[seenLines] = y2;
-  
-  seenLines++;
-  lasers[0].drawLine(x1, y1, x2, y2);
+void mergeLines(const long set1Len, const long (*set1)[4], const long set2Len, const long (*set2)[4], long (*outputSet)[4]) {
+  for (int i = 0; i < set1Len; i++) 
+    for (int j = 0; j < 4; j++)
+      outputSet[i][j] = set1[i][j];
+  for (int i = 0; i < set2Len; i++) 
+    for (int j = 0; j < 4; j++)
+      outputSet[i + set1Len][j] = set2[i][j];
 }
 
-void drawMeshWireframe(const long (*n)[2], const Mesh& m) {
-  uint8_t i = m.numTriangles - 1;
-  int seenLines = 0;
-  long sx1[i*3], sy1[i*3], sx2[i*3], sy2[i*3];
-  
-  do {
-    if (!isFaceHidden(n, i, m)) {
-      drawMeshLine(seenLines, sx1, sy1, sx2, sy2, n[m.triangles[i][0]][0], n[m.triangles[i][0]][1], n[m.triangles[i][1]][0], n[m.triangles[i][1]][1]);
-      drawMeshLine(seenLines, sx1, sy1, sx2, sy2, n[m.triangles[i][1]][0], n[m.triangles[i][1]][1], n[m.triangles[i][2]][0], n[m.triangles[i][2]][1]);
-      drawMeshLine(seenLines, sx1, sy1, sx2, sy2, n[m.triangles[i][2]][0], n[m.triangles[i][2]][1], n[m.triangles[i][0]][0], n[m.triangles[i][0]][1]);
-    }
-  } while(i--);
-}
-
-void updateLineList(int& seenLines, long *sx1, long *sy1, long *sx2, long *sy2, long *lc,
-  const long x1, const long y1, const long x2, const long y2) {
-  for (int j = 0; j < seenLines; j++) {
-    if ((sx1[j] == x1 && sy1[j] == y1 && sx2[j] == x2 && sy2[j] == y2) || 
-        (sx1[j] == x2 && sy1[j] == y2 && sx2[j] == x1 && sy2[j] == y1)) {
-          lc[j]++;
-          return;
-        }
-  }
-
-  sx1[seenLines] = x1;
-  sy1[seenLines] = y1;
-  sx2[seenLines] = x2;
-  sy2[seenLines] = y2;
-  lc[seenLines]++;
-  
-  seenLines++;
-}
-
-void drawMeshWireframeOutline(const long (*n)[2], const Mesh& m) {
-  int t = m.numTriangles - 1;
-  int numLines = 0;
-  long x1[t*3], y1[t*3], x2[t*3], y2[t*3], lc[t*3];
-  memset(lc, 0, sizeof(lc));
-  
-  do {
-    if (!isFaceHidden(n, t, m)) {      
-      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][0]][0], n[m.triangles[t][0]][1], n[m.triangles[t][1]][0], n[m.triangles[t][1]][1]);
-      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][1]][0], n[m.triangles[t][1]][1], n[m.triangles[t][2]][0], n[m.triangles[t][2]][1]);
-      updateLineList(numLines, x1, y1, x2, y2, lc, n[m.triangles[t][2]][0], n[m.triangles[t][2]][1], n[m.triangles[t][0]][0], n[m.triangles[t][0]][1]);
-    }
-  } while(t--);
-
-  int numEdgeLines = 0;
-  for (int i = 0; i < numLines; i++)
-    if (lc[i] == 1)
-      numEdgeLines++;
-  
+void orderLines(const long numLines, const long (*lines)[4], long (*orderedLines)[4]) {
   int linesProcessed = 0;
-  long nx1[numEdgeLines], ny1[numEdgeLines], nx2[numEdgeLines], ny2[numEdgeLines];
   bool seen[numLines];
   memset(seen, 0, sizeof(seen));
 
-  for (int i = 0; i < numLines; i++) {
-    if (lc[i] == 1) {
-      seen[i] = true;
-      nx1[linesProcessed] = x1[i];
-      ny1[linesProcessed] = y1[i];
-      nx2[linesProcessed] = x2[i];
-      ny2[linesProcessed] = y2[i];
-      linesProcessed++;
-      break;
-    }
-  }
+  seen[0] = true;
+  orderedLines[0][0] = lines[0][0];
+  orderedLines[0][1] = lines[0][1];
+  orderedLines[0][2] = lines[0][2];
+  orderedLines[0][3] = lines[0][3];
+  linesProcessed++;
   
-  while (linesProcessed < numEdgeLines) {
+  while (linesProcessed < numLines) {
+    bool found = false;
     for (int i = 1; i < numLines; i++) {
-      if (seen[i] || lc[i] != 1) continue;
-      for (int j = 0; j < linesProcessed; j++) {
-        if (nx2[j] == x1[i] && ny2[j] == y1[i]) {
+      if (seen[i]) continue;
+ 
+      if (orderedLines[linesProcessed - 1][2] == lines[i][0] && orderedLines[linesProcessed - 1][3] == lines[i][1]) {
+        seen[i] = true;
+        orderedLines[linesProcessed][0] = lines[i][0];
+        orderedLines[linesProcessed][1] = lines[i][1];
+        orderedLines[linesProcessed][2] = lines[i][2];
+        orderedLines[linesProcessed][3] = lines[i][3];
+        linesProcessed++;
+        found = true;
+      } else if (orderedLines[linesProcessed - 1][2] == lines[i][2] && orderedLines[linesProcessed - 1][3] == lines[i][3]) {
+        seen[i] = true;
+        orderedLines[linesProcessed][0] = lines[i][2];
+        orderedLines[linesProcessed][1] = lines[i][3];
+        orderedLines[linesProcessed][2] = lines[i][0];
+        orderedLines[linesProcessed][3] = lines[i][1];
+        linesProcessed++;
+        found = true;
+      }
+    }
+
+    if (!found) {
+      for (int i = 1; i < numLines; i++) {
+        if (!seen[i]) {
           seen[i] = true;
-          nx1[linesProcessed] = x1[i];
-          ny1[linesProcessed] = y1[i];
-          nx2[linesProcessed] = x2[i];
-          ny2[linesProcessed] = y2[i];
-          linesProcessed++;
-          break;
-        } else if (nx2[j] == x2[i] && ny2[j] == y2[i]) {
-          seen[i] = true;
-          nx1[linesProcessed] = x2[i];
-          ny1[linesProcessed] = y2[i];
-          nx2[linesProcessed] = x1[i];
-          ny2[linesProcessed] = y1[i];
+          orderedLines[linesProcessed][0] = lines[i][0];
+          orderedLines[linesProcessed][1] = lines[i][1];
+          orderedLines[linesProcessed][2] = lines[i][2];
+          orderedLines[linesProcessed][3] = lines[i][3];
           linesProcessed++;
           break;
         }
       }
     }
   }
-
-  for (int i = 0; i < numEdgeLines; i++)
-    lasers[0].drawLine(nx1[i], ny1[i], nx2[i], ny2[i]);  
 }
+
+void processMesh(const long (*n)[2], const Mesh& m, 
+                 long &numEdgeLines, long (*edgeLines)[4], 
+                 long &numInteriorLines, long (*interiorLines)[4]) {
+                  
+  int seenLineCount = 0;
+  long seenLines[m.numTriangles * 3][4];
+  long lineCount[m.numTriangles * 3];
+  memset(lineCount, 0, sizeof(lineCount));
+  
+  for (int t = 0; t < m.numTriangles; t++) {
+    if (!isFaceHidden(n, t, m)) {
+      for (int i = 0; i < 3; i++) {
+        bool found = false;
+        for (int j = 0; j < seenLineCount; j++) {
+          if (
+              (
+                seenLines[j][0] == n[m.triangles[t][i]][0] && 
+                seenLines[j][1] == n[m.triangles[t][i]][1] && 
+                seenLines[j][2] == n[m.triangles[t][(i+1)%3]][0] && 
+                seenLines[j][3] == n[m.triangles[t][(i+1)%3]][1]
+              ) 
+              || 
+              (
+                seenLines[j][0] == n[m.triangles[t][(i+1)%3]][0] && 
+                seenLines[j][1] == n[m.triangles[t][(i+1)%3]][1] && 
+                seenLines[j][2] == n[m.triangles[t][i]][0] && 
+                seenLines[j][3] == n[m.triangles[t][i]][1]
+              )
+            ) {
+              lineCount[j]++;
+              found = true;
+              break;
+           }
+        }
+        
+        if (!found) {
+          seenLines[seenLineCount][0] = n[m.triangles[t][i]][0];
+          seenLines[seenLineCount][1] = n[m.triangles[t][i]][1];
+          seenLines[seenLineCount][2] = n[m.triangles[t][(i+1)%3]][0];
+          seenLines[seenLineCount][3] = n[m.triangles[t][(i+1)%3]][1];
+          lineCount[seenLineCount]++;
+          seenLineCount++;
+        }
+      }
+    }
+  }
+
+  numInteriorLines = 0;
+  numEdgeLines = 0;
+  for (int i = 0; i < seenLineCount; i++) {
+    if (lineCount[i] == 1) {
+      edgeLines[numEdgeLines][0] = seenLines[i][0];
+      edgeLines[numEdgeLines][1] = seenLines[i][1];
+      edgeLines[numEdgeLines][2] = seenLines[i][2];
+      edgeLines[numEdgeLines][3] = seenLines[i][3];
+      numEdgeLines++;
+    }
+    else {
+      interiorLines[numInteriorLines][0] = seenLines[i][0];
+      interiorLines[numInteriorLines][1] = seenLines[i][1];
+      interiorLines[numInteriorLines][2] = seenLines[i][2];
+      interiorLines[numInteriorLines][3] = seenLines[i][3];
+      numInteriorLines++;
+    }
+  }
+}
+
 
 void cube() { 
   static double nextTick = millis();
@@ -330,7 +339,6 @@ void cube() {
   const long zDist = 10000;
   long mScale = 30;
   
-  lasers[0].setColorRGB(255, 0, 0);
   while (millis() > nextTick) {
     Matrix4 world = Matrix4::rotateX(meshRotation.x);
     world = Matrix4::multiply(Matrix4::rotateY(meshRotation.y), world);
@@ -353,9 +361,23 @@ void cube() {
 
     nextTick += 20.0;
   }    
+
+  lasers[0].setColorRGB(0, 0, 255);
+  lasers[0].on();
   
-  drawMeshWireframe(projNodes, cubeMesh);
-  //drawMeshWireframeOutline(projNodes, cubeMesh);
+  long numEdgeLines = 0;
+  long numInteriorLines = 0;
+  long edgeLines[cubeMesh.numTriangles * 3][4];
+  long interiorLines[cubeMesh.numTriangles * 3][4];
+  processMesh(projNodes, cubeMesh, numEdgeLines, edgeLines, numInteriorLines, interiorLines);
+
+  long numAllLines = numEdgeLines + numInteriorLines;
+  long allLines[numAllLines][4];
+  long orderedAllLines[numAllLines][4];
+  mergeLines(numEdgeLines, edgeLines, numInteriorLines, interiorLines, allLines);
+  orderLines(numAllLines, allLines, orderedAllLines);
+  for (int i = 0; i < numAllLines; i++)
+    lasers[0].drawLine(orderedAllLines[i][0], orderedAllLines[i][1], orderedAllLines[i][2], orderedAllLines[i][3]); 
 }
 
 void loop() {
@@ -392,6 +414,6 @@ void loop() {
     case 5: movingSquare(); break;
     case 6: cube(); break;
     case 7: rotatingCircle(); break;
-    case 8: printCVs(); break;
+    //case 8: printCVs(); break;
   }
 }
