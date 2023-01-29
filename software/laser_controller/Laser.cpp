@@ -53,6 +53,10 @@ void Laser::setDistortionFactors(long x, float y) {
   _yDistortionFactor = FROM_FLOAT(y);
 }
 
+void Laser::setMoveDelay(int delayUs) {
+  _moveDelay = delayUs;
+}
+
 void Laser::writeDAC(long x, long y) {
   //apply distortion corrections
   x = (((x - 2048) * COS(ABS(y - 2048) / _xDistortionFactor)) >> 14) + 2048;
@@ -193,7 +197,8 @@ void Laser::sendToRaw(long xNew, long yNew) {
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
-  delayMicroseconds(LASER_DELAY_US);
+  if (_moveDelay > 0)
+    delayMicroseconds(_moveDelay);
 }
 
 void Laser::drawLine(long x1, long y1, long x2, long y2) {

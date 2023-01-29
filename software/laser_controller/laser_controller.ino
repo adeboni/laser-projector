@@ -32,7 +32,6 @@ SerialTransfer uartTransfer;
 ADC *adc = new ADC();
 Gpio gpio;
 AudioProcessor audio;
-MeshLoader meshLoader;
 Mesh cubeMesh;
 
 void initDAC() {
@@ -56,7 +55,7 @@ void setup() {
     gpio.displayError(1);
   audio.begin();
 
-  cubeMesh = meshLoader.loadMesh("/cube.json");
+  cubeMesh = MeshLoader::loadMesh("/cube.json");
 
   //these values will eventually be stored on and loaded from the SD card for each laser
   lasers[0].setScale(0.67, 0.67);
@@ -71,6 +70,7 @@ void movingSquare() {
   static long y = 0;
   long squareSize = 400;
   long moveAmount = 10;
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   
   lasers[0].sendTo(x, y);
@@ -97,6 +97,7 @@ void movingSquare() {
 }
 
 void square() {
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   lasers[0].sendTo(0, 0);
   lasers[0].on();
@@ -108,6 +109,7 @@ void square() {
 }
 
 void circle() {
+  lasers[0].setMoveDelay(0);
   const int scale = 12;
   for (int r = 0; r <= 360; r += 5) {
     lasers[0].setColorHSL(r, 100, 50); 
@@ -118,6 +120,7 @@ void circle() {
 }
 
 void circle2() {
+  lasers[0].setMoveDelay(0);
   const int scale = 12;
   for (int r = 0; r <= 360; r += 5) {
     if (r < 120)      { lasers[0].setColorRGB(255, 0, 0); lasers[0].on(); }
@@ -135,6 +138,7 @@ void rotatingCircle() {
   Matrix4 world = Matrix4::rotateX(rotation.x);
   world = Matrix4::multiply(Matrix4::rotateY(rotation.y), world);
   world = Matrix4::multiply(Matrix4::rotateZ(rotation.z), world);
+  lasers[0].setMoveDelay(0);
   lasers[0].setEnable3D(true);
   lasers[0].setMatrix(world);
   circle2();
@@ -153,6 +157,7 @@ void circleFFT() {
   static int rotate = 0;
   audio.updateFFT();
   audio.decay = 50;
+  lasers[0].setMoveDelay(0);
   lasers[0].setColorRGB(255, 0, 0);
   int i = 4;
   float firstX, firstY;
@@ -175,6 +180,7 @@ void circleFFT() {
 void linearFFT() {
   audio.updateFFT();
   audio.decay = 30;
+  lasers[0].setMoveDelay(0);
   lasers[0].setColorRGB(255, 0, 0);
   long step = 4096 / FFT_DISPLAY_BINS;
   long pos = 100;
@@ -365,6 +371,7 @@ void cube() {
     nextTick += 20.0;
   }    
 
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
   
@@ -389,6 +396,7 @@ void countDown() {
   static char j = '0';
   static int i = 0;
 
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   Drawing::drawLetter(j, 2048, 2048);
 
@@ -404,12 +412,14 @@ void countDown() {
 }
 
 void staticText() {
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   Drawing::drawString("HELLO WORLD", 1000, 2048, 0.25);
 }
 
 
 void drawScroller() {
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(0, 0, 255);
   String s = "HELLO WORLD";
   int speed = 100;
@@ -456,6 +466,7 @@ void drawScroller() {
 }
 
 void globe() {
+  lasers[0].setMoveDelay(0);
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
   int pos = random(360)/5 * 5;
@@ -486,20 +497,39 @@ void drawPlaneRotate() {
   if (rotation.y > 360) rotation.y = 0;
   if (rotation.z > 360) rotation.z = 0; 
 
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   long centerX, centerY, w, h;
   Drawing::calcObjectBox(draw_plane, sizeof(draw_plane)/4, centerX, centerY, w, h);
   Drawing::drawObjectRotated3D(draw_plane, sizeof(draw_plane)/4, 2048 - w/2, 2048 - h/2, rotation);
 }
 
-void drawPlane() {
-  lasers[0].setColorRGB(255, 0, 0);
-  Drawing::drawObject(draw_plane, sizeof(draw_plane)/4, 2048, 2048);
+void lfo() {
+  static int dx = 0;
+  static int dy = 0;
+  static int dc = 0;
+
+  lasers[0].setMoveDelay(400);
+  lasers[0].sendTo(2048 + SIN((dx/4)%360)/16, 2048 + COS((dy/3)%360)/16);
+  lasers[0].setMoveDelay(0);
+  for (int x = 5; x <= 360; x += 5) { 
+    lasers[0].setColorHSL((x + dc) % 360, 100, 50);
+    lasers[0].on();
+    lasers[0].sendTo(2048 + SIN(((x+dx)/4)%360)/16, 2048 + COS(((x+dy)/3)%360)/16);
+  }
+  lasers[0].off();
+  
+  dx += 1;
+  dy += 2;
+  dc += 2;
 }
 
 void drawBike() {
+  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
-  Drawing::drawObject(draw_bike, sizeof(draw_bike)/4, 2048, 2048);
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      Drawing::drawObject(draw_bike, sizeof(draw_bike)/4, 2000 + i * 450, 2000 + j * 300, 0.5);
 }
 
 
@@ -545,7 +575,7 @@ void loop() {
     case 9: staticText(); break;
     case 10: drawScroller(); break;
     case 11: globe(); break;
-    case 12: drawPlane(); break;
+    case 12: lfo(); break;
     case 13: drawBike(); break;
     case 14: drawPlaneRotate(); break;
     

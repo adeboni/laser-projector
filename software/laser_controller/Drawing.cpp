@@ -4,30 +4,22 @@
 void Drawing::drawString(String text, int x, int y, float scale) {
   int i = 0;
   int x1 = x;
-  while (text.charAt(i) != '\0') {
-     x1 += drawLetter(text.charAt(i), x1, y, scale); 
-     i++;
-  }
+  while (text.charAt(i) != '\0')
+     x1 += drawLetter(text.charAt(i++), x1, y, scale); 
 }
 
 long Drawing::stringAdvance(String text, float scale) {
   long adv = 0;
   int i = 0;
-  while (text.charAt(i) != '\0') {
-     adv += advance(text.charAt(i), scale); 
-     i++;
-  }
+  while (text.charAt(i) != '\0')
+     adv += advance(text.charAt(i++), scale); 
   return adv;
 }
 
 long Drawing::advance(byte letter, float scale) {
   long adv = 850;
-  if (letter == 'I') {
-    adv = 200;
-  } else
-  if (letter == 'W') {
-    adv = 1000;
-  }
+  if (letter == 'I') adv = 200;
+  else if (letter == 'W') adv = 1000;
   return TO_INT(adv * FROM_FLOAT(scale));
 }
 
@@ -87,17 +79,12 @@ void Drawing::drawObject(const unsigned short* data, int size, long translateX, 
   unsigned short posX;
   unsigned short posY;
   while (size>0) {
-    posX = pgm_read_word(d);
-    d++;
-    posY = pgm_read_word(d);
-    d++;
+    posX = pgm_read_word(d++);
+    posY = pgm_read_word(d++);
     size--;
 
-    if (posX & 0x8000) {
-      lasers[0].on();
-    } else {
-      lasers[0].off();
-    }
+    if (posX & 0x8000) lasers[0].on();
+    else lasers[0].off();
     lasers[0].sendTo(TO_INT((posX & 0x7fff) * FROM_FLOAT(scale)) + translateX, TO_INT(posY * FROM_FLOAT(scale)) + translateY);
   }
   lasers[0].off();
@@ -123,10 +110,8 @@ void Drawing::calcObjectBox(const unsigned short* data, int size, long& centerX,
   unsigned short x1 = 0;
   unsigned short y1 = 0;
   while (size > 0) {
-    posX = pgm_read_word(d) & 0x7fff;
-    d++;
-    posY = pgm_read_word(d);
-    d++;
+    posX = pgm_read_word(d++) & 0x7fff;
+    posY = pgm_read_word(d++);
     size--;
     if (posX < x0) x0 = posX;
     if (posY < y0) y0 = posY;

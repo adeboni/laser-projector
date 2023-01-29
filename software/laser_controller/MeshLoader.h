@@ -14,9 +14,8 @@ typedef struct {
 
 class MeshLoader {
 public:
-  MeshLoader();
-  Mesh loadMesh(const char *filename);
-  void printMesh(Mesh mesh);
+  static Mesh loadMesh(const char *filename);
+  static void printMesh(Mesh mesh);
 };
 
 #endif

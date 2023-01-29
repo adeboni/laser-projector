@@ -6,7 +6,6 @@
 #include <WireIMXRT.h>
 
 #define PWM_FREQ 375000
-#define LASER_DELAY_US 200
 
 class Laser {
 public:
@@ -30,6 +29,7 @@ public:
   void setScale(float scaleX, float scaleY);
   void setOffset(long offsetX, long offsetY);
   void setClipArea(long xMin, long yMin, long xMax, long yMax);
+  void setMoveDelay(int delayUs);
 
   void setEnable3D(bool flag) { _enable3D = flag; }
   void setMatrix(const Matrix4& matrix) { _matrix = matrix; }
@@ -40,6 +40,7 @@ private:
   uint8_t _xDacIndex, _yDacIndex;
   FIXPT _quality = FROM_FLOAT(1.0 / 32.0);
   Color _color;
+  int _moveDelay = 0;
 
   long _sentX = 0;
   long _sentY = 0;

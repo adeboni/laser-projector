@@ -3,10 +3,6 @@
 extern Gpio gpio;
 DynamicJsonDocument meshJson(2048);
 
-MeshLoader::MeshLoader() {
-
-}
-
 Mesh MeshLoader::loadMesh(const char *filename) {
   File file = SD.open(filename);
   DeserializationError error = deserializeJson(meshJson, file);
@@ -30,10 +26,8 @@ Mesh MeshLoader::loadMesh(const char *filename) {
 }
 
 void MeshLoader::printMesh(Mesh mesh) {
-  Serial.print("Num Nodes: ");
-  Serial.println(mesh.numNodes);
-  Serial.print("Num Triangles: ");
-  Serial.println(mesh.numTriangles);
+  Serial.printf("Num Nodes: %d\r\n", mesh.numNodes);
+  Serial.printf("Num Triangles: %d\r\n", mesh.numTriangles);
   Serial.println("Nodes:");
   for (int i = 0; i < mesh.numNodes; i++) {
     Serial.print("[ ");
