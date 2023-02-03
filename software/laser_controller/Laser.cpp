@@ -53,10 +53,6 @@ void Laser::setDistortionFactors(long x, float y) {
   _yDistortionFactor = FROM_FLOAT(y);
 }
 
-void Laser::setMoveDelay(int delayUs) {
-  _moveDelay = delayUs;
-}
-
 void Laser::writeDAC(long x, long y) {
   //apply distortion corrections
   x = (((x - 2048) * COS(ABS(y - 2048) / _xDistortionFactor)) >> 14) + 2048;
@@ -151,7 +147,7 @@ bool Laser::clipLine(long& x0, long& y0, long& x1, long& y1) {
 void Laser::sendTo(long xpos, long ypos) {
   _sentX = xpos;
   _sentY = ypos;
-  
+
   if (_enable3D) {
     Vector3 p1 = {FROM_INT(xpos - 2048), FROM_INT(ypos - 2048), 0};
     Vector3 p = Matrix4::applyMatrix(_matrix, p1);
@@ -174,7 +170,7 @@ void Laser::sendTo(long xpos, long ypos) {
   _oldY = yNew;
 }
 
-void Laser::sendToRaw(long xNew, long yNew) {
+void Laser::sendToRaw(long xNew, long yNew) { 
   // divide into equal parts, using _quality
   long fdiffx = xNew - _x;
   long fdiffy = yNew - _y;
@@ -197,17 +193,18 @@ void Laser::sendToRaw(long xNew, long yNew) {
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
-  if (_moveDelay > 0)
-    delayMicroseconds(_moveDelay);
+
+  if (LASER_END_DELAY > 0) delayMicroseconds(LASER_END_DELAY);
 }
 
 void Laser::drawLine(long x1, long y1, long x2, long y2) {
   if (_sentX != x1 || _sentY != y1) {
     off();
     sendTo(x1, y1);
-  }
+  } 
   on();
   sendTo(x2, y2);
+  if (LASER_LINE_END_DELAY > 0) delayMicroseconds(LASER_LINE_END_DELAY);
 }
 
 unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
@@ -246,12 +243,16 @@ void Laser::setColorRGB(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 void Laser::on() {
+  if (!_laserOn && LASER_TOGGLE_DELAY > 0) delayMicroseconds(LASER_TOGGLE_DELAY);
+  _laserOn = true;
   analogWrite(_redPin, _color.r);
   analogWrite(_greenPin, _color.g);
   analogWrite(_bluePin, _color.b);
 }
 
 void Laser::off() {
+  if (_laserOn && LASER_TOGGLE_DELAY > 0) delayMicroseconds(LASER_TOGGLE_DELAY);
+  _laserOn = false;
   analogWrite(_redPin, 0);
   analogWrite(_greenPin, 0);
   analogWrite(_bluePin, 0);

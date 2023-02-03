@@ -70,7 +70,6 @@ void movingSquare() {
   static long y = 0;
   long squareSize = 400;
   long moveAmount = 10;
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   
   lasers[0].sendTo(x, y);
@@ -97,7 +96,6 @@ void movingSquare() {
 }
 
 void square() {
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   lasers[0].sendTo(0, 0);
   lasers[0].on();
@@ -109,7 +107,6 @@ void square() {
 }
 
 void circle() {
-  lasers[0].setMoveDelay(0);
   const int scale = 12;
   for (int r = 0; r <= 360; r += 5) {
     lasers[0].setColorHSL(r, 100, 50); 
@@ -120,12 +117,11 @@ void circle() {
 }
 
 void circle2() {
-  lasers[0].setMoveDelay(0);
   const int scale = 12;
   for (int r = 0; r <= 360; r += 5) {
-    if (r < 120)      { lasers[0].setColorRGB(255, 0, 0); lasers[0].on(); }
-    else if (r < 240) { lasers[0].setColorRGB(0, 255, 0); lasers[0].on(); }
-    else              { lasers[0].setColorRGB(0, 0, 255); lasers[0].on(); }
+    if (r < 120)      { lasers[0].setColorRGB(255, 0, 0); lasers[0].on(); lasers[0].off(); }
+    else if (r < 240) { lasers[0].setColorRGB(0, 255, 0); lasers[0].on(); lasers[0].off(); }
+    else              { lasers[0].setColorRGB(0, 0, 255); lasers[0].on(); lasers[0].off(); }
     
     lasers[0].sendTo(SIN(r)/scale + 2048, COS(r)/scale + 2048);
   }
@@ -138,7 +134,6 @@ void rotatingCircle() {
   Matrix4 world = Matrix4::rotateX(rotation.x);
   world = Matrix4::multiply(Matrix4::rotateY(rotation.y), world);
   world = Matrix4::multiply(Matrix4::rotateZ(rotation.z), world);
-  lasers[0].setMoveDelay(0);
   lasers[0].setEnable3D(true);
   lasers[0].setMatrix(world);
   circle2();
@@ -156,8 +151,7 @@ void rotatingCircle() {
 void circleFFT() {
   static int rotate = 0;
   audio.updateFFT();
-  audio.decay = 50;
-  lasers[0].setMoveDelay(0);
+  audio.decay = 100;
   lasers[0].setColorRGB(255, 0, 0);
   int i = 4;
   float firstX, firstY;
@@ -180,7 +174,6 @@ void circleFFT() {
 void linearFFT() {
   audio.updateFFT();
   audio.decay = 30;
-  lasers[0].setMoveDelay(0);
   lasers[0].setColorRGB(255, 0, 0);
   long step = 4096 / FFT_DISPLAY_BINS;
   long pos = 100;
@@ -371,7 +364,6 @@ void cube() {
     nextTick += 20.0;
   }    
 
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
   
@@ -396,7 +388,6 @@ void countDown() {
   static char j = '0';
   static int i = 0;
 
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   Drawing::drawLetter(j, 2048, 2048);
 
@@ -412,14 +403,12 @@ void countDown() {
 }
 
 void staticText() {
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   Drawing::drawString("HELLO WORLD", 1000, 2048, 0.25);
 }
 
 
 void drawScroller() {
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(0, 0, 255);
   String s = "HELLO WORLD";
   int speed = 100;
@@ -466,7 +455,6 @@ void drawScroller() {
 }
 
 void globe() {
-  lasers[0].setMoveDelay(0);
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
   int pos = random(360)/5 * 5;
@@ -497,7 +485,6 @@ void drawPlaneRotate() {
   if (rotation.y > 360) rotation.y = 0;
   if (rotation.z > 360) rotation.z = 0; 
 
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   long centerX, centerY, w, h;
   Drawing::calcObjectBox(draw_plane, sizeof(draw_plane)/4, centerX, centerY, w, h);
@@ -509,9 +496,7 @@ void lfo() {
   static int dy = 0;
   static int dc = 0;
 
-  lasers[0].setMoveDelay(400);
   lasers[0].sendTo(2048 + SIN((dx/4)%360)/16, 2048 + COS((dy/3)%360)/16);
-  lasers[0].setMoveDelay(0);
   for (int x = 5; x <= 360; x += 5) { 
     lasers[0].setColorHSL((x + dc) % 360, 100, 50);
     lasers[0].on();
@@ -525,7 +510,6 @@ void lfo() {
 }
 
 void drawBike() {
-  lasers[0].setMoveDelay(200);
   lasers[0].setColorRGB(255, 0, 0);
   for (int i = 0; i < 2; i++)
     for (int j = 0; j < 2; j++)
