@@ -1,6 +1,6 @@
 #include "Laser.h"
 
-Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacIndex, uint8_t yDacIndex) {
+Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t dacPin) {
   _redPin = redPin;
   _greenPin = greenPin;
   _bluePin = bluePin;
@@ -12,12 +12,19 @@ Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t xDacInde
   analogWriteFrequency(bluePin, PWM_FREQ);
   off();
 	
-  _xDacIndex = xDacIndex;
-  _yDacIndex = yDacIndex;
+  _dacPin = dacPin;
+  pinMode(dacPin, OUTPUT);
+  digitalWrite(dacPin, HIGH);
 }
 
-void Laser::setQuality(int quality) {
-  _quality = FROM_FLOAT(1.0 / quality);
+void Laser::setQuality(float quality) {
+  _quality = quality;
+}
+
+void Laser::setDelays(int toggleDelay, int lineEndDelay, int endDelay) {
+  _toggleDelay = toggleDelay;
+  _lineEndDelay = lineEndDelay;
+  _endDelay = endDelay;
 }
 
 void Laser::setMirroring(bool x, bool y, bool xy) {
@@ -26,141 +33,117 @@ void Laser::setMirroring(bool x, bool y, bool xy) {
   _mirrorXY = xy;
 }
 
-void Laser::setScale(float scale) { 
-  _scaleX = FROM_FLOAT(scale);
-  _scaleY = FROM_FLOAT(scale);
-}
-
 void Laser::setScale(float scaleX, float scaleY) { 
-  _scaleX = FROM_FLOAT(scaleX);
-  _scaleY = FROM_FLOAT(scaleY);
+  _scaleX = scaleX;
+  _scaleY = scaleY;
 }
 
-void Laser::setOffset(long offsetX, long offsetY) { 
+void Laser::setOffset(int offsetX, int offsetY) { 
   _offsetX = offsetX;
   _offsetY = offsetY;
 }
 
-void Laser::setClipArea(long xMin, long yMin, long xMax, long yMax) {
-  _clipXMin = xMin;
-  _clipYMin = yMin;
-  _clipXMax = xMin;
-  _clipYMax = yMin;
+void Laser::setClipArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
+  _clipPoly[0] = x1;
+  _clipPoly[1] = y1;
+  _clipPoly[2] = x2;
+  _clipPoly[3] = y2;
+  _clipPoly[4] = x3;
+  _clipPoly[5] = y3;
+  _clipPoly[6] = x4;
+  _clipPoly[7] = y4;
 }
 
-void Laser::setDistortionFactors(long x, float y) {
+void Laser::setClipAreaTop(int x1, int y1, int x2, int y2) {
+  _clipPoly[0] = x1;
+  _clipPoly[1] = y1;
+  _clipPoly[2] = x2;
+  _clipPoly[3] = y2;
+}
+
+void Laser::setClipAreaBottom(int x3, int y3, int x4, int y4) {
+  _clipPoly[4] = x3;
+  _clipPoly[5] = y3;
+  _clipPoly[6] = x4;
+  _clipPoly[7] = y4;
+}
+
+void Laser::setDistortionFactors(int x, float y) {
   _xDistortionFactor = x;
-  _yDistortionFactor = FROM_FLOAT(y);
+  _yDistortionFactor = y;
 }
 
-void Laser::writeDAC(long x, long y) {
+void Laser::writeDAC(int x, int y) {
   //apply distortion corrections
-  x = (((x - 2048) * COS(ABS(y - 2048) / _xDistortionFactor)) >> 14) + 2048;
-  y = TO_INT((y - 2048) * _yDistortionFactor) + 2048;
+  //x = ((x - 2048) * COS(ABS(y - 2048) / _xDistortionFactor)) + 2048;
+  //y = ((y - 2048) * _yDistortionFactor) + 2048;
 
-  int x1 = constrain((int)x, 0, 4095);
-  int y1 = constrain((int)y, 0, 4095);
+  int x1 = constrain(x, 0, 4095);
+  int y1 = constrain(y, 0, 4095);
 
   if (_mirrorXY) SWAP(x1, y1);
   if (_mirrorX)  x1 = 4095 - x1;
   if (_mirrorY)  y1 = 4095 - y1;
 
-  Wire.beginTransmission(0x48);
-  Wire.write(0x30 + _xDacIndex);
-  Wire.write((x1 & 4088) >> 4);
-  Wire.write((x1 & 15) << 4);
-  Wire.endTransmission();
+  SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(_dacPin, LOW);
+  SPI.transfer(0x30 | ((x1 >> 8) & 0x0f));
+  SPI.transfer(x1 & 0xff);
+  digitalWrite(_dacPin, HIGH);
+  SPI.endTransaction();
 
-  Wire.beginTransmission(0x48);
-  Wire.write(0x30 + _yDacIndex);
-  Wire.write((y1 & 4088) >> 4);
-  Wire.write((y1 & 15) << 4);
-  Wire.endTransmission();
+  SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(_dacPin, LOW);
+  SPI.transfer(0xb0 | ((y1 >> 8) & 0x0f));
+  SPI.transfer(y1 & 0xff);
+  digitalWrite(_dacPin, HIGH); 
+  SPI.endTransaction();
 }
 
-const int INSIDE = 0; // 0000
-const int LEFT   = 1; // 0001
-const int RIGHT  = 2; // 0010
-const int BOTTOM = 4; // 0100
-const int TOP    = 8; // 1000
-
-int Laser::computeOutCode(long x, long y) {
-  int code = INSIDE;
-  if      (x < _clipXMin) code |= LEFT;
-  else if (x > _clipXMax) code |= RIGHT;
-  if      (y < _clipYMin) code |= BOTTOM;
-  else if (y > _clipYMax) code |= TOP;
-  return code;
-}
-
-bool Laser::clipLine(long& x0, long& y0, long& x1, long& y1) {
-  int outcode0 = computeOutCode(x0, y0);
-  int outcode1 = computeOutCode(x1, y1);
-  bool accept = false;
+bool Laser::clipLine(int& x1, int& y1, int& x2, int& y2) { 
+  int dotx = x2 - x1;
+  int doty = y2 - y1;
+  float tEnteringMax = 0;
+  float tLeavingMin = 1;
   
-  while (true) {
-    if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
-      accept = true;
-      break;
-    } else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
-      break;
-    } else {
-      // failed both tests, so calculate the line segment to clip
-      // from an outside point to an intersection with clip edge
-      long x, y;
-
-      // At least one endpoint is outside the clip rectangle; pick it.
-      int outcodeOut = outcode0 ? outcode0 : outcode1;
-
-      // Now find the intersection point;
-      // use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
-      if (outcodeOut & TOP) {           // point is above the clip rectangle
-        x = x0 + (x1 - x0) * float(_clipYMax - y0) / float(y1 - y0);
-        y = _clipYMax;
-      } else if (outcodeOut & BOTTOM) { // point is below the clip rectangle
-        x = x0 + (x1 - x0) * float(_clipYMin - y0) / float(y1 - y0);
-        y = _clipYMin;
-      } else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
-        y = y0 + (y1 - y0) * float(_clipXMax - x0) / float(x1 - x0);
-        x = _clipXMax;
-      } else if (outcodeOut & LEFT) {   // point is to the left of clip rectangle
-        y = y0 + (y1 - y0) * float(_clipXMin - x0) / float(x1 - x0);
-        x = _clipXMin;
-      }
-
-      // Now we move outside point to intersection point to clip and get ready for next pass.
-      if (outcodeOut == outcode0) {
-        x0 = x;
-        y0 = y;
-        outcode0 = computeOutCode(x0, y0);
-      } else {
-        x1 = x;
-        y1 = y;
-        outcode1 = computeOutCode(x1, y1);
-      }
-    }
+  for (int i = 0; i < 4; i++) {
+    int normalx = _clipPoly[i*2+1] - _clipPoly[((i+1)%4)*2+1];
+    int normaly = _clipPoly[((i+1)%4)*2] - _clipPoly[i*2];
+    int numerator = normalx * (_clipPoly[i*2] - x1) + normaly * (_clipPoly[i*2+1] - y1);
+    float denominator = normalx * dotx + normaly * doty;
+    float t = denominator == 0 ? numerator : numerator / denominator;
+    
+    if (denominator >= 0) tEnteringMax = max(t, tEnteringMax);
+    else tLeavingMin = min(t, tLeavingMin);
   }
   
-  return accept;
+  if (tEnteringMax > tLeavingMin) 
+    return false;
+
+  x2 = (int)(x1 + dotx * tLeavingMin);
+  y2 = (int)(y1 + doty * tLeavingMin);
+  x1 = (int)(x1 + dotx * tEnteringMax);
+  y1 = (int)(y1 + doty * tEnteringMax);
+  return true;
 }
 
-void Laser::sendTo(long xpos, long ypos) {
+void Laser::sendTo(int xpos, int ypos) {
   _sentX = xpos;
   _sentY = ypos;
 
   if (_enable3D) {
-    Vector3 p1 = {FROM_INT(xpos - 2048), FROM_INT(ypos - 2048), 0};
+    Vector3 p1 = {xpos - 2048, ypos - 2048, 0};
     Vector3 p = Matrix4::applyMatrix(_matrix, p1);
     xpos = (_zDist * p.x) / (_zDist + p.z) + 2048;
     ypos = (_zDist * p.y) / (_zDist + p.z) + 2048;
   }
 
-  long xNew = TO_INT(xpos * _scaleX) + _offsetX;
-  long yNew = TO_INT(ypos * _scaleY) + _offsetY; 
-  long clipX = xNew;
-  long clipY = yNew;
-  long oldX = _oldX;
-  long oldY = _oldY;
+  int xNew = (int)(xpos * _scaleX) + _offsetX;
+  int yNew = (int)(ypos * _scaleY) + _offsetY; 
+  int clipX = xNew;
+  int clipY = yNew;
+  int oldX = _oldX;
+  int oldY = _oldY;
   if (clipLine(oldX, oldY, clipX, clipY)) {
     if (oldX != _oldX || oldY != _oldY)
       sendToRaw(oldX, oldY);
@@ -170,41 +153,40 @@ void Laser::sendTo(long xpos, long ypos) {
   _oldY = yNew;
 }
 
-void Laser::sendToRaw(long xNew, long yNew) { 
+void Laser::sendToRaw(int xNew, int yNew) { 
   // divide into equal parts, using _quality
-  long fdiffx = xNew - _x;
-  long fdiffy = yNew - _y;
-  long diffx = TO_INT(abs(fdiffx) * _quality);
-  long diffy = TO_INT(abs(fdiffy) * _quality);
+  float fdiffx = xNew - _x;
+  float fdiffy = yNew - _y;
+  float diffx = abs(fdiffx) / _quality;
+  float diffy = abs(fdiffy) / _quality;
 
-  // use the bigger direction
-  if (diffx < diffy) diffx = diffy;     
-  fdiffx = FROM_INT(fdiffx) / diffx;
-  fdiffy = FROM_INT(fdiffy) / diffx;
+  // use the bigger direction 
+  fdiffx = fdiffx / max(diffx, diffy);
+  fdiffy = fdiffy / max(diffx, diffy);
   // interpolate in FIXPT
-  FIXPT tmpx = 0;
-  FIXPT tmpy = 0;
+  float tmpx = 0;
+  float tmpy = 0;
   for (int i = 0; i < diffx - 1; i++) {
     tmpx += fdiffx;
     tmpy += fdiffy;
-    writeDAC(_x + TO_INT(tmpx), _y + TO_INT(tmpy));
+    writeDAC(_x + tmpx, _y + tmpy);
   }
   
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
 
-  if (LASER_END_DELAY > 0) delayMicroseconds(LASER_END_DELAY);
+  if (_endDelay > 0) delayMicroseconds(_endDelay);
 }
 
-void Laser::drawLine(long x1, long y1, long x2, long y2) {
+void Laser::drawLine(int x1, int y1, int x2, int y2) {
   if (_sentX != x1 || _sentY != y1) {
     off();
     sendTo(x1, y1);
   } 
   on();
   sendTo(x2, y2);
-  if (LASER_LINE_END_DELAY > 0) delayMicroseconds(LASER_LINE_END_DELAY);
+  if (_lineEndDelay > 0) delayMicroseconds(_lineEndDelay);
 }
 
 unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
@@ -243,7 +225,7 @@ void Laser::setColorRGB(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 void Laser::on() {
-  if (!_laserOn && LASER_TOGGLE_DELAY > 0) delayMicroseconds(LASER_TOGGLE_DELAY);
+  if (!_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
   _laserOn = true;
   analogWrite(_redPin, _color.r);
   analogWrite(_greenPin, _color.g);
@@ -251,9 +233,51 @@ void Laser::on() {
 }
 
 void Laser::off() {
-  if (_laserOn && LASER_TOGGLE_DELAY > 0) delayMicroseconds(LASER_TOGGLE_DELAY);
+  if (_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
   _laserOn = false;
   analogWrite(_redPin, 0);
   analogWrite(_greenPin, 0);
   analogWrite(_bluePin, 0);
+}
+
+void Laser::getQuality(float& quality) {
+  quality = _quality;
+}
+
+void Laser::getDistortionFactors(int& x, float& y) {
+  x = _xDistortionFactor;
+  y = _yDistortionFactor;
+}
+
+void Laser::getMirroring(bool& x, bool& y, bool& xy) {
+  x = _mirrorX;
+  y = _mirrorY;
+  xy = _mirrorXY;
+}
+
+void Laser::getScale(float& scaleX, float& scaleY) {
+  scaleX = _scaleX;
+  scaleY = _scaleY;
+}
+
+void Laser::getOffset(int& offsetX, int& offsetY) {
+  offsetX = _offsetX;
+  offsetY = _offsetY;
+}
+
+void Laser::getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
+  x1 = _clipPoly[0];
+  y1 = _clipPoly[1];
+  x2 = _clipPoly[2];
+  y2 = _clipPoly[3];
+  x3 = _clipPoly[4];
+  y3 = _clipPoly[5];
+  x4 = _clipPoly[6];
+  y4 = _clipPoly[7];
+}
+
+void Laser::getDelays(int& toggleDelay, int& lineEndDelay, int& endDelay) {
+  toggleDelay = _toggleDelay;
+  lineEndDelay = _lineEndDelay;
+  endDelay = _endDelay;
 }

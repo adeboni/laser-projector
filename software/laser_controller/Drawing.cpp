@@ -17,13 +17,13 @@ long Drawing::stringAdvance(String text, float scale) {
 }
 
 long Drawing::advance(byte letter, float scale) {
-  long adv = 850;
+  int adv = 850;
   if (letter == 'I') adv = 200;
   else if (letter == 'W') adv = 1000;
-  return TO_INT(adv * FROM_FLOAT(scale));
+  return (int)(adv * scale);
 }
 
-long Drawing::drawLetter(byte letter, long translateX, long translateY, float scale) {
+long Drawing::drawLetter(byte letter, int translateX, int translateY, float scale) {
   long adv = advance(letter, scale);
   
   switch (letter) {
@@ -69,12 +69,11 @@ long Drawing::drawLetter(byte letter, long translateX, long translateY, float sc
     case '.': drawObject(draw_dot, sizeof(draw_dot)/4, translateX, translateY, scale); break;
     case ' ':    
         break;
-
   }
   return adv;
 }
 
-void Drawing::drawObject(const unsigned short* data, int size, long translateX, long translateY, float scale) {
+void Drawing::drawObject(const unsigned short* data, int size, int translateX, int translateY, float scale) {
   const unsigned short* d = data;
   unsigned short posX;
   unsigned short posY;
@@ -85,12 +84,12 @@ void Drawing::drawObject(const unsigned short* data, int size, long translateX, 
 
     if (posX & 0x8000) lasers[0].on();
     else lasers[0].off();
-    lasers[0].sendTo(TO_INT((posX & 0x7fff) * FROM_FLOAT(scale)) + translateX, TO_INT(posY * FROM_FLOAT(scale)) + translateY);
+    lasers[0].sendTo((int)((posX & 0x7fff) * scale) + translateX, (int)(posY * scale) + translateY);
   }
   lasers[0].off();
 }
 
-void Drawing::drawObjectRotated3D(const unsigned short* data, int size, long centerX, long centerY, Vector3 rotation) {
+void Drawing::drawObjectRotated3D(const unsigned short* data, int size, int centerX, int centerY, Vector3 rotation) {
   Matrix4 world = Matrix4::rotateX(rotation.x);
   world = Matrix4::multiply(Matrix4::rotateY(rotation.y), world);
   world = Matrix4::multiply(Matrix4::rotateZ(rotation.z), world);
@@ -101,7 +100,7 @@ void Drawing::drawObjectRotated3D(const unsigned short* data, int size, long cen
   lasers[0].setEnable3D(false);
 }
 
-void Drawing::calcObjectBox(const unsigned short* data, int size, long& centerX, long& centerY, long& width, long& height) {
+void Drawing::calcObjectBox(const unsigned short* data, int size, int& centerX, int& centerY, int& width, int& height) {
   const unsigned short* d = data;
   unsigned short posX;
   unsigned short posY;
