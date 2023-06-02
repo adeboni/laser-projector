@@ -28,8 +28,27 @@ struct Matrix4 {
    static Matrix4 scale(const float ratio);
 };
 
+struct Matrix8 {
+  float m[8][8];
+  static Matrix8 invert(const Matrix8& mat);
+  static Matrix8 decompose(const Matrix8& mat, int* perm);
+  static float* helperSolve(const Matrix8& luMat, float* b);
+};
+
+struct LaserFrame {
+  Vector3 point;
+  Color color;
+  bool laserOn;
+};
+
+struct MasterFrame {
+  int numPoints[4] = {0, 0, 0, 0};
+  LaserFrame laserFrame[4][1024];
+};
+
 float SIN(unsigned int angle);
 float COS(unsigned int angle);
 void SWAP(int &x, int &y);
+void SWAP(float &x, float &y);
 
 #endif

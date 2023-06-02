@@ -50,9 +50,13 @@ void setup() {
   audio.begin();
 
   loadSettings();
-  
-  if (gpio.readUart() && gpio.isButtonPressed(NES_SELECT))
-    beginCalibration();
+
+  unsigned long loadStartTime = millis();
+  while (millis() - loadStartTime < 5000) {
+    if (gpio.readUart() && gpio.isButtonPressed(NES_SELECT)) {
+        beginCalibration();
+    } 
+  }
 
   cubeMesh = MeshManager::loadMesh("/cube.json");
 }

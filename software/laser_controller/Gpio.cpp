@@ -74,3 +74,15 @@ bool Gpio::isButtonReleased(uint8_t button) {
   return bitRead(previousButtons, button) == 0 && 
          bitRead(rxStruct.nes, button) == 1;
 }
+
+void Gpio::printButtons() {
+  if (isButtonPressed(NES_A)) Serial.print("A ");
+  if (isButtonPressed(NES_B)) Serial.print("B ");
+  if (isButtonPressed(NES_SELECT)) Serial.print("SELECT ");
+  if (isButtonPressed(NES_START)) Serial.print("START ");
+  if (isButtonPressed(NES_UP)) Serial.print("UP ");
+  if (isButtonPressed(NES_DOWN)) Serial.print("DOWN ");
+  if (isButtonPressed(NES_LEFT)) Serial.print("LEFT ");
+  if (isButtonPressed(NES_RIGHT)) Serial.print("RIGHT ");
+  Serial.println();
+}

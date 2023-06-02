@@ -12,6 +12,10 @@ void SWAP(int &x, int &y) {
   int z = x; x = y; y = z;
 }
 
+void SWAP(float &x, float &y) {
+  float z = x; x = y; y = z;
+}
+
 Matrix4 Matrix4::multiply(const Matrix4 &mat1, const Matrix4 &mat2) {
   Matrix4 mat;
   for (unsigned char c=0; c<4; c++)
@@ -85,4 +89,89 @@ Vector3 Matrix4::applyMatrix(const Matrix4& matrix, const Vector3& in) {
            matrix.m[3][2]);
 
   return out;
+}
+
+Matrix8 Matrix8::invert(const Matrix8& mat) {
+  Matrix8 res;
+  int perm[8];
+  Matrix8 lum = decompose(mat, perm);
+  float b[8];
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 8; j++)
+      b[j] = i == perm[j] ? 1.0 : 0.0;
+    float* x = helperSolve(lum, b);
+    for (int j = 0; j < 8; j++)
+      res.m[j][i] = x[j];
+  }
+  return res;
+}
+
+Matrix8 Matrix8::decompose(const Matrix8& mat, int* perm) {
+  Matrix8 res;
+  memcpy(res.m, mat.m, sizeof(float)*64);
+  for (int i = 0; i < 8; i++)
+    perm[i] = i;
+
+  for (int j = 0; j < 7; j++) {
+    float colMax = abs(res.m[j][j]);
+    int pRow = j;
+
+    for (int i = j + 1; i < 8; i++) {
+      if (abs(res.m[i][j]) > colMax) {
+        colMax = abs(res.m[i][j]);
+        pRow = i;
+      }
+    }
+
+    if (pRow != j) {
+      for (int k = 0; k < 8; k++)
+        SWAP(res.m[pRow][k], res.m[j][k]);
+      SWAP(perm[pRow], perm[j]);
+    }
+
+    if (res.m[j][j] == 0.0){
+      int goodRow = -1;
+
+      for (int row = j + 1; row < 8; row++)
+        if (res.m[row][j] != 0.0)
+          goodRow = row;
+      
+      if (goodRow == -1)
+        return res;
+      
+      for (int k = 0; k < 8; k++)
+        SWAP(res.m[goodRow][k], res.m[j][k]);
+      SWAP(perm[goodRow], perm[j]);
+    }
+
+    for (int i = j + 1; i < 8; i++) {
+      res.m[i][j] /= res.m[j][j];
+      for (int k = j + 1; k < 8; k++)
+        res.m[i][k] -= res.m[i][j] * res.m[j][k];
+    }
+  }
+
+  return res;
+}
+
+float* Matrix8::helperSolve(const Matrix8& luMat, float* b) {
+  float x[8];
+  memcpy(x, b, sizeof(float)*8);
+
+  for (int i = 1; i < 8; i++) {
+    float sum = x[i];
+    for (int j = 0; j < i; ++j)
+      sum -= luMat.m[i][j] * x[j];
+    x[i] = sum;
+  }
+  
+  x[7] /= luMat.m[7][7];
+  for (int i = 6; i >= 0; i--) {
+    double sum = x[i];
+    for (int j = i + 1; j < 8; ++j)
+      sum -= luMat.m[i][j] * x[j];
+    x[i] = sum / luMat.m[i][i];
+  }
+
+  return x;
 }

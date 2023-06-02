@@ -10,6 +10,7 @@
 #define DEFAULT_TOGGLE_DELAY 500
 #define DEFAULT_LINE_DELAY 200
 #define DEFAULT_END_DELAY 100
+#define DEFAULT_MID_DELAY 100
 #define DEFAULT_X_DISTORTION 54
 #define DEFAULT_Y_DISTORTION 0.95
 
@@ -20,6 +21,7 @@ public:
   void drawLine(int x1, int y1, int x2, int y2);
   void setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness);
   void setColorRGB(uint8_t red, uint8_t green, uint8_t blue);
+  void setColor(const Color& color);
   void off();
   void on();
 
@@ -34,7 +36,10 @@ public:
   void setClipArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
   void setClipAreaTop(int x1, int y1, int x2, int y2);
   void setClipAreaBottom(int x3, int y3, int x4, int y4);
-  void setDelays(int toggleDelay, int lineEndDelay, int endDelay);
+  void setWarpArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
+  void setWarpAreaTop(int x1, int y1, int x2, int y2);
+  void setWarpAreaBottom(int x3, int y3, int x4, int y4);
+  void setDelays(int toggleDelay, int lineEndDelay, int endDelay, int midDelay);
 
   void getQuality(float& quality);
   void getDistortionFactors(int& x, float& y);
@@ -42,6 +47,7 @@ public:
   void getScale(float& scaleX, float& scaleY);
   void getOffset(int& offsetX, int& offsetY);
   void getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
+  void getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
   void getDelays(int& toggleDelay, int& lineEndDelay, int& endDelay);
 
   void setEnable3D(bool flag) { _enable3D = flag; }
@@ -71,10 +77,14 @@ private:
   int _offsetY = 0;
 
   int _clipPoly[8] = {0, 0, 4095, 0, 4095, 4095, 0, 4095};
+  int _warpPolySrc[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
+  int _warpPoly[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
+  float _homography[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   int _toggleDelay = DEFAULT_TOGGLE_DELAY;
   int _lineEndDelay = DEFAULT_LINE_DELAY;
   int _endDelay = DEFAULT_END_DELAY;
+  int _midDelay = DEFAULT_MID_DELAY;
 
   bool _enable3D = false;
   Matrix4 _matrix;
@@ -86,6 +96,8 @@ private:
   bool clipLine(int& x1, int& y1, int& x2, int& y2);
   void sendToRaw(int x, int y);
   void writeDAC(int x, int y);
+  void calculateHomography();
+  void warpPerspective(int& x, int& y);
   
   unsigned int h2rgb(unsigned int v1, unsigned int v2, unsigned int hue);
 };

@@ -13,8 +13,8 @@ void offsetAlignment() {
   while (selectedMode == MODE_OFFSET) {
     int xs = gpio.getCV(0, 50, 100);
     int ys = gpio.getCV(1, 50, 100);
-    int xo = gpio.getCV(2, 100, 800);
-    int yo = gpio.getCV(3, 100, 800);
+    int xo = gpio.getCV(2, 100, 1200);
+    int yo = gpio.getCV(3, 100, 1200);
    
     lasers[selectedLaser].setScale(xs / 100.0, ys / 100.0);
     lasers[selectedLaser].setOffset(xo, yo);
@@ -57,8 +57,8 @@ void clippingTopAlignment() {
   while (selectedMode == MODE_CLIPPING_TOP) {
     int x1 = gpio.getCV(0, 0, 4095);
     int y1 = gpio.getCV(1, 0, 4095);
-    int x2 = gpio.getCV(0, 0, 4095);
-    int y2 = gpio.getCV(1, 0, 4095);
+    int x2 = gpio.getCV(2, 0, 4095);
+    int y2 = gpio.getCV(3, 0, 4095);
    
     lasers[selectedLaser].setClipAreaTop(x1, y1, x2, y2);
     
@@ -81,11 +81,11 @@ void clippingBottomAlignment() {
   while (selectedMode == MODE_CLIPPING_BOTTOM) {
     int x3 = gpio.getCV(0, 0, 4095);
     int y3 = gpio.getCV(1, 0, 4095);
-    int x4 = gpio.getCV(0, 0, 4095);
-    int y4 = gpio.getCV(1, 0, 4095);
+    int x4 = gpio.getCV(2, 0, 4095);
+    int y4 = gpio.getCV(3, 0, 4095);
    
     lasers[selectedLaser].setClipAreaBottom(x3, y3, x4, y4);
-    
+
     lasers[selectedLaser].sendTo(_x1, _y1);
     lasers[selectedLaser].sendTo(_x2, _y2);
     lasers[selectedLaser].sendTo(x3, y3);
@@ -99,6 +99,7 @@ void checkButtons() {
   if (gpio.readUart()) {      
     if (gpio.isButtonPressed(NES_START)) {
       //save settings to sd card
+      selectedMode = MODE_END_CAL;
       return;
     }
     
@@ -107,13 +108,14 @@ void checkButtons() {
     if (gpio.isButtonReleased(NES_LEFT))
       selectedLaser = max(0, selectedLaser - 1);
     if (gpio.isButtonReleased(NES_UP))
-      selectedMode = min(3, selectedMode + 1);
+      selectedMode = min(5, selectedMode + 1);
     if (gpio.isButtonReleased(NES_DOWN))
       selectedMode = max(0, selectedMode - 1);
   }
 }
 
 void beginCalibration() {
+  Serial.println("Starting calibration");
   while (true) {
     for (int i = 0; i < 4; i++)
       lasers[i].off();
@@ -125,6 +127,9 @@ void beginCalibration() {
       case MODE_DISTORTION: distortionAlignment(); break;
       case MODE_CLIPPING_TOP: clippingTopAlignment(); break;
       case MODE_CLIPPING_BOTTOM: clippingBottomAlignment(); break;
+      //case MODE_WARP_TOP: warpTopAlignment(); break;
+      //case MODE_WARP_BOTTOM: warpBottomAlignment(); break;
+      case MODE_END_CAL: return;
     }
   }
 }

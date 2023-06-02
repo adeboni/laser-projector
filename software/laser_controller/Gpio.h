@@ -28,6 +28,7 @@ public:
   int getCV(uint8_t index, int min, int max);
   bool isButtonPressed(uint8_t button);
   bool isButtonReleased(uint8_t button);
+  void printButtons();
   
 private:
   const int _modePin = 15;
