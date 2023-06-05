@@ -28,18 +28,88 @@ DynamicJsonDocument settingsJson(1024);
 Mesh cubeMesh;
 
 void loadSettings() {
+  Serial.println("Loading settings");
+  
   File file = SD.open("/settings.json");
   DeserializationError error = deserializeJson(settingsJson, file);
   if (error) gpio.displayError(2);
+  file.close();
 
   for (int i = 0; i < 4; i++) {
     lasers[i].setScale(settingsJson["L"][i][0].as<int>() / 100.0, settingsJson["L"][i][1].as<int>() / 100.0);
     lasers[i].setOffset(settingsJson["L"][i][2].as<int>(), settingsJson["L"][i][3].as<int>());
-    lasers[i].setDistortionFactors(settingsJson["L"][i][4].as<int>(), settingsJson["L"][i][5].as<int>() / 100.0);
     lasers[i].setMirroring(false, true, false);
+    /*
+    lasers[i].setClipArea(
+       settingsJson["L"][i][4].as<int>(),
+       settingsJson["L"][i][5].as<int>(),
+       settingsJson["L"][i][6].as<int>(),
+       settingsJson["L"][i][7].as<int>(),
+       settingsJson["L"][i][8].as<int>(),
+       settingsJson["L"][i][9].as<int>(),
+       settingsJson["L"][i][10].as<int>(),
+       settingsJson["L"][i][11].as<int>()
+    );
+    lasers[i].setWarpArea(
+       settingsJson["L"][i][12].as<int>(),
+       settingsJson["L"][i][13].as<int>(),
+       settingsJson["L"][i][14].as<int>(),
+       settingsJson["L"][i][15].as<int>(),
+       settingsJson["L"][i][16].as<int>(),
+       settingsJson["L"][i][17].as<int>(),
+       settingsJson["L"][i][18].as<int>(),
+       settingsJson["L"][i][19].as<int>()
+    );
+    */
   }
   
+  Serial.println("Loaded settings");
+}
+
+void saveSettings() {
+  Serial.println("Saving settings");
+  
+  for (int i = 0; i < 4; i++) {
+    float _xs, _ys;
+    lasers[i].getScale(_xs, _ys);
+    settingsJson["L"][i][0] = (int)(_xs * 100);
+    settingsJson["L"][i][1] = (int)(_ys * 100);
+
+    int _xo, _yo;
+    lasers[i].getOffset(_xo, _yo);
+    settingsJson["L"][i][2] = _xo;
+    settingsJson["L"][i][3] = _yo;
+
+    /*
+    int _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4;
+    lasers[i].getClipArea(_x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4);
+    settingsJson["L"][i][4] = _x1;
+    settingsJson["L"][i][5] = _y1;
+    settingsJson["L"][i][6] = _x2;
+    settingsJson["L"][i][7] = _y2;
+    settingsJson["L"][i][8] = _x3;
+    settingsJson["L"][i][9] = _y3;
+    settingsJson["L"][i][10] = _x4;
+    settingsJson["L"][i][11] = _y4;
+    
+    lasers[i].getWarpArea(_x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4);
+    settingsJson["L"][i][12] = _x1;
+    settingsJson["L"][i][13] = _y1;
+    settingsJson["L"][i][14] = _x2;
+    settingsJson["L"][i][15] = _y2;
+    settingsJson["L"][i][16] = _x3;
+    settingsJson["L"][i][17] = _y3;
+    settingsJson["L"][i][18] = _x4;
+    settingsJson["L"][i][19] = _y4;
+    */
+  }
+
+  SD.remove("/settings.json");
+  File file = SD.open("/settings.json", FILE_WRITE);
+  serializeJson(settingsJson, file);
   file.close();
+  
+  Serial.println("Saved settings");
 }
 
 void setup() {
@@ -55,6 +125,7 @@ void setup() {
   while (millis() - loadStartTime < 5000) {
     if (gpio.readUart() && gpio.isButtonPressed(NES_SELECT)) {
         beginCalibration();
+        saveSettings();
     } 
   }
 
@@ -95,13 +166,11 @@ void movingSquare() {
 void square() {
   for (int i = 0; i < 4; i++) {
     lasers[i].setColorRGB(255, 0, 0);
-    lasers[i].sendTo(0, 0);
     lasers[i].on();
+    lasers[i].sendTo(0, 0);
     lasers[i].sendTo(0, 4095);
     lasers[i].sendTo(4095, 4095);
     lasers[i].sendTo(4095, 0);
-    lasers[i].sendTo(0, 0);
-    lasers[i].off();
   }
 }
 
@@ -113,7 +182,7 @@ void circle() {
       lasers[i].on();
       lasers[i].sendTo(SIN(r)*scale + 2048, COS(r)*scale + 2048);
     }
-    lasers[i].off();
+    //lasers[i].off();
   }
 }
 

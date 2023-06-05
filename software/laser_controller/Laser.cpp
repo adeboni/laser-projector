@@ -15,18 +15,16 @@ Laser::Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t dacPin) 
   _dacPin = dacPin;
   pinMode(dacPin, OUTPUT);
   digitalWrite(dacPin, HIGH);
-  //calculateHomography();
+  calculateHomography();
 }
 
 void Laser::setQuality(float quality) {
   _quality = quality;
 }
 
-void Laser::setDelays(int toggleDelay, int lineEndDelay, int endDelay, int midDelay) {
+void Laser::setDelays(int toggleDelay, int dacDelay) {
   if (toggleDelay >= 0) _toggleDelay = toggleDelay;
-  if (lineEndDelay >= 0) _lineEndDelay = lineEndDelay;
-  if (endDelay >= 0) _endDelay = endDelay;
-  if (midDelay >= 0) _midDelay = midDelay;
+  if (dacDelay >= 0) _dacDelay = dacDelay;
 }
 
 void Laser::setMirroring(bool x, bool y, bool xy) {
@@ -71,43 +69,34 @@ void Laser::setClipAreaBottom(int x3, int y3, int x4, int y4) {
 }
 
 void Laser::setWarpArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
-  _warpPoly[0] = x1;
-  _warpPoly[1] = y1;
-  _warpPoly[2] = x2;
-  _warpPoly[3] = y2;
-  _warpPoly[4] = x3;
-  _warpPoly[5] = y3;
-  _warpPoly[6] = x4;
-  _warpPoly[7] = y4;
+  _warpPolyDst[0] = x1;
+  _warpPolyDst[1] = y1;
+  _warpPolyDst[2] = x2;
+  _warpPolyDst[3] = y2;
+  _warpPolyDst[4] = x3;
+  _warpPolyDst[5] = y3;
+  _warpPolyDst[6] = x4;
+  _warpPolyDst[7] = y4;
   calculateHomography();
 }
 
 void Laser::setWarpAreaTop(int x1, int y1, int x2, int y2) {
-  _warpPoly[0] = x1;
-  _warpPoly[1] = y1;
-  _warpPoly[2] = x2;
-  _warpPoly[3] = y2;
+  _warpPolyDst[0] = x1;
+  _warpPolyDst[1] = y1;
+  _warpPolyDst[2] = x2;
+  _warpPolyDst[3] = y2;
   calculateHomography();
 }
 
 void Laser::setWarpAreaBottom(int x3, int y3, int x4, int y4) {
-  _warpPoly[4] = x3;
-  _warpPoly[5] = y3;
-  _warpPoly[6] = x4;
-  _warpPoly[7] = y4;
+  _warpPolyDst[4] = x3;
+  _warpPolyDst[5] = y3;
+  _warpPolyDst[6] = x4;
+  _warpPolyDst[7] = y4;
   calculateHomography();
 }
 
-void Laser::setDistortionFactors(int x, float y) {
-  _xDistortionFactor = x;
-  _yDistortionFactor = y;
-}
-
 void Laser::writeDAC(int x, int y) {
-  //apply distortion corrections
-  //x = ((x - 2048) * COS(ABS(y - 2048) / _xDistortionFactor)) + 2048;
-  //y = ((y - 2048) * _yDistortionFactor) + 2048;
-
   //warpPerspective(x, y);
 
   int x1 = constrain(x, 0, 4095);
@@ -130,6 +119,8 @@ void Laser::writeDAC(int x, int y) {
   SPI.transfer(y1 & 0xff);
   digitalWrite(_dacPin, HIGH); 
   SPI.endTransaction();
+
+  if (_dacDelay > 0) delayMicroseconds(_dacDelay);
 }
 
 bool Laser::clipLine(int& x1, int& y1, int& x2, int& y2) { 
@@ -193,23 +184,22 @@ void Laser::sendToRaw(int xNew, int yNew) {
   float diffy = abs(fdiffy) / _quality;
 
   // use the bigger direction 
-  fdiffx = fdiffx / max(diffx, diffy);
-  fdiffy = fdiffy / max(diffx, diffy);
+  float maxDiff = max(diffx, diffy);
+  fdiffx = fdiffx / maxDiff;
+  fdiffy = fdiffy / maxDiff;
+  
   // interpolate in FIXPT
   float tmpx = 0;
   float tmpy = 0;
-  for (int i = 0; i < diffx - 1; i++) {
+  for (int i = 0; i < maxDiff - 1; i++) {
     tmpx += fdiffx;
     tmpy += fdiffy;
-    writeDAC(_x + tmpx, _y + tmpy);
-    if (_midDelay > 0) delayMicroseconds(_midDelay);
+    writeDAC(_x + (int)tmpx, _y + (int)tmpy);
   }
   
   _x = xNew;
   _y = yNew;
   writeDAC(_x, _y);
-
-  if (_endDelay > 0) delayMicroseconds(_endDelay);
 }
 
 void Laser::drawLine(int x1, int y1, int x2, int y2) {
@@ -217,9 +207,9 @@ void Laser::drawLine(int x1, int y1, int x2, int y2) {
     off();
     sendTo(x1, y1);
   } 
+  
   on();
   sendTo(x2, y2);
-  if (_lineEndDelay > 0) delayMicroseconds(_lineEndDelay);
 }
 
 unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
@@ -282,11 +272,6 @@ void Laser::getQuality(float& quality) {
   quality = _quality;
 }
 
-void Laser::getDistortionFactors(int& x, float& y) {
-  x = _xDistortionFactor;
-  y = _yDistortionFactor;
-}
-
 void Laser::getMirroring(bool& x, bool& y, bool& xy) {
   x = _mirrorX;
   y = _mirrorY;
@@ -315,20 +300,19 @@ void Laser::getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, in
 }
 
 void Laser::getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
-  x1 = _warpPoly[0];
-  y1 = _warpPoly[1];
-  x2 = _warpPoly[2];
-  y2 = _warpPoly[3];
-  x3 = _warpPoly[4];
-  y3 = _warpPoly[5];
-  x4 = _warpPoly[6];
-  y4 = _warpPoly[7];
+  x1 = _warpPolyDst[0];
+  y1 = _warpPolyDst[1];
+  x2 = _warpPolyDst[2];
+  y2 = _warpPolyDst[3];
+  x3 = _warpPolyDst[4];
+  y3 = _warpPolyDst[5];
+  x4 = _warpPolyDst[6];
+  y4 = _warpPolyDst[7];
 }
 
-void Laser::getDelays(int& toggleDelay, int& lineEndDelay, int& endDelay) {
+void Laser::getDelays(int& toggleDelay, int& dacDelay) {
   toggleDelay = _toggleDelay;
-  lineEndDelay = _lineEndDelay;
-  endDelay = _endDelay;
+  dacDelay = _dacDelay;
 }
 
 void Laser::calculateHomography() {
@@ -340,8 +324,8 @@ void Laser::calculateHomography() {
     coefMat.m[2 * i][3] = 0;
     coefMat.m[2 * i][4] = 0;
     coefMat.m[2 * i][5] = 0;
-    coefMat.m[2 * i][6] = -_warpPolySrc[2 * i] * _warpPoly[2 * i];
-    coefMat.m[2 * i][7] = -_warpPolySrc[2 * i + 1] * _warpPoly[2 * i];
+    coefMat.m[2 * i][6] = -_warpPolyDst[2 * i] * _warpPolySrc[2 * i];
+    coefMat.m[2 * i][7] = -_warpPolyDst[2 * i] * _warpPolySrc[2 * i + 1];
 
     coefMat.m[2 * i + 1][0] = 0;
     coefMat.m[2 * i + 1][1] = 0;
@@ -349,15 +333,16 @@ void Laser::calculateHomography() {
     coefMat.m[2 * i + 1][3] = _warpPolySrc[2 * i];
     coefMat.m[2 * i + 1][4] = _warpPolySrc[2 * i + 1];
     coefMat.m[2 * i + 1][5] = 1;
-    coefMat.m[2 * i + 1][6] = -_warpPolySrc[2 * i] * _warpPoly[2 * i + 1];
-    coefMat.m[2 * i + 1][7] = -_warpPolySrc[2 * i + 1] * _warpPoly[2 * i + 1];
+    coefMat.m[2 * i + 1][6] = -_warpPolyDst[2 * i + 1] * _warpPolySrc[2 * i];
+    coefMat.m[2 * i + 1][7] = -_warpPolyDst[2 * i + 1] * _warpPolySrc[2 * i + 1];
   }
 
   float dstVec[8];
   for (int i = 0; i < 8; i++)
-    dstVec[i] = _warpPoly[i];
+    dstVec[i] = _warpPolyDst[i];
 
   Matrix8 invCoefMat = Matrix8::invert(coefMat);
+
   for (int i = 0; i < 8; i++) {
     _homography[i] = 0;
     for (int j = 0; j < 8; j++)
@@ -371,6 +356,6 @@ void Laser::warpPerspective(int& x, int& y) {
   float dst2 = _homography[3] * x + _homography[4] * y + _homography[5];
   float dst3 = _homography[6] * x + _homography[7] * y + _homography[8];
 
-  x = (int)(dst2 / dst3);
-  y = (int)(dst1 / dst3);
+  x = (int)(dst1 / dst3);
+  y = (int)(dst2 / dst3);
 }

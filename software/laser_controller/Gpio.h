@@ -26,6 +26,8 @@ public:
   uint8_t getMode();
   int getCV(uint8_t index);
   int getCV(uint8_t index, int min, int max);
+  void setCVTarget(uint8_t index, int value, int delta);
+  void clearCVTarget(uint8_t index);
   bool isButtonPressed(uint8_t button);
   bool isButtonReleased(uint8_t button);
   void printButtons();
@@ -36,6 +38,8 @@ private:
   const int _cvPins[6] = {23, 22, 21, 20, 26, 27};
   const int _rxPin = 25;
   const int _txPin = 24;
+  int _cvTargets[6] = {-1, -1, -1, -1, -1, -1};
+  int _cvTargetDeltas[6] = {0, 0, 0, 0, 0, 0};
 };
 
 #endif

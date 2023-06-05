@@ -6,11 +6,9 @@
 #include <SPI.h>
 
 #define PWM_FREQ 375000
-#define DEFAULT_QUALITY 32
+#define DEFAULT_QUALITY 16
 #define DEFAULT_TOGGLE_DELAY 500
-#define DEFAULT_LINE_DELAY 200
-#define DEFAULT_END_DELAY 100
-#define DEFAULT_MID_DELAY 100
+#define DEFAULT_DAC_DELAY 100
 #define DEFAULT_X_DISTORTION 54
 #define DEFAULT_Y_DISTORTION 0.95
 
@@ -29,7 +27,6 @@ public:
   // setting smaller values will slow down the rendering but will cause more linearity in the galvo movement,
   // setting bigger values will cause faster rendering, but lines will not be straight anymore.
   void setQuality(float quality);
-  void setDistortionFactors(int x, float y);
   void setMirroring(bool x, bool y, bool xy);
   void setScale(float scaleX, float scaleY);
   void setOffset(int offsetX, int offsetY);
@@ -39,16 +36,15 @@ public:
   void setWarpArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);
   void setWarpAreaTop(int x1, int y1, int x2, int y2);
   void setWarpAreaBottom(int x3, int y3, int x4, int y4);
-  void setDelays(int toggleDelay, int lineEndDelay, int endDelay, int midDelay);
+  void setDelays(int toggleDelay, int dacDelay);
 
   void getQuality(float& quality);
-  void getDistortionFactors(int& x, float& y);
   void getMirroring(bool& x, bool& y, bool& xy);
   void getScale(float& scaleX, float& scaleY);
   void getOffset(int& offsetX, int& offsetY);
   void getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
   void getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
-  void getDelays(int& toggleDelay, int& lineEndDelay, int& endDelay);
+  void getDelays(int& toggleDelay, int& dacDelay);
 
   void setEnable3D(bool flag) { _enable3D = flag; }
   void setMatrix(const Matrix4& matrix) { _matrix = matrix; }
@@ -78,20 +74,15 @@ private:
 
   int _clipPoly[8] = {0, 0, 4095, 0, 4095, 4095, 0, 4095};
   int _warpPolySrc[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
-  int _warpPoly[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
-  float _homography[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+  int _warpPolyDst[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
+  float _homography[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 
   int _toggleDelay = DEFAULT_TOGGLE_DELAY;
-  int _lineEndDelay = DEFAULT_LINE_DELAY;
-  int _endDelay = DEFAULT_END_DELAY;
-  int _midDelay = DEFAULT_MID_DELAY;
+  int _dacDelay = DEFAULT_DAC_DELAY;
 
   bool _enable3D = false;
   Matrix4 _matrix;
   int _zDist = 10000;
-
-  int _xDistortionFactor = DEFAULT_X_DISTORTION;
-  float _yDistortionFactor = DEFAULT_Y_DISTORTION;
 
   bool clipLine(int& x1, int& y1, int& x2, int& y2);
   void sendToRaw(int x, int y);

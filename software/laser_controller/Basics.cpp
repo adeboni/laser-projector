@@ -12,10 +12,6 @@ void SWAP(int &x, int &y) {
   int z = x; x = y; y = z;
 }
 
-void SWAP(float &x, float &y) {
-  float z = x; x = y; y = z;
-}
-
 Matrix4 Matrix4::multiply(const Matrix4 &mat1, const Matrix4 &mat2) {
   Matrix4 mat;
   for (unsigned char c=0; c<4; c++)
@@ -95,11 +91,27 @@ Matrix8 Matrix8::invert(const Matrix8& mat) {
   Matrix8 res;
   int perm[8];
   Matrix8 lum = decompose(mat, perm);
-  float b[8];
+  float x[8];
+  
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++)
-      b[j] = i == perm[j] ? 1.0 : 0.0;
-    float* x = helperSolve(lum, b);
+      x[j] = i == perm[j] ? 1.0 : 0.0;
+
+    for (int k = 0; k < 8; k++) {
+      float sum = x[k];
+      for (int w = 0; w < k; w++)
+        sum -= lum.m[k][w] * x[w];
+      x[k] = sum;
+    }
+    
+    x[7] /= lum.m[7][7];
+    for (int k = 6; k >= 0; k--) {
+      float sum = x[k];
+      for (int w = k + 1; w < 8; w++)
+        sum -= lum.m[k][w] * x[w];
+      x[k] = sum / lum.m[k][k];
+    }
+    
     for (int j = 0; j < 8; j++)
       res.m[j][i] = x[j];
   }
@@ -124,12 +136,18 @@ Matrix8 Matrix8::decompose(const Matrix8& mat, int* perm) {
     }
 
     if (pRow != j) {
-      for (int k = 0; k < 8; k++)
-        SWAP(res.m[pRow][k], res.m[j][k]);
-      SWAP(perm[pRow], perm[j]);
+      for (int k = 0; k < 8; k++) {
+        float temp = res.m[pRow][k];
+        res.m[pRow][k] = res.m[j][k];
+        res.m[j][k] = temp;
+      }
+
+      float temp = perm[pRow];
+      perm[pRow] = perm[j];
+      perm[j] = temp;
     }
 
-    if (res.m[j][j] == 0.0){
+    if (res.m[j][j] == 0.0) {
       int goodRow = -1;
 
       for (int row = j + 1; row < 8; row++)
@@ -139,9 +157,15 @@ Matrix8 Matrix8::decompose(const Matrix8& mat, int* perm) {
       if (goodRow == -1)
         return res;
       
-      for (int k = 0; k < 8; k++)
-        SWAP(res.m[goodRow][k], res.m[j][k]);
-      SWAP(perm[goodRow], perm[j]);
+      for (int k = 0; k < 8; k++) {
+        float temp = res.m[goodRow][k];
+        res.m[goodRow][k] = res.m[j][k];
+        res.m[j][k] = temp;
+      }
+
+      float temp = perm[goodRow];
+      perm[goodRow] = perm[j];
+      perm[j] = temp;
     }
 
     for (int i = j + 1; i < 8; i++) {
@@ -154,24 +178,13 @@ Matrix8 Matrix8::decompose(const Matrix8& mat, int* perm) {
   return res;
 }
 
-float* Matrix8::helperSolve(const Matrix8& luMat, float* b) {
-  float x[8];
-  memcpy(x, b, sizeof(float)*8);
-
-  for (int i = 1; i < 8; i++) {
-    float sum = x[i];
-    for (int j = 0; j < i; ++j)
-      sum -= luMat.m[i][j] * x[j];
-    x[i] = sum;
+void Matrix8::print(const Matrix8& mat) {
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 8; j++) {
+      Serial.print(mat.m[i][j]);
+      Serial.print(", ");
+    }
+    Serial.println();
   }
-  
-  x[7] /= luMat.m[7][7];
-  for (int i = 6; i >= 0; i--) {
-    double sum = x[i];
-    for (int j = i + 1; j < 8; ++j)
-      sum -= luMat.m[i][j] * x[j];
-    x[i] = sum / luMat.m[i][i];
-  }
-
-  return x;
+  Serial.println();
 }

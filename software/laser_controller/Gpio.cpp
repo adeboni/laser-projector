@@ -35,11 +35,28 @@ uint8_t Gpio::getMode() {
 }
 
 int Gpio::getCV(uint8_t index, int min, int max) {
-  return map(getCV(index), 0, 1023, min, max);
+  int res = map(getCV(index), 0, 1023, min, max);
+
+  if (_cvTargets[index] != -1 && abs(res - _cvTargets[index]) < _cvTargetDeltas[index])
+    clearCVTarget(index);
+
+  if (_cvTargets[index] == -1)
+    return res;
+  else
+    return _cvTargets[index];
 }
 
 int Gpio::getCV(uint8_t index) {
   return adc->analogRead(_cvPins[index], ADC_1);
+}
+
+void Gpio::setCVTarget(uint8_t index, int value, int delta) {
+  _cvTargets[index] = value;
+  _cvTargetDeltas[index] = delta;
+}
+
+void Gpio::clearCVTarget(uint8_t index) {
+  _cvTargets[index] = -1;
 }
 
 void Gpio::displayError(uint8_t value) {

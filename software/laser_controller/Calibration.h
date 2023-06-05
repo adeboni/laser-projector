@@ -6,11 +6,10 @@
 
 #define MODE_END_CAL        -1
 #define MODE_OFFSET          0
-#define MODE_DISTORTION      1
-#define MODE_CLIPPING_TOP    2
-#define MODE_CLIPPING_BOTTOM 3
-#define MODE_WARP_TOP        4
-#define MODE_WARP_BOTTOM     5
+#define MODE_CLIPPING_TOP    1
+#define MODE_CLIPPING_BOTTOM 2
+#define MODE_WARP_TOP        3
+#define MODE_WARP_BOTTOM     4
 
 void offsetAlignment();
 void distortionAlignment();
