@@ -39,7 +39,7 @@ void loadSettings() {
     lasers[i].setScale(settingsJson["L"][i][0].as<int>() / 100.0, settingsJson["L"][i][1].as<int>() / 100.0);
     lasers[i].setOffset(settingsJson["L"][i][2].as<int>(), settingsJson["L"][i][3].as<int>());
     lasers[i].setMirroring(false, true, false);
-    /*
+    
     lasers[i].setClipArea(
        settingsJson["L"][i][4].as<int>(),
        settingsJson["L"][i][5].as<int>(),
@@ -50,6 +50,7 @@ void loadSettings() {
        settingsJson["L"][i][10].as<int>(),
        settingsJson["L"][i][11].as<int>()
     );
+    
     lasers[i].setWarpArea(
        settingsJson["L"][i][12].as<int>(),
        settingsJson["L"][i][13].as<int>(),
@@ -60,7 +61,6 @@ void loadSettings() {
        settingsJson["L"][i][18].as<int>(),
        settingsJson["L"][i][19].as<int>()
     );
-    */
   }
   
   Serial.println("Loaded settings");
@@ -80,7 +80,6 @@ void saveSettings() {
     settingsJson["L"][i][2] = _xo;
     settingsJson["L"][i][3] = _yo;
 
-    /*
     int _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4;
     lasers[i].getClipArea(_x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4);
     settingsJson["L"][i][4] = _x1;
@@ -101,7 +100,6 @@ void saveSettings() {
     settingsJson["L"][i][17] = _y3;
     settingsJson["L"][i][18] = _x4;
     settingsJson["L"][i][19] = _y4;
-    */
   }
 
   SD.remove("/settings.json");
@@ -262,9 +260,10 @@ void linearFFT() {
 void cube() { 
   static double nextTick = millis();
   static Vector3 meshRotation = {0, 0, 0};
+  static bool dataInit = false;
   int projNodes[cubeMesh.numNodes][2];
-  const int zDist = 10000;
-  int mScale = 30;
+  const int zDist = 1000;
+  int mScale = 10;
   
   while (millis() > nextTick) {
     Matrix4 world = Matrix4::rotateX(meshRotation.x);
@@ -286,18 +285,21 @@ void cube() {
     if (meshRotation.y > 360) meshRotation.y = 0;
     if (meshRotation.z > 360) meshRotation.z = 0;
 
-    nextTick += 20.0;
-  }    
+    nextTick += 40.0;
+    dataInit = true;
+  }   
+
+  if (!dataInit) return;
 
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
-  
+
   int numEdgeLines = 0;
   int numInteriorLines = 0;
   int edgeLines[cubeMesh.numTriangles * 3][4];
   int interiorLines[cubeMesh.numTriangles * 3][4];
   MeshManager::processMesh(projNodes, cubeMesh, numEdgeLines, edgeLines, numInteriorLines, interiorLines);
-
+  
   int numAllLines = numEdgeLines + numInteriorLines;
   int allLines[numAllLines][4];
   int orderedAllLines[numAllLines][4];
