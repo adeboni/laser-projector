@@ -7,6 +7,7 @@
 #include "AudioProcessor.h"
 #include "MeshManager.h"
 #include "Calibration.h"
+#include "FrameManager.h"
 
 Laser lasers[4] = {
   Laser(0, 4, 8, 39), 
@@ -14,16 +15,11 @@ Laser lasers[4] = {
   Laser(2, 6, 10, 37), 
   Laser(3, 7, 32, 36)
 };
-
-const char* modeNames[] = {"Circle", "Circle 2", "Linear FFT", "Circle FFT", 
-                           "Square", "Moving Square", "Cube", "Rotating Circle", 
-                           "CV Values", "", "", "",
-                           "", "", "", ""};
                            
 ADC *adc = new ADC();
 Gpio gpio;
 AudioProcessor audio;
-DynamicJsonDocument settingsJson(1024);
+DynamicJsonDocument settingsJson(2048);
 
 Mesh cubeMesh;
 
@@ -305,8 +301,26 @@ void cube() {
   int orderedAllLines[numAllLines][4];
   MeshManager::mergeLines(numEdgeLines, edgeLines, numInteriorLines, interiorLines, allLines);
   MeshManager::orderLines(numAllLines, allLines, orderedAllLines);
-  for (int i = 0; i < numAllLines; i++)
-    lasers[0].drawLine(orderedAllLines[i][0], orderedAllLines[i][1], orderedAllLines[i][2], orderedAllLines[i][3]); 
+
+  int _x = -1;
+  int _y = -1;
+  for (int i = 0; i < numAllLines; i++) {
+    int x1 = orderedAllLines[i][0];
+    int y1 = orderedAllLines[i][1];
+    int x2 = orderedAllLines[i][2];
+    int y2 = orderedAllLines[i][3];
+
+    if (x1 != _x || y1 != _y) {
+      lasers[0].off();
+      lasers[0].sendTo(x1, y1);
+    }
+
+    lasers[0].on();
+    lasers[0].sendTo(x2, y2);
+
+    _x = x2;
+    _y = y2;
+  }
 }
 
 ///////////////////////////////////////
@@ -446,6 +460,30 @@ void drawBike() {
 }
 
 
+
+void frameTest() {
+  MasterFrame mf;
+
+  mf.insertMove(0, 200, 200, 0, 0, 255, true);
+  mf.insertMove(0, 200, 1000, 0, 0, 255, true);
+  mf.insertMove(0, 1000, 1000, 0, 0, 255, true);
+  mf.insertMove(0, 1000, 200, 0, 0, 255, true);
+
+  mf.insertMove(0, 2200, 2200, 0, 0, 255, false);
+  mf.insertMove(0, 2200, 3000, 0, 0, 255, true);
+  mf.insertMove(0, 3000, 3000, 0, 0, 255, true);
+  mf.insertMove(0, 3000, 2200, 0, 0, 255, true);
+  mf.insertMove(0, 200, 200, 0, 0, 255, false);
+
+  mf.insertMove(1, 200, 200, 0, 0, 255, true);
+  mf.insertMove(1, 200, 1000, 0, 0, 255, true);
+  mf.insertMove(1, 1000, 1000, 0, 0, 255, true);
+  mf.insertMove(1, 1000, 200, 0, 0, 255, true);
+
+  mf.drawFrame();
+}
+
+
 ///////////////////////////////////////
 
 
@@ -468,11 +506,13 @@ void loop() {
 
   if (lastMode != mode) {
     lastMode = mode;
-    gpio.sendUart(modeNames[mode], "");
+    //gpio.sendUart(modeNames[mode], "");
   }
   
   switch (mode) {
-    case 0: circle(); break;
+    //case 0: cube(); break;
+    case 0: frameTest(); break;
+    //case 0: circle(); break;
     case 1: circle2(); break;
     case 2: rotatingCircle(); break;
     case 3: linearFFT(); break;

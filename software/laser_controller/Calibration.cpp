@@ -12,19 +12,19 @@ void offsetAlignment() {
 
   float _xs, _ys;
   lasers[selectedLaser].getScale(_xs, _ys);
-  gpio.setCVTarget(0, (int)(_xs * 100), 3);
-  gpio.setCVTarget(1, (int)(_ys * 100), 3);
+  gpio.setCVTarget(0, (int)(_xs * 100), 10);
+  gpio.setCVTarget(1, (int)(_ys * 100), 10);
 
   int _xo, _yo;
   lasers[selectedLaser].getOffset(_xo, _yo);
-  gpio.setCVTarget(2, _xo, 50);
-  gpio.setCVTarget(3, _yo, 50);
+  gpio.setCVTarget(2, _xo, 200);
+  gpio.setCVTarget(3, _yo, 200);
 
   while (selectedMode == MODE_OFFSET) {
-    int xs = gpio.getCV(0, 30, 120);
-    int ys = gpio.getCV(1, 30, 120);
-    int xo = gpio.getCV(2, 0, 1500);
-    int yo = gpio.getCV(3, 0, 1500);
+    int xs = gpio.getCV(0, 5, 150);
+    int ys = gpio.getCV(1, 5, 150);
+    int xo = gpio.getCV(2, -2000, 2000);
+    int yo = gpio.getCV(3, -2000, 2000);
    
     lasers[selectedLaser].setScale(xs / 100.0, ys / 100.0);
     lasers[selectedLaser].setOffset(xo, yo);

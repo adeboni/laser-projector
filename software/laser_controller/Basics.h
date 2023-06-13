@@ -35,17 +35,6 @@ struct Matrix8 {
   static void print(const Matrix8& mat);
 };
 
-struct LaserFrame {
-  Vector3 point;
-  Color color;
-  bool laserOn;
-};
-
-struct MasterFrame {
-  int numPoints[4] = {0, 0, 0, 0};
-  LaserFrame laserFrame[4][1024];
-};
-
 float SIN(unsigned int angle);
 float COS(unsigned int angle);
 void SWAP(int &x, int &y);

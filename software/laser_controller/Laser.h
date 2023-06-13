@@ -8,7 +8,7 @@
 #define PWM_FREQ 375000
 #define DEFAULT_QUALITY 16
 #define DEFAULT_TOGGLE_DELAY 500
-#define DEFAULT_DAC_DELAY 100
+#define DEFAULT_DAC_DELAY 150
 #define DEFAULT_X_DISTORTION 54
 #define DEFAULT_Y_DISTORTION 0.95
 
@@ -16,7 +16,8 @@ class Laser {
 public:
   Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t dacPin);
   void sendTo(int x, int y);
-  void drawLine(int x1, int y1, int x2, int y2);
+  void writeDAC(int x, int y);
+  bool clipLine(int& x1, int& y1, int& x2, int& y2);
   void setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness);
   void setColorRGB(uint8_t red, uint8_t green, uint8_t blue);
   void setColor(const Color& color);
@@ -37,6 +38,8 @@ public:
   void setWarpAreaTop(int x1, int y1, int x2, int y2);
   void setWarpAreaBottom(int x3, int y3, int x4, int y4);
   void setDelays(int toggleDelay, int dacDelay);
+  void setPreviousPosition(int x, int y);
+  void setPreviousPositionClipped(int x, int y);
 
   void getQuality(float& quality);
   void getMirroring(bool& x, bool& y, bool& xy);
@@ -45,6 +48,8 @@ public:
   void getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
   void getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4);
   void getDelays(int& toggleDelay, int& dacDelay);
+  void getPreviousPosition(int& x, int& y);
+  void getPreviousPositionClipped(int& x, int& y);
 
   void setEnable3D(bool flag) { _enable3D = flag; }
   void setMatrix(const Matrix4& matrix) { _matrix = matrix; }
@@ -56,8 +61,6 @@ private:
   Color _color;
   int _laserOn = false;
 
-  int _sentX = 0;
-  int _sentY = 0;
   int _x = 0; 
   int _y = 0;
   int _oldX = 0;
@@ -84,9 +87,7 @@ private:
   Matrix4 _matrix;
   int _zDist = 10000;
 
-  bool clipLine(int& x1, int& y1, int& x2, int& y2);
   void sendToRaw(int x, int y);
-  void writeDAC(int x, int y);
   void calculateHomography();
   void warpPerspective(int& x, int& y);
   

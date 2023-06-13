@@ -22,9 +22,18 @@ void Laser::setQuality(float quality) {
   _quality = quality;
 }
 
+void Laser::getQuality(float& quality) {
+  quality = _quality;
+}
+
 void Laser::setDelays(int toggleDelay, int dacDelay) {
   if (toggleDelay >= 0) _toggleDelay = toggleDelay;
   if (dacDelay >= 0) _dacDelay = dacDelay;
+}
+
+void Laser::getDelays(int& toggleDelay, int& dacDelay) {
+  toggleDelay = _toggleDelay;
+  dacDelay = _dacDelay;
 }
 
 void Laser::setMirroring(bool x, bool y, bool xy) {
@@ -33,14 +42,30 @@ void Laser::setMirroring(bool x, bool y, bool xy) {
   _mirrorXY = xy;
 }
 
+void Laser::getMirroring(bool& x, bool& y, bool& xy) {
+  x = _mirrorX;
+  y = _mirrorY;
+  xy = _mirrorXY;
+}
+
 void Laser::setScale(float scaleX, float scaleY) { 
   _scaleX = scaleX;
   _scaleY = scaleY;
 }
 
+void Laser::getScale(float& scaleX, float& scaleY) {
+  scaleX = _scaleX;
+  scaleY = _scaleY;
+}
+
 void Laser::setOffset(int offsetX, int offsetY) { 
   _offsetX = offsetX;
   _offsetY = offsetY;
+}
+
+void Laser::getOffset(int& offsetX, int& offsetY) {
+  offsetX = _offsetX;
+  offsetY = _offsetY;
 }
 
 void Laser::setClipArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
@@ -66,6 +91,17 @@ void Laser::setClipAreaBottom(int x3, int y3, int x4, int y4) {
   _clipPoly[5] = y3;
   _clipPoly[6] = x4;
   _clipPoly[7] = y4;
+}
+
+void Laser::getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
+  x1 = _clipPoly[0];
+  y1 = _clipPoly[1];
+  x2 = _clipPoly[2];
+  y2 = _clipPoly[3];
+  x3 = _clipPoly[4];
+  y3 = _clipPoly[5];
+  x4 = _clipPoly[6];
+  y4 = _clipPoly[7];
 }
 
 void Laser::setWarpArea(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
@@ -95,6 +131,94 @@ void Laser::setWarpAreaBottom(int x3, int y3, int x4, int y4) {
   _warpPolyDst[7] = y4;
   calculateHomography();
 }
+
+void Laser::getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
+  x1 = _warpPolyDst[0];
+  y1 = _warpPolyDst[1];
+  x2 = _warpPolyDst[2];
+  y2 = _warpPolyDst[3];
+  x3 = _warpPolyDst[4];
+  y3 = _warpPolyDst[5];
+  x4 = _warpPolyDst[6];
+  y4 = _warpPolyDst[7];
+}
+
+void Laser::setPreviousPosition(int x, int y) {
+  _oldX = x;
+  _oldY = y;
+}
+
+void Laser::getPreviousPosition(int& x, int& y) {
+  x = _oldX;
+  y = _oldY;
+}
+
+void Laser::setPreviousPositionClipped(int x, int y) {
+  _x = x;
+  _y = y;
+}
+
+void Laser::getPreviousPositionClipped(int& x, int& y) {
+  x = _x;
+  y = _y;
+}
+
+
+unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
+  if (hue < 60) return v1 * 60 + (v2 - v1) * hue;
+  if (hue < 180) return v2 * 60;
+  if (hue < 240) return v1 * 60 + (v2 - v1) * (240 - hue);
+  return v1 * 60;
+}
+
+void Laser::setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness) {
+  unsigned int red, green, blue;
+  unsigned int var1, var2;
+
+  if (hue > 359) hue = hue % 360;
+  if (saturation > 100) saturation = 100;
+  if (lightness > 100) lightness = 100;
+
+  if (saturation == 0) {
+    red = green = blue = lightness * 255 / 100;
+  } else {
+    if (lightness < 50) var2 = lightness * (100 + saturation);
+    else var2 = ((lightness + saturation) * 100) - (saturation * lightness);
+    var1 = lightness * 200 - var2;
+    red = h2rgb(var1, var2, (hue < 240) ? hue + 120 : hue - 240) * 255 / 600000;
+    green = h2rgb(var1, var2, hue) * 255 / 600000;
+    blue = h2rgb(var1, var2, (hue >= 120) ? hue - 120 : hue + 240) * 255 / 600000;
+  }
+
+  setColorRGB(red, green, blue);
+}
+
+void Laser::setColorRGB(uint8_t red, uint8_t green, uint8_t blue) {
+  _color.r = red;
+  _color.g = green;
+  _color.b = blue;
+}
+
+void Laser::setColor(const Color& color) {
+  _color = color;
+}
+
+void Laser::on() {
+  if (!_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
+  _laserOn = true;
+  analogWrite(_redPin, _color.r);
+  analogWrite(_greenPin, _color.g);
+  analogWrite(_bluePin, _color.b);
+}
+
+void Laser::off() {
+  if (_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
+  _laserOn = false;
+  analogWrite(_redPin, 0);
+  analogWrite(_greenPin, 0);
+  analogWrite(_bluePin, 0);
+}
+
 
 void Laser::writeDAC(int x, int y) {
   warpPerspective(x, y);
@@ -151,9 +275,6 @@ bool Laser::clipLine(int& x1, int& y1, int& x2, int& y2) {
 }
 
 void Laser::sendTo(int xpos, int ypos) {
-  _sentX = xpos;
-  _sentY = ypos;
-
   if (_enable3D) {
     Vector3 p1 = {xpos - 2048, ypos - 2048, 0};
     Vector3 p = Matrix4::applyMatrix(_matrix, p1);
@@ -202,118 +323,6 @@ void Laser::sendToRaw(int xNew, int yNew) {
   writeDAC(_x, _y);
 }
 
-void Laser::drawLine(int x1, int y1, int x2, int y2) {
-  if (_sentX != x1 || _sentY != y1) {
-    off();
-    sendTo(x1, y1);
-  } 
-  
-  on();
-  sendTo(x2, y2);
-}
-
-unsigned int Laser::h2rgb(unsigned int v1, unsigned int v2, unsigned int hue) {
-  if (hue < 60) return v1 * 60 + (v2 - v1) * hue;
-  if (hue < 180) return v2 * 60;
-  if (hue < 240) return v1 * 60 + (v2 - v1) * (240 - hue);
-  return v1 * 60;
-}
-
-void Laser::setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness) {
-  unsigned int red, green, blue;
-  unsigned int var1, var2;
-
-  if (hue > 359) hue = hue % 360;
-  if (saturation > 100) saturation = 100;
-  if (lightness > 100) lightness = 100;
-
-  // algorithm from: http://www.easyrgb.com/index.php?X=MATH&H=19#text19
-  if (saturation == 0) {
-    red = green = blue = lightness * 255 / 100;
-  } else {
-    if (lightness < 50) var2 = lightness * (100 + saturation);
-    else var2 = ((lightness + saturation) * 100) - (saturation * lightness);
-    var1 = lightness * 200 - var2;
-    red = h2rgb(var1, var2, (hue < 240) ? hue + 120 : hue - 240) * 255 / 600000;
-    green = h2rgb(var1, var2, hue) * 255 / 600000;
-    blue = h2rgb(var1, var2, (hue >= 120) ? hue - 120 : hue + 240) * 255 / 600000;
-  }
-
-  setColorRGB(red, green, blue);
-}
-
-void Laser::setColorRGB(uint8_t red, uint8_t green, uint8_t blue) {
-  _color.r = red;
-  _color.g = green;
-  _color.b = blue;
-}
-
-void Laser::setColor(const Color& color) {
-  _color = color;
-}
-
-void Laser::on() {
-  if (!_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
-  _laserOn = true;
-  analogWrite(_redPin, _color.r);
-  analogWrite(_greenPin, _color.g);
-  analogWrite(_bluePin, _color.b);
-}
-
-void Laser::off() {
-  if (_laserOn && _toggleDelay > 0) delayMicroseconds(_toggleDelay);
-  _laserOn = false;
-  analogWrite(_redPin, 0);
-  analogWrite(_greenPin, 0);
-  analogWrite(_bluePin, 0);
-}
-
-void Laser::getQuality(float& quality) {
-  quality = _quality;
-}
-
-void Laser::getMirroring(bool& x, bool& y, bool& xy) {
-  x = _mirrorX;
-  y = _mirrorY;
-  xy = _mirrorXY;
-}
-
-void Laser::getScale(float& scaleX, float& scaleY) {
-  scaleX = _scaleX;
-  scaleY = _scaleY;
-}
-
-void Laser::getOffset(int& offsetX, int& offsetY) {
-  offsetX = _offsetX;
-  offsetY = _offsetY;
-}
-
-void Laser::getClipArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
-  x1 = _clipPoly[0];
-  y1 = _clipPoly[1];
-  x2 = _clipPoly[2];
-  y2 = _clipPoly[3];
-  x3 = _clipPoly[4];
-  y3 = _clipPoly[5];
-  x4 = _clipPoly[6];
-  y4 = _clipPoly[7];
-}
-
-void Laser::getWarpArea(int& x1, int& y1, int& x2, int& y2, int& x3, int& y3, int& x4, int& y4) {
-  x1 = _warpPolyDst[0];
-  y1 = _warpPolyDst[1];
-  x2 = _warpPolyDst[2];
-  y2 = _warpPolyDst[3];
-  x3 = _warpPolyDst[4];
-  y3 = _warpPolyDst[5];
-  x4 = _warpPolyDst[6];
-  y4 = _warpPolyDst[7];
-}
-
-void Laser::getDelays(int& toggleDelay, int& dacDelay) {
-  toggleDelay = _toggleDelay;
-  dacDelay = _dacDelay;
-}
 
 void Laser::calculateHomography() {
   Matrix8 coefMat;
@@ -337,16 +346,12 @@ void Laser::calculateHomography() {
     coefMat.m[2 * i + 1][7] = -_warpPolyDst[2 * i + 1] * _warpPolySrc[2 * i + 1];
   }
 
-  float dstVec[8];
-  for (int i = 0; i < 8; i++)
-    dstVec[i] = _warpPolyDst[i];
-
   Matrix8 invCoefMat = Matrix8::invert(coefMat);
 
   for (int i = 0; i < 8; i++) {
     _homography[i] = 0;
     for (int j = 0; j < 8; j++)
-      _homography[i] += invCoefMat.m[i][j] * dstVec[j];
+      _homography[i] += invCoefMat.m[i][j] * _warpPolyDst[j];
   }
   _homography[8] = 1;
 }
