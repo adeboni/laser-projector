@@ -11,11 +11,21 @@ Mesh MeshManager::loadMesh(const char *filename) {
   Mesh mesh;
   
   mesh.numNodes = meshJson["NC"].as<int>();
+
+  mesh.nodes = (int**)malloc(mesh.numNodes * sizeof(int*));
+  for (int i = 0; i < mesh.numNodes; i++)
+    mesh.nodes[i] = (int*)malloc(3 * sizeof(int));
+
   for (int i = 0; i < mesh.numNodes; i++)
     for (int j = 0; j < 3; j++)
       mesh.nodes[i][j] = (int)(meshJson["N"][i][j].as<float>());
      
   mesh.numTriangles = meshJson["TC"].as<int>();
+
+  mesh.triangles = (int**)malloc(mesh.numTriangles * sizeof(int*));
+  for (int i = 0; i < mesh.numTriangles; i++)
+    mesh.triangles[i] = (int*)malloc(3 * sizeof(int));
+
   for (int i = 0; i < mesh.numTriangles; i++)
     for (int j = 0; j < 3; j++)
       mesh.triangles[i][j] = meshJson["T"][i][j].as<int>();
@@ -25,7 +35,17 @@ Mesh MeshManager::loadMesh(const char *filename) {
   return mesh;
 }
 
-void MeshManager::printMesh(Mesh mesh) {
+void MeshManager::disposeMesh(Mesh mesh) {
+  for (int i = 0; i < mesh.numNodes; i++)
+    free(mesh.nodes[i]);
+  free(mesh.nodes);
+  
+  for (int i = 0; i < mesh.numTriangles; i++)
+    free(mesh.triangles[i]);
+  free(mesh.triangles);
+}
+
+void MeshManager::printMesh(const Mesh& mesh) {
   Serial.printf("Num Nodes: %d\r\n", mesh.numNodes);
   Serial.printf("Num Triangles: %d\r\n", mesh.numTriangles);
   Serial.println("Nodes:");

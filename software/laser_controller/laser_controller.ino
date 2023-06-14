@@ -220,7 +220,8 @@ void circleFFT() {
   audio.decay = 100;
   lasers[0].setColorRGB(255, 0, 0);
   int i = 4;
-  float firstX, firstY;
+  float firstX = 2048;
+  float firstY = 2048;
   for (int r = 0; r <= 360; r+=8, i++) {    
     float d = ((float)audio.bands[i] / 25 + 5) * 50;
     float x = SIN((r + rotate) % 360) * d + 2048;
@@ -348,53 +349,6 @@ void staticText() {
   Drawing::drawString("HELLO WORLD", 1000, 2048, 0.25);
 }
 
-
-void drawScroller() {
-  lasers[0].setColorRGB(0, 0, 255);
-  String s = "HELLO WORLD";
-  int speed = 100;
-  float scale = 0.5;
-  
-  int charW = Drawing::advance('I');
-  int maxChar = (4096. / (charW * scale));
-  char buffer[100];
-  for (int j = 0; j < maxChar; j++)
-    buffer[j] = ' ';
-  
-  int scrollX = 0;
-  for (int c = 0; c < s.length() + maxChar; c++) {
-    int currentScroll = Drawing::advance(buffer[0]);
-    while (scrollX < currentScroll) {
-      long time = millis();
-      int x = -scrollX;;
-      bool somethingDrawn = false;
-      for (int i = 0;i<maxChar;i++) {
-        if (buffer[i] != ' ')
-          somethingDrawn = true;
-        
-        x += Drawing::drawLetter(buffer[i], x, 2048);
-
-        if (x > 4096 / scale)
-          break;
-      }
-      if (!somethingDrawn) 
-        scrollX = currentScroll; 
-      scrollX += speed / scale;
-      long elapsed = millis() - time;
-      if (elapsed < 50) 
-        delay(50 - elapsed); 
-    }
-    scrollX -= currentScroll;
-    for (int k = 0; k < maxChar - 1; k++)
-      buffer[k] = buffer[k+1];
-    
-    if (c < s.length())
-      buffer[maxChar-1] = s[c];
-    else
-      buffer[maxChar-1] = ' ';
-  }
-}
-
 void globe() {
   lasers[0].setColorRGB(0, 0, 255);
   lasers[0].on();
@@ -519,8 +473,8 @@ void loop() {
   }
   
   switch (mode) {
-    //case 0: cube(); break;
-    case 0: frameTest(); break;
+    case 0: cube(); break;
+    //case 0: frameTest(); break;
     //case 0: circle(); break;
     case 1: circle2(); break;
     case 2: rotatingCircle(); break;
