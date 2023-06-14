@@ -6,8 +6,6 @@
 #include "Basics.h"
 #include "Laser.h"
 
-#define BASE_QUALITY 32
-
 extern Laser lasers[4];
 
 struct FrameSegment {
@@ -29,8 +27,6 @@ private:
 	LinkedList<FrameSegment> segmentRaw[4];
 	LinkedList<FrameSegment> segment[4];
 	bool laserEnabled[4] = {false, false, false, false};
-	float quality[4] = {BASE_QUALITY, BASE_QUALITY, BASE_QUALITY, BASE_QUALITY};
-	int repeats[4] = {1, 1, 1, 1};
 	
 	void calculateFrames();
 };

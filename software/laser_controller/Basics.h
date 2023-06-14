@@ -35,6 +35,7 @@ struct Matrix8 {
   static void print(const Matrix8& mat);
 };
 
+int ABS(int x);
 float SIN(unsigned int angle);
 float COS(unsigned int angle);
 void SWAP(int &x, int &y);

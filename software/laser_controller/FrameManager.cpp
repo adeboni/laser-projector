@@ -1,5 +1,7 @@
 #include "FrameManager.h"
 
+#define BASE_QUALITY 32
+
 MasterFrame::MasterFrame() {
 	for (int i = 0; i < 4; i++) {
 		segmentRaw[i] = LinkedList<FrameSegment>();
@@ -15,12 +17,7 @@ void MasterFrame::insertMove(uint8_t laser, int x, int y, int r, int g, int b, b
 	lasers[laser].getScale(_scaleX, _scaleY);
 	lasers[laser].getOffset(_offsetX, _offsetY);
 	lasers[laser].getPreviousPosition(_oldX, _oldY);
-	
-	_scaleX = 1;
-	_scaleY = 1;
-	_offsetX = 0;
-	_offsetY = 0;
-	
+
 	int xNew = (int)(x * _scaleX) + _offsetX;
 	int yNew = (int)(y * _scaleY) + _offsetY; 
 	int clipX = xNew;
@@ -41,7 +38,9 @@ void MasterFrame::insertMove(uint8_t laser, int x, int y, int r, int g, int b, b
 }
 
 void MasterFrame::calculateFrames() {
-	long totalLength[4] = {0, 0, 0, 0};
+	int totalLength[4] = {0, 0, 0, 0};
+	float quality[4] = {BASE_QUALITY, BASE_QUALITY, BASE_QUALITY, BASE_QUALITY};
+	int repeats[4] = {1, 1, 1, 1};
 	int maxIndex = 0;
 	
 	// find the laser that does the most drawing
@@ -51,7 +50,9 @@ void MasterFrame::calculateFrames() {
 		int _y = 0;
 		
 		for (int i = 0; i < segmentRaw[l].size(); i++) {
-			totalLength[l] += max(abs(segmentRaw[l].get(i).x - _x), abs(segmentRaw[l].get(i).y - _y));
+			int diffx = ABS(segmentRaw[l].get(i).x - _x);
+			int diffy = ABS(segmentRaw[l].get(i).y - _y);
+			totalLength[l] += max(diffx, diffy);
 			_x = segmentRaw[l].get(i).x;
 			_y = segmentRaw[l].get(i).y;
 		}
@@ -73,50 +74,52 @@ void MasterFrame::calculateFrames() {
 	
 	for (int l = 0; l < 4; l++) {
 		if (!laserEnabled[l]) continue;
-		int _x, _y;
-		lasers[l].getPreviousPositionClipped(_x, _y);
 		
-		for (int i = 0; i < segmentRaw[l].size(); i++) {
-		  // divide into equal parts, using _quality
-		  float fdiffx = segmentRaw[l].get(i).x - _x;
-		  float fdiffy = segmentRaw[l].get(i).y - _y;
-		  float diffx = abs(fdiffx) / quality[l];
-		  float diffy = abs(fdiffy) / quality[l];
+		for (int r = 0; r < repeats[l]; r++) {
+			for (int i = 0; i < segmentRaw[l].size(); i++) {
+			  int _x, _y;
+			  lasers[l].getPreviousPositionClipped(_x, _y);
+				
+			  // divide into equal parts, using _quality
+			  float fdiffx = segmentRaw[l].get(i).x - _x;
+			  float fdiffy = segmentRaw[l].get(i).y - _y;
+			  float diffx = abs(fdiffx) / quality[l];
+			  float diffy = abs(fdiffy) / quality[l];
 
-		  // use the bigger direction 
-		  float maxDiff = max(diffx, diffy);
-		  fdiffx = fdiffx / maxDiff;
-		  fdiffy = fdiffy / maxDiff;
-		  
-		  // interpolate in FIXPT
-		  float tmpx = 0;
-		  float tmpy = 0;
-		  for (int j = 0; j < maxDiff - 1; j++) {
-			tmpx += fdiffx;
-			tmpy += fdiffy;
-			
-			FrameSegment fs = {_x + (int)tmpx, _y + (int)tmpy,
-							   segmentRaw[l].get(i).r, 
-							   segmentRaw[l].get(i).g, 
-							   segmentRaw[l].get(i).b, 
-							   segmentRaw[l].get(i).on};
-							   
-			segment[l].add(fs);
-		  }
-		  
-		  lasers[l].setPreviousPositionClipped(segmentRaw[l].get(i).x, segmentRaw[l].get(i).y);
-		  
-		  FrameSegment fs = {segmentRaw[l].get(i).x,
-							 segmentRaw[l].get(i).y,
-							 segmentRaw[l].get(i).r, 
-							 segmentRaw[l].get(i).g, 
-							 segmentRaw[l].get(i).b, 
-							 segmentRaw[l].get(i).on};
-							   
-		  segment[l].add(fs);
+			  // use the bigger direction 
+			  float maxDiff = max(diffx, diffy);
+			  fdiffx = fdiffx / maxDiff;
+			  fdiffy = fdiffy / maxDiff;
+			  
+			  // interpolate in FIXPT
+			  float tmpx = 0;
+			  float tmpy = 0;
+			  for (int j = 0; j < maxDiff - 1; j++) {
+				tmpx += fdiffx;
+				tmpy += fdiffy;
+				
+				FrameSegment fs = {_x + (int)tmpx, _y + (int)tmpy,
+								   segmentRaw[l].get(i).r, 
+								   segmentRaw[l].get(i).g, 
+								   segmentRaw[l].get(i).b, 
+								   segmentRaw[l].get(i).on};
+								   
+				segment[l].add(fs);
+			  }
+			  
+			  lasers[l].setPreviousPositionClipped(segmentRaw[l].get(i).x, segmentRaw[l].get(i).y);
+			  
+			  FrameSegment fs = {segmentRaw[l].get(i).x,
+								 segmentRaw[l].get(i).y,
+								 segmentRaw[l].get(i).r, 
+								 segmentRaw[l].get(i).g, 
+								 segmentRaw[l].get(i).b, 
+								 segmentRaw[l].get(i).on};
+								   
+			  segment[l].add(fs);
+			}
 		}
 	}
-	
 	/*
 	int numActiveLasers = 0;
 	for (int l = 0; l < 4; l++)
@@ -142,8 +145,7 @@ void MasterFrame::drawFrame() {
 			if (segment[l][i].on) lasers[l].on();
 			else lasers[l].off();
 			
-			Serial.printf("%d %d %d\r\n", l, segment[l].get(i).x, segment[l].get(i).y);
-			//lasers[l].writeDAC(segment[l].get(i).x, segment[l].get(i).y);
+			lasers[l].writeDAC(segment[l].get(i).x, segment[l].get(i).y);
 		}
 	}
 }

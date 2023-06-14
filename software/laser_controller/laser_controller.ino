@@ -464,21 +464,30 @@ void drawBike() {
 void frameTest() {
   MasterFrame mf;
 
-  mf.insertMove(0, 200, 200, 0, 0, 255, true);
-  mf.insertMove(0, 200, 1000, 0, 0, 255, true);
-  mf.insertMove(0, 1000, 1000, 0, 0, 255, true);
-  mf.insertMove(0, 1000, 200, 0, 0, 255, true);
+  mf.insertMove(0, 1200, 1200, 0, 0, 255, true);
+  mf.insertMove(0, 1200, 2000, 0, 0, 255, true);
+  mf.insertMove(0, 2000, 2000, 0, 0, 255, true);
+  mf.insertMove(0, 2000, 1200, 0, 0, 255, true);
 
   mf.insertMove(0, 2200, 2200, 0, 0, 255, false);
+  
   mf.insertMove(0, 2200, 3000, 0, 0, 255, true);
   mf.insertMove(0, 3000, 3000, 0, 0, 255, true);
   mf.insertMove(0, 3000, 2200, 0, 0, 255, true);
-  mf.insertMove(0, 200, 200, 0, 0, 255, false);
+  mf.insertMove(0, 2200, 2200, 0, 0, 255, true);
+  
+  mf.insertMove(0, 1200, 1200, 0, 0, 255, false);
 
-  mf.insertMove(1, 200, 200, 0, 0, 255, true);
-  mf.insertMove(1, 200, 1000, 0, 0, 255, true);
-  mf.insertMove(1, 1000, 1000, 0, 0, 255, true);
-  mf.insertMove(1, 1000, 200, 0, 0, 255, true);
+  mf.insertMove(2, 1200, 1200, 0, 0, 255, true);
+  mf.insertMove(2, 1200, 2000, 0, 0, 255, true);
+  mf.insertMove(2, 2000, 2000, 0, 0, 255, true);
+  mf.insertMove(2, 2000, 1200, 0, 0, 255, true);
+
+  mf.insertMove(1, 2200, 3000, 0, 0, 255, true);
+  mf.insertMove(1, 3000, 3000, 0, 0, 255, true);
+  mf.insertMove(1, 3000, 2200, 0, 0, 255, true);
+  mf.insertMove(1, 2200, 2200, 0, 0, 255, true);
+
 
   mf.drawFrame();
 }

@@ -12,6 +12,10 @@ void SWAP(int &x, int &y) {
   int z = x; x = y; y = z;
 }
 
+int ABS(int x) {
+  return x < 0 ? -x : x;
+}
+
 Matrix4 Matrix4::multiply(const Matrix4 &mat1, const Matrix4 &mat2) {
   Matrix4 mat;
   for (unsigned char c=0; c<4; c++)
