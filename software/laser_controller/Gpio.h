@@ -22,7 +22,6 @@ public:
   void setLEDs(uint8_t value);
   void displayError(uint8_t value);
   bool readUart();
-  void sendUart(const char *line1, const char *line2);
   uint8_t getMode();
   int getCV(uint8_t index);
   int getCV(uint8_t index, int min, int max);

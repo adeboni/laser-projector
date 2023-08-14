@@ -21,8 +21,6 @@ Gpio gpio;
 AudioProcessor audio;
 DynamicJsonDocument settingsJson(2048);
 
-Mesh cubeMesh;
-
 void loadSettings() {
   Serial.println("Loading settings");
   
@@ -35,7 +33,10 @@ void loadSettings() {
     lasers[i].setScale(settingsJson["L"][i][0].as<int>() / 100.0, settingsJson["L"][i][1].as<int>() / 100.0);
     lasers[i].setOffset(settingsJson["L"][i][2].as<int>(), settingsJson["L"][i][3].as<int>());
     lasers[i].setMirroring(false, true, false);
+
+    lasers[i].setClipArea(29, 882, 4095 - 29, 882, 4095 - 1367, 4095 - 882, 1367, 4095 - 882);
     
+    /*
     lasers[i].setClipArea(
        settingsJson["L"][i][4].as<int>(),
        settingsJson["L"][i][5].as<int>(),
@@ -57,6 +58,7 @@ void loadSettings() {
        settingsJson["L"][i][18].as<int>(),
        settingsJson["L"][i][19].as<int>()
     );
+    */
   }
   
   Serial.println("Loaded settings");
@@ -122,376 +124,89 @@ void setup() {
         saveSettings();
     } 
   }
-
-  cubeMesh = MeshManager::loadMesh("/cube.json");
 }
 
-void movingSquare() {
-  static int dir = 0;
-  static long x = 0;
-  static long y = 0;
-  long squareSize = 400;
-  long moveAmount = 10;
-  lasers[0].setColorRGB(255, 0, 0);
-  
-  lasers[0].sendTo(x, y);
-  lasers[0].on();
-  lasers[0].sendTo(x + squareSize, y);
-  lasers[0].sendTo(x + squareSize, y + squareSize);
-  lasers[0].sendTo(x, y + squareSize);
-  lasers[0].sendTo(x, y);
-  lasers[0].off();
-  
-  if (dir == 0) {
-    x = constrain(x + moveAmount, 0, 4095 - squareSize);
-    if (x + squareSize == 4095) dir = 1;
-  } else if (dir == 1) {
-    y = constrain(y + moveAmount, 0, 4095 - squareSize);
-    if (y + squareSize == 4095) dir = 2;
-  } else if (dir == 2) {
-    x = constrain(x - moveAmount, 0, 4095 - squareSize);
-    if (x == 0) dir = 3;
-  } else if (dir == 3) {
-    y = constrain(y - moveAmount, 0, 4095 - squareSize);
-    if (y == 0) dir = 0;
-  }
-}
+//////////////////
 
-void square() {
-  for (int i = 0; i < 4; i++) {
-    lasers[i].setColorRGB(255, 0, 0);
-    lasers[i].on();
-    lasers[i].sendTo(0, 0);
-    lasers[i].sendTo(0, 4095);
-    lasers[i].sendTo(4095, 4095);
-    lasers[i].sendTo(4095, 0);
-  }
-}
+#define NUM_BUBBLES 6
+void bubbles(int laser, int r, int g, int b) {
+  static int xPos[NUM_BUBBLES] = {-1, 300, 1600, 500, 900, 700};
+  static int yPos[NUM_BUBBLES] = {-1, 1500, 3000, 1200, 700, 900};
+  static int rotate[NUM_BUBBLES] = {0};
 
-void circle() {
-  const int scale = 1000;
-  for (int i = 0; i < 4; i++) {
-    for (int r = 0; r <= 360; r += 5) {
-      lasers[i].setColorHSL(r, 100, 50); 
-      lasers[i].on();
-      lasers[i].sendTo(SIN(r)*scale + 2048, COS(r)*scale + 2048);
-    }
-    //lasers[i].off();
-  }
-}
-
-void circle2() {
-  const int scale = 1000;
-  for (int i = 0; i < 4; i++) {
-    for (int r = 0; r <= 360; r += 5) {
-      if (r < 120)      { lasers[i].setColorRGB(255, 0, 0); lasers[i].on(); lasers[i].off(); }
-      else if (r < 240) { lasers[i].setColorRGB(0, 255, 0); lasers[i].on(); lasers[i].off(); }
-      else              { lasers[i].setColorRGB(0, 0, 255); lasers[i].on(); lasers[i].off(); }
-      
-      lasers[i].sendTo(SIN(r)*scale + 2048, COS(r)*scale + 2048);
-    }
-    lasers[i].off();
-  }
-}
-
-void rotatingCircle() {
-  static Vector3 rotation = {0, 0, 0};
-  
-  Matrix4 world = Matrix4::rotateX(rotation.x);
-  world = Matrix4::multiply(Matrix4::rotateY(rotation.y), world);
-  world = Matrix4::multiply(Matrix4::rotateZ(rotation.z), world);
-  lasers[0].setEnable3D(true);
-  lasers[0].setMatrix(world);
-  circle2();
-  lasers[0].setEnable3D(false);
-  
-  rotation.x += 3;
-  rotation.y += 2;
-  rotation.z += 1;
-
-  if (rotation.x > 360) rotation.x = 0;
-  if (rotation.y > 360) rotation.y = 0;
-  if (rotation.z > 360) rotation.z = 0; 
-}
-
-void circleFFT() {
-  static int rotate = 0;
   audio.updateFFT();
   audio.decay = 100;
-  lasers[0].setColorRGB(255, 0, 0);
-  int i = 4;
-  float firstX = 2048;
-  float firstY = 2048;
-  for (int r = 0; r <= 360; r+=8, i++) {    
-    float d = ((float)audio.bands[i] / 25 + 5) * 50;
-    float x = SIN((r + rotate) % 360) * d + 2048;
-    float y = COS((r + rotate) % 360) * d + 2048;
-    lasers[0].sendTo(x, y);
-    if (r == 0) {    
-      lasers[0].on();
-      firstX = x;
-      firstY = y;
-    }
-  }
-  rotate++;
-  lasers[0].sendTo(firstX, firstY);
-  lasers[0].off();
-}
 
-void linearFFT() {
-  audio.updateFFT();
-  audio.decay = 30;
-  lasers[0].setColorRGB(255, 0, 0);
-  long step = 4096 / FFT_DISPLAY_BINS;
-  long pos = 100;
-  lasers[0].sendTo(pos, 2048);
-  lasers[0].on();
-  for (int i = 0; i < FFT_DISPLAY_BINS; i++) {
-    lasers[0].sendTo(pos, audio.bands[i] + 2048);  
-    pos += step;
-    if (pos > 4095) break;
-  }
-  lasers[0].off();
-}
-
-void cube() { 
-  static double nextTick = millis();
-  static Vector3 meshRotation = {0, 0, 0};
-  static bool dataInit = false;
-  int projNodes[cubeMesh.numNodes][2];
-  const int zDist = 1000;
-  int mScale = 10;
-  
-  while (millis() > nextTick) {
-    Matrix4 world = Matrix4::rotateX(meshRotation.x);
-    world = Matrix4::multiply(Matrix4::rotateY(meshRotation.y), world);
-    world = Matrix4::multiply(Matrix4::rotateZ(meshRotation.z), world);
-
-    for (uint8_t i = 0; i < cubeMesh.numNodes; i++) {
-      Vector3 in = {cubeMesh.nodes[i][0], cubeMesh.nodes[i][1], cubeMesh.nodes[i][2]};
-      Vector3 p = Matrix4::applyMatrix(world, in);
-      projNodes[i][0] = (zDist * p.x) / (zDist + p.z) * mScale + 2048;
-      projNodes[i][1] = (zDist * p.y) / (zDist + p.z) * mScale + 2048;
+  for (int i = 0; i < NUM_BUBBLES; i++) {
+    if (yPos[i] > 4000 || yPos[i] == -1) {
+      yPos[i] = 0;
+      xPos[i] = random(3800) + 100;
+      rotate[i] = random(360);
     }
 
-    meshRotation.x += 3;
-    meshRotation.y += 2;
-    meshRotation.z += 1;
+    lasers[laser].setColorRGB(r, g, b);
 
-    if (meshRotation.x > 360) meshRotation.x = 0;
-    if (meshRotation.y > 360) meshRotation.y = 0;
-    if (meshRotation.z > 360) meshRotation.z = 0;
-
-    nextTick += 40.0;
-    dataInit = true;
-  }   
-
-  if (!dataInit) return;
-
-  lasers[0].setColorRGB(0, 0, 255);
-  lasers[0].on();
-
-  int numEdgeLines = 0;
-  int numInteriorLines = 0;
-  int edgeLines[cubeMesh.numTriangles * 3][4];
-  int interiorLines[cubeMesh.numTriangles * 3][4];
-  MeshManager::processMesh(projNodes, cubeMesh, numEdgeLines, edgeLines, numInteriorLines, interiorLines);
-  
-  int numAllLines = numEdgeLines + numInteriorLines;
-  int allLines[numAllLines][4];
-  int orderedAllLines[numAllLines][4];
-  MeshManager::mergeLines(numEdgeLines, edgeLines, numInteriorLines, interiorLines, allLines);
-  MeshManager::orderLines(numAllLines, allLines, orderedAllLines);
-
-  int _x = -1;
-  int _y = -1;
-  for (int i = 0; i < numAllLines; i++) {
-    int x1 = orderedAllLines[i][0];
-    int y1 = orderedAllLines[i][1];
-    int x2 = orderedAllLines[i][2];
-    int y2 = orderedAllLines[i][3];
-
-    if (x1 != _x || y1 != _y) {
-      lasers[0].off();
-      lasers[0].sendTo(x1, y1);
+    int b = 4;
+    float firstX = 2048;
+    float firstY = 2048;
+    for (int r = 0; r <= 360; r+=90, b++) {    
+      float d = ((float)audio.bands[b] / 25 + 5) * map(yPos[i], 0, 4000, 20, 70) / 4;
+      float x = SIN((r + rotate[i]) % 360) * d + xPos[i] + SIN(yPos[i]) * 50 + SIN(xPos[i] * 50);
+      float y = COS((r + rotate[i]) % 360) * d + yPos[i];
+      lasers[laser].sendTo(x, y);
+      if (r == 0) {    
+        lasers[laser].on();
+        firstX = x;
+        firstY = y;
+      }
     }
 
-    lasers[0].on();
-    lasers[0].sendTo(x2, y2);
+    yPos[i] += random(5, 15) * 10;
+    rotate[i] += 3;
 
-    _x = x2;
-    _y = y2;
-  }
+    lasers[laser].sendTo(firstX, firstY);
+    lasers[laser].off();
+  }  
 }
 
-///////////////////////////////////////
-
-void countDown() {
-  static char j = '0';
-  static int i = 0;
-
-  lasers[0].setColorRGB(255, 0, 0);
-  Drawing::drawLetter(j, 2048, 2048);
-
-  if (i++ == 60) {
-    if (j == '9')
-      j = 'A';
-    else if (j == 'Z')
-      j = '0';
-    else 
-      j++;
-    i = 0;
-  }
-}
-
-void staticText() {
-  lasers[0].setColorRGB(255, 0, 0);
-  Drawing::drawString("HELLO WORLD", 1000, 2048, 0.25);
-}
-
-void globe() {
-  lasers[0].setColorRGB(0, 0, 255);
-  lasers[0].on();
-  int pos = random(360)/5 * 5;
-  int diff1 = random(35);
-  int diff2 = random(35);
-  int diff3 = random(35);
-  for (int r = 0; r <= 360; r += 5) {    
-    lasers[0].sendTo(2048 + SIN(r)*1000, 2048 + COS(r)*1000);
-    if (r == pos) {    
-      lasers[0].sendTo(2048 + SIN(r+diff1)*500, 2048 + COS(r+diff2)*500);
-      lasers[0].sendTo(2048 + SIN(r+diff2)*250, 2048 + COS(r+diff3)*250);
-      lasers[0].sendTo(2048, 2048);
-      lasers[0].sendTo(2048 + SIN(r+diff3)*250, 2048 + COS(r+diff3)*250);
-      lasers[0].sendTo(2048 + SIN(r+diff2)*500, 2048 + COS(r+diff1)*500);
-      lasers[0].sendTo(2048 + SIN(r)*1000, 2048 + COS(r)*1000);
-    }
-  }
-}
-
-void drawPlaneRotate() {
-  static Vector3 rotation = {0, 0, 0};
-
-  rotation.x += 3;
-  rotation.y += 2;
-  rotation.z += 1;
-
-  if (rotation.x > 360) rotation.x = 0;
-  if (rotation.y > 360) rotation.y = 0;
-  if (rotation.z > 360) rotation.z = 0; 
-
-  lasers[0].setColorRGB(255, 0, 0);
-  int centerX, centerY, w, h;
-  Drawing::calcObjectBox(draw_plane, sizeof(draw_plane)/4, centerX, centerY, w, h);
-  Drawing::drawObjectRotated3D(draw_plane, sizeof(draw_plane)/4, 2048 - w/2, 2048 - h/2, rotation);
-}
-
-void lfo() {
-  static int dx = 0;
-  static int dy = 0;
-  static int dc = 0;
-
+void lasersOff() {
   for (int i = 0; i < 4; i++) {
-    lasers[i].sendTo(2048 + SIN((dx/4)%360)*1000, 2048 + COS((dy/3)%360)*1000);
-    for (int x = 5; x <= 360; x += 5) { 
-      lasers[i].setColorHSL((x + dc) % 360, 100, 50);
-      lasers[i].on();
-      lasers[i].sendTo(2048 + SIN(((x+dx)/4)%360)*1000, 2048 + COS(((x+dy)/3)%360)*1000);
-    }
     lasers[i].off();
   }
-  
-  dx += 1;
-  dy += 2;
-  dc += 2;
 }
-
-void drawBike() {
-  lasers[0].setColorRGB(255, 0, 0);
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-      Drawing::drawObject(draw_bike, sizeof(draw_bike)/4, 2000 + i * 450, 2000 + j * 300, 0.5);
-}
-
-
-
-void frameTest() {
-  MasterFrame mf;
-
-  mf.insertMove(0, 1200, 1200, 0, 0, 255, true);
-  mf.insertMove(0, 1200, 2000, 0, 0, 255, true);
-  mf.insertMove(0, 2000, 2000, 0, 0, 255, true);
-  mf.insertMove(0, 2000, 1200, 0, 0, 255, true);
-
-  mf.insertMove(0, 2200, 2200, 0, 0, 255, false);
-  
-  mf.insertMove(0, 2200, 3000, 0, 0, 255, true);
-  mf.insertMove(0, 3000, 3000, 0, 0, 255, true);
-  mf.insertMove(0, 3000, 2200, 0, 0, 255, true);
-  mf.insertMove(0, 2200, 2200, 0, 0, 255, true);
-  
-  mf.insertMove(0, 1200, 1200, 0, 0, 255, false);
-
-  mf.insertMove(2, 1200, 1200, 0, 0, 255, true);
-  mf.insertMove(2, 1200, 2000, 0, 0, 255, true);
-  mf.insertMove(2, 2000, 2000, 0, 0, 255, true);
-  mf.insertMove(2, 2000, 1200, 0, 0, 255, true);
-
-  mf.insertMove(1, 2200, 3000, 0, 0, 255, true);
-  mf.insertMove(1, 3000, 3000, 0, 0, 255, true);
-  mf.insertMove(1, 3000, 2200, 0, 0, 255, true);
-  mf.insertMove(1, 2200, 2200, 0, 0, 255, true);
-
-
-  mf.drawFrame();
-}
-
 
 ///////////////////////////////////////
 
 
-void loop() {
-  static int lastMode = -1;
-  static int mode = 0;
-  static int lastKnobMode = 0;
-  
+void loop() { 
   if (gpio.readUart()) {
+    /*
     if (gpio.isButtonReleased(NES_A))
       mode = min(mode + 1, 15);
     else if (gpio.isButtonReleased(NES_B))
       mode = max(mode - 1, 0);
+    */
   }
  
-  int knobMode = gpio.getMode();
-  if (knobMode != lastKnobMode)
-    mode = lastKnobMode = knobMode;
-  gpio.setLEDs(mode);
-
-  if (lastMode != mode) {
-    lastMode = mode;
-    //gpio.sendUart(modeNames[mode], "");
-  }
-  
-  switch (mode) {
-    case 0: cube(); break;
-    //case 0: frameTest(); break;
-    //case 0: circle(); break;
-    case 1: circle2(); break;
-    case 2: rotatingCircle(); break;
-    case 3: linearFFT(); break;
-    case 4: circleFFT(); break;
-    case 5: square(); break;
-    case 6: movingSquare(); break;
-    case 7: cube(); break;
-    
-    case 8: countDown(); break;
-    case 9: staticText(); break;
-    //case 10: drawScroller(); break;
-    case 11: globe(); break;
-    case 12: lfo(); break;
-    case 13: drawBike(); break;
-    case 14: drawPlaneRotate(); break;
-    
-    //case 15: printCVs(); break;
+  gpio.setLEDs(gpio.getMode());
+  switch (gpio.getMode()) {
+    case 2: 
+      bubbles(0, 255, 0, 0); 
+      bubbles(1, 255, 0, 0); 
+      bubbles(2, 255, 0, 0); 
+      break;
+    case 3: 
+      bubbles(0, 0, 255, 0); 
+      bubbles(1, 0, 255, 0); 
+      bubbles(2, 0, 255, 0); 
+      break;
+    case 4: 
+      bubbles(0, 0, 0, 255); 
+      bubbles(1, 0, 0, 255); 
+      bubbles(2, 0, 0, 255); 
+      break;
+    default:
+      lasersOff();
+      break;
   }
 }

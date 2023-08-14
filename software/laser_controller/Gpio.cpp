@@ -5,12 +5,8 @@ SerialTransfer uartTransfer;
 uint8_t previousButtons = 0;
 
 struct {
-  char line1[41];
-  char line2[41];
-} txStruct;
-
-struct {
   uint8_t nes;
+  uint8_t mode;
 } rxStruct;
 
 Gpio::Gpio() {
@@ -19,8 +15,11 @@ Gpio::Gpio() {
   for (int i = 0; i < 6; i++)
     pinMode(_cvPins[i], INPUT);
 
-  Serial6.begin(115200);
+  Serial6.begin(9600);
   uartTransfer.begin(Serial6);
+
+  rxStruct.mode = 0;
+  rxStruct.nes = 255;
 }
 
 void Gpio::setLEDs(uint8_t value) {
@@ -31,7 +30,7 @@ void Gpio::setLEDs(uint8_t value) {
 }
 
 uint8_t Gpio::getMode() {
-  return adc->analogRead(_modePin, ADC_1) >> 6;
+  return rxStruct.mode;
 }
 
 int Gpio::getCV(uint8_t index, int min, int max) {
@@ -75,12 +74,6 @@ bool Gpio::readUart() {
     return true;
   }
   return false;
-}
-
-void Gpio::sendUart(const char *line1, const char *line2) {
-  sprintf(txStruct.line1, line1);
-  sprintf(txStruct.line2, line2);
-  uartTransfer.sendDatum(txStruct);
 }
 
 bool Gpio::isButtonPressed(uint8_t button) {

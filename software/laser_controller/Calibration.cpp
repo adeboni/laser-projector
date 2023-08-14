@@ -7,7 +7,7 @@ int selectedLaser = 0;
 int selectedMode = 0;
 
 void offsetAlignment() {
-  lasers[selectedLaser].setColorRGB(255, 0, 0);
+  lasers[selectedLaser].setColorRGB(0, 255, 0);
   lasers[selectedLaser].on();
 
   float _xs, _ys;
@@ -20,6 +20,9 @@ void offsetAlignment() {
   gpio.setCVTarget(2, _xo, 200);
   gpio.setCVTarget(3, _yo, 200);
 
+  int _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4;
+  lasers[selectedLaser].getClipArea(_x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4);
+
   while (selectedMode == MODE_OFFSET) {
     int xs = gpio.getCV(0, 5, 150);
     int ys = gpio.getCV(1, 5, 150);
@@ -29,10 +32,17 @@ void offsetAlignment() {
     lasers[selectedLaser].setScale(xs / 100.0, ys / 100.0);
     lasers[selectedLaser].setOffset(xo, yo);
     
+    /*
     lasers[selectedLaser].sendTo(2048, 0);
     lasers[selectedLaser].sendTo(4095, 2048);
     lasers[selectedLaser].sendTo(2048, 4095);
     lasers[selectedLaser].sendTo(0, 2048);
+    */
+
+    lasers[selectedLaser].sendTo(_x1 + 10, _y1 + 10);
+    lasers[selectedLaser].sendTo(_x2 - 10, _y2 + 10);
+    lasers[selectedLaser].sendTo(_x3 - 10, _y3 - 10);
+    lasers[selectedLaser].sendTo(_x4 + 10, _y4 - 10);
 
     checkButtons();
   }
@@ -164,10 +174,12 @@ void checkButtons() {
       selectedLaser = min(3, selectedLaser + 1);
     if (gpio.isButtonReleased(NES_LEFT))
       selectedLaser = max(0, selectedLaser - 1);
+    /*
     if (gpio.isButtonReleased(NES_UP))
       selectedMode = min(4, selectedMode + 1);
     if (gpio.isButtonReleased(NES_DOWN))
       selectedMode = max(0, selectedMode - 1);
+    */
   }
 }
 
@@ -181,10 +193,10 @@ void beginCalibration() {
      
     switch (selectedMode) {
       case MODE_OFFSET: offsetAlignment(); break;
-      case MODE_CLIPPING_TOP: clippingTopAlignment(); break;
-      case MODE_CLIPPING_BOTTOM: clippingBottomAlignment(); break;
-      case MODE_WARP_TOP: warpTopAlignment(); break;
-      case MODE_WARP_BOTTOM: warpBottomAlignment(); break;
+      //case MODE_CLIPPING_TOP: clippingTopAlignment(); break;
+      //case MODE_CLIPPING_BOTTOM: clippingBottomAlignment(); break;
+      //case MODE_WARP_TOP: warpTopAlignment(); break;
+      //case MODE_WARP_BOTTOM: warpBottomAlignment(); break;
       case MODE_END_CAL: return;
     }
   }

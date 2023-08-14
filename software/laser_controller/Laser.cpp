@@ -221,7 +221,7 @@ void Laser::off() {
 
 
 void Laser::writeDAC(int x, int y) {
-  warpPerspective(x, y);
+  //warpPerspective(x, y);
 
   int x1 = constrain(x, 0, 4095);
   int y1 = constrain(y, 0, 4095);
