@@ -6,9 +6,9 @@
 #include <SPI.h>
 
 #define PWM_FREQ 375000
-#define DEFAULT_QUALITY 16
+#define DEFAULT_QUALITY 32
 #define DEFAULT_TOGGLE_DELAY 500
-#define DEFAULT_DAC_DELAY 150
+#define DEFAULT_DAC_DELAY 650
 #define DEFAULT_X_DISTORTION 54
 #define DEFAULT_Y_DISTORTION 0.95
 
@@ -17,7 +17,8 @@ public:
   Laser(uint8_t redPin, uint8_t greenPin, uint8_t bluePin, uint8_t dacPin);
   void sendTo(int x, int y);
   void writeDAC(int x, int y);
-  bool clipLine(int& x1, int& y1, int& x2, int& y2);
+  bool clipLine(long& x0, long& y0, long& x1, long& y1);
+  //bool clipLine(int& x1, int& y1, int& x2, int& y2);
   void setColorHSL(unsigned int hue, unsigned int saturation, unsigned int lightness);
   void setColorRGB(uint8_t red, uint8_t green, uint8_t blue);
   void setColor(const Color& color);
@@ -75,6 +76,10 @@ private:
   int _offsetX = 0;
   int _offsetY = 0;
 
+  int _clipXMin = 29;
+  int _clipXMax = 4095 - 29;
+  int _clipYMin = 882;
+  int _clipYMax = 4095 - 882;
   int _clipPoly[8] = {0, 0, 4095, 0, 4095, 4095, 0, 4095};
   int _warpPolySrc[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
   int _warpPolyDst[8] = {1000, 1000, 3000, 1000, 3000, 3000, 1000, 3000};
@@ -92,6 +97,7 @@ private:
   void warpPerspective(int& x, int& y);
   
   unsigned int h2rgb(unsigned int v1, unsigned int v2, unsigned int hue);
+  int computeOutCode(long x, long y);
 };
 
 #endif

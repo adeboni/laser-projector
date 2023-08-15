@@ -20,10 +20,10 @@ void MasterFrame::insertMove(uint8_t laser, int x, int y, int r, int g, int b, b
 
 	int xNew = (int)(x * _scaleX) + _offsetX;
 	int yNew = (int)(y * _scaleY) + _offsetY; 
-	int clipX = xNew;
-	int clipY = yNew;
-	int oldX = _oldX;
-	int oldY = _oldY;
+	long clipX = xNew;
+	long clipY = yNew;
+	long oldX = _oldX;
+	long oldY = _oldY;
 	
 	if (lasers[laser].clipLine(oldX, oldY, clipX, clipY)) {
 		if (oldX != _oldX || oldY != _oldY) {

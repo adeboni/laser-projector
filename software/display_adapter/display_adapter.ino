@@ -89,10 +89,10 @@ void updateDisplay() {
       lcd.print("Laser Graphics");
       break;
     case 6:
-      lcd.print("Laser Etch-a-Sketch");
+      lcd.print("Laser Lissajou");
       break;
     case 7:
-      lcd.print("N/A");
+      lcd.print("Laser Etch-a-Sketch");
       break;
   }
 

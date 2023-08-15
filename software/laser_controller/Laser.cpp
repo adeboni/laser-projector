@@ -247,6 +247,83 @@ void Laser::writeDAC(int x, int y) {
   if (_dacDelay > 0) delayMicroseconds(_dacDelay);
 }
 
+const int INSIDE = 0; // 0000
+const int LEFT = 1;   // 0001
+const int RIGHT = 2;  // 0010
+const int BOTTOM = 4; // 0100
+const int TOP = 8;    // 1000
+
+int Laser::computeOutCode(long x, long y) {
+  int code = INSIDE;          // initialised as being inside of [[clip window]]
+
+  if (x < _clipXMin)           // to the left of clip window
+    code |= LEFT;
+  else if (x > _clipXMax)      // to the right of clip window
+    code |= RIGHT;
+  if (y < _clipYMin)           // below the clip window
+    code |= BOTTOM;
+  else if (y > _clipYMax)      // above the clip window
+    code |= TOP;
+
+  return code;
+}
+
+// Cohen–Sutherland clipping algorithm clips a line from
+// P0 = (x0, y0) to P1 = (x1, y1) against a rectangle with 
+// diagonal from (_clipXMin, _clipYMin) to (_clipXMax, _clipYMax).
+bool Laser::clipLine(long& x0, long& y0, long& x1, long& y1) {
+  // compute outcodes for P0, P1, and whatever point lies outside the clip rectangle
+  int outcode0 = computeOutCode(x0, y0);
+  int outcode1 = computeOutCode(x1, y1);
+  bool accept = false;
+  
+  while (true) {
+    if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
+      accept = true;
+      break;
+    } else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
+      break;
+    } else {
+      // failed both tests, so calculate the line segment to clip
+      // from an outside point to an intersection with clip edge
+      long x, y;
+
+      // At least one endpoint is outside the clip rectangle; pick it.
+      int outcodeOut = outcode0 ? outcode0 : outcode1;
+
+      // Now find the intersection point;
+      // use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
+      if (outcodeOut & TOP) {           // point is above the clip rectangle
+        x = x0 + (x1 - x0) * float(_clipYMax - y0) / float(y1 - y0);
+        y = _clipYMax;
+      } else if (outcodeOut & BOTTOM) { // point is below the clip rectangle
+        x = x0 + (x1 - x0) * float(_clipYMin - y0) / float(y1 - y0);
+        y = _clipYMin;
+      } else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
+        y = y0 + (y1 - y0) * float(_clipXMax - x0) / float(x1 - x0);
+        x = _clipXMax;
+      } else if (outcodeOut & LEFT) {   // point is to the left of clip rectangle
+        y = y0 + (y1 - y0) * float(_clipXMin - x0) / float(x1 - x0);
+        x = _clipXMin;
+      }
+
+      // Now we move outside point to intersection point to clip
+      // and get ready for next pass.
+      if (outcodeOut == outcode0) {
+        x0 = x;
+        y0 = y;
+        outcode0 = computeOutCode(x0, y0);
+      } else {
+        x1 = x;
+        y1 = y;
+        outcode1 = computeOutCode(x1, y1);
+      }
+    }
+  }
+  return accept;
+}
+/*
+
 bool Laser::clipLine(int& x1, int& y1, int& x2, int& y2) { 
   int dotx = x2 - x1;
   int doty = y2 - y1;
@@ -273,6 +350,7 @@ bool Laser::clipLine(int& x1, int& y1, int& x2, int& y2) {
   y1 = (int)(y1 + doty * tEnteringMax);
   return true;
 }
+*/
 
 void Laser::sendTo(int xpos, int ypos) {
   if (_enable3D) {
@@ -284,10 +362,10 @@ void Laser::sendTo(int xpos, int ypos) {
 
   int xNew = (int)(xpos * _scaleX) + _offsetX;
   int yNew = (int)(ypos * _scaleY) + _offsetY; 
-  int clipX = xNew;
-  int clipY = yNew;
-  int oldX = _oldX;
-  int oldY = _oldY;
+  long clipX = xNew;
+  long clipY = yNew;
+  long oldX = _oldX;
+  long oldY = _oldY;
   if (clipLine(oldX, oldY, clipX, clipY)) {
     if (oldX != _oldX || oldY != _oldY)
       sendToRaw(oldX, oldY);

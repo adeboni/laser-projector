@@ -129,44 +129,171 @@ void setup() {
 //////////////////
 
 #define NUM_BUBBLES 6
-void bubbles(int laser, int r, int g, int b) {
-  static int xPos[NUM_BUBBLES] = {-1, 300, 1600, 500, 900, 700};
-  static int yPos[NUM_BUBBLES] = {-1, 1500, 3000, 1200, 700, 900};
+void bubbles() {
+  static int xPos[NUM_BUBBLES] = {-1};
+  static int yPos[NUM_BUBBLES] = {-1};
   static int rotate[NUM_BUBBLES] = {0};
+  static int color[3] = {255};
 
   audio.updateFFT();
   audio.decay = 100;
+  for (int i = 0; i < 3; i++)
+    lasers[i].setDelays(-1, 150);
+
+  bool doReset = true;
+  for (int i = 0; i < NUM_BUBBLES; i++)
+    if (yPos[i] != -1)
+      doReset = false;
+
+  if (doReset) {
+    int x = random(1000, 3000);
+    for (int i = 0; i < NUM_BUBBLES; i++) {
+      xPos[i] = random(x - 500, x + 500);
+      yPos[i] = random(1000, 1400);
+      rotate[i] = random(360);
+      for (int c = 0; c < 3; c++)
+        color[c] = random(255);
+    }
+  }
 
   for (int i = 0; i < NUM_BUBBLES; i++) {
-    if (yPos[i] > 4000 || yPos[i] == -1) {
-      yPos[i] = 0;
-      xPos[i] = random(3800) + 100;
-      rotate[i] = random(360);
-    }
+    if (yPos[i] == -1)
+      continue;
 
-    lasers[laser].setColorRGB(r, g, b);
+    for (int i = 0; i < 3; i++)
+      lasers[i].setColorRGB(0, 0, 255);
+      //lasers[i].setColorRGB((int)((millis()) % 255), (int)((millis() + 85) % 255), (int)((millis() + 170) % 255));
 
     int b = 4;
     float firstX = 2048;
     float firstY = 2048;
-    for (int r = 0; r <= 360; r+=90, b++) {    
-      float d = ((float)audio.bands[b] / 25 + 5) * map(yPos[i], 0, 4000, 20, 70) / 4;
+    for (int r = 0; r <= 360; r+=45, b++) {    
+      float d = ((float)audio.bands[b] / 25 + 5) * map(yPos[i], 0, 4000, 20, 70) / 6;
       float x = SIN((r + rotate[i]) % 360) * d + xPos[i] + SIN(yPos[i]) * 50 + SIN(xPos[i] * 50);
       float y = COS((r + rotate[i]) % 360) * d + yPos[i];
-      lasers[laser].sendTo(x, y);
+      for (int i = 0; i < 3; i++)
+        lasers[i].sendTo(x, y);
       if (r == 0) {    
-        lasers[laser].on();
+        for (int i = 0; i < 3; i++)
+          lasers[i].on();
         firstX = x;
         firstY = y;
       }
     }
 
-    yPos[i] += random(5, 15) * 10;
+    yPos[i] += random(5, 15);
+    if (yPos[i] > 3200)
+      yPos[i] = -1;
     rotate[i] += 3;
 
-    lasers[laser].sendTo(firstX, firstY);
-    lasers[laser].off();
+    for (int i = 0; i < 3; i++) {
+      lasers[i].sendTo(firstX, firstY);
+      lasers[i].off();
+    }
   }  
+}
+
+
+void quads() {
+  static int xPos[] = {1500, 1500, 2500, 2500};
+  static int yPos[] = {1500, 2500, 2500, 1500};
+  static int xDir[] = {1, 1, -1, -1};
+  static int yDir[] = {1, -1, -1, 1};
+
+  //audio.updateFFT();
+  //audio.decay = 100;
+
+  for (int i = 0; i < 3; i++) {
+    lasers[i].setColorRGB(0, 255, 0);
+    //lasers[i].setColorRGB((int)((millis()) % 255), (int)((millis() + 85) % 255), (int)((millis() + 170) % 255));
+    lasers[i].on();
+    lasers[i].setDelays(-1, 350);
+
+    for (int p = 0; p < 4; p++)
+      lasers[i].sendTo(xPos[p], yPos[p]);
+      //lasers[i].sendTo(xPos[p] + audio.bands[1], yPos[p] + audio.bands[1]);
+  }
+
+  for (int p = 0; p < 4; p++) {
+    xPos[p] += xDir[p] * random(30);
+    if (xPos[p] > 2500 || xPos[p] < 1500) xDir[p] *= -1;
+    yPos[p] += yDir[p] * random(30);
+    if (yPos[p] > 2500 || yPos[p] < 1500) yDir[p] *= -1;
+  }
+}
+
+void lissajou() {
+  for (int i = 0; i < 3; i++) {
+    lasers[i].setColorRGB(0, 0, 255);
+    //lasers[i].setColorRGB((int)((millis() / 300) % 255), (int)((millis() / 300 + 85) % 255), (int)((millis() / 300 + 170) % 255));
+    lasers[i].on();
+    lasers[i].setDelays(-1, 150);
+  }
+
+  for (int i = 0; i < 720; i+=10) {
+    int x = (int)(sin((millis() / 30 + i) * PI / 360) * 500 + 2048);
+    int y = (int)(cos((millis() / 40 - i * 2) * PI / 180) * 500 + 2048);
+    for (int i = 0; i < 3; i++)
+      lasers[i].sendTo(x, y);
+  }
+}
+
+void etchasketch() {
+  static int xPos[100] = {0};
+  static int yPos[100] = {0};
+  static bool penDown[100] = {false};
+  static int numPoints = 0;
+  static int currX = 2048;
+  static int currY = 2048;
+  static bool currPen = true;
+
+  for (int i = 0; i < 3; i++) {
+    lasers[i].setColorRGB(0, 255, 0);
+    lasers[i].setDelays(-1, 350);
+    lasers[i].off();
+  }
+
+  gpio.readUart();
+
+  if (gpio.isButtonReleased(NES_SELECT))
+    numPoints = 0;
+
+  if (gpio.isButtonReleased(NES_B))
+    currPen = !currPen;
+
+  if (gpio.isButtonReleased(NES_A)) {
+    xPos[numPoints] = currX;
+    yPos[numPoints] = currY;
+    penDown[numPoints] = currPen;
+    numPoints++;
+  }
+
+  if (gpio.isButtonPressed(NES_LEFT))  currX = constrain(currX - 8, 1500, 2500);
+  if (gpio.isButtonPressed(NES_RIGHT)) currX = constrain(currX + 8, 1500, 2500);
+  if (gpio.isButtonPressed(NES_UP))    currY = constrain(currY + 8, 1500, 2500);
+  if (gpio.isButtonPressed(NES_DOWN))  currY = constrain(currY - 8, 1500, 2500);
+
+
+  for (int i = 0; i < numPoints; i++) {
+    if (penDown[i] && i > 0) lasers[1].on();
+    else lasers[1].off();
+    lasers[1].sendTo(xPos[i], yPos[i]);
+  }
+
+  if (currPen) lasers[1].on();
+  else lasers[1].off();
+  lasers[1].sendTo(currX, currY);
+  lasers[1].on();
+  delay(50);
+  lasers[1].off();
+}
+
+void equations() {
+  
+}
+
+void graphics() {
+  
 }
 
 void lasersOff() {
@@ -179,31 +306,26 @@ void lasersOff() {
 
 
 void loop() { 
-  if (gpio.readUart()) {
-    /*
-    if (gpio.isButtonReleased(NES_A))
-      mode = min(mode + 1, 15);
-    else if (gpio.isButtonReleased(NES_B))
-      mode = max(mode - 1, 0);
-    */
-  }
- 
+  gpio.readUart();
   gpio.setLEDs(gpio.getMode());
   switch (gpio.getMode()) {
     case 2: 
-      bubbles(0, 255, 0, 0); 
-      bubbles(1, 255, 0, 0); 
-      bubbles(2, 255, 0, 0); 
+      bubbles();
       break;
     case 3: 
-      bubbles(0, 0, 255, 0); 
-      bubbles(1, 0, 255, 0); 
-      bubbles(2, 0, 255, 0); 
+      quads(); 
       break;
-    case 4: 
-      bubbles(0, 0, 0, 255); 
-      bubbles(1, 0, 0, 255); 
-      bubbles(2, 0, 0, 255); 
+    case 4:
+      equations();
+      break;
+    case 5:
+      graphics();
+      break;
+    case 6:
+      lissajou();
+      break;
+    case 7:
+      etchasketch();
       break;
     default:
       lasersOff();
