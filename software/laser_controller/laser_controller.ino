@@ -236,14 +236,21 @@ void quads() {
   lasers[0].setDelays(-1, 350);
 
   while (currMode == 3) {
-    for (int p = 0; p < 4; p++)
-      lasers[0].sendTo(xPos[p], yPos[p]);
+    for (int i = 0; i < 3; i++) {
+      for (int p = 0; p < 5; p++) {
+        lasers[0].sendTo(xPos[p % 4] + i * 40, yPos[p % 4] + i * 35);
+        lasers[0].on();
+      }
+      lasers[0].off();
+    }
       
     for (int p = 0; p < 4; p++) {
-      xPos[p] += xDir[p] * random(10);
-      if (xPos[p] > 2500 || xPos[p] < 1500) xDir[p] *= -1;
-      yPos[p] += yDir[p] * random(10);
-      if (yPos[p] > 2500 || yPos[p] < 1500) yDir[p] *= -1;
+      xPos[p] += xDir[p] * random(20);
+      if (xPos[p] > 2500 || xPos[p] < 1000) 
+        xDir[p] *= -1;
+      yPos[p] += yDir[p] * random(20);
+      if (yPos[p] > 2500 || yPos[p] < 1500) 
+        yDir[p] *= -1;
     }
 
     checkMode();
@@ -251,7 +258,7 @@ void quads() {
 }
 
 void lissajou() {
-  static int masterX = 0;
+  static int i = 0;
 
   lasersOff();
   lasers[0].setDelays(-1, 150);
@@ -259,13 +266,10 @@ void lissajou() {
   lasers[0].on();
 
   while (currMode == 6) {
-    for (int i = 0; i < 720; i+=10) {
-      int x = (int)(sin((millis() / 30 + i) * PI / 360) * 500 + 2048);
-      int y = (int)(cos((millis() / 40 - i * 2) * PI / 180) * 500 + 2048);
-      lasers[0].sendTo(x, y);
-    }
-    
-    masterX += 15;
+    int x = (int)(sin((millis() / 30 + i) * PI / 360) * 500 + 2048);
+    int y = (int)(cos((millis() / 40 - i * 2) * PI / 180) * 500 + 2048);
+    lasers[0].sendTo(x, y);
+    i += 10;
 
     checkMode();
   }
@@ -385,7 +389,7 @@ void equations() {
     _drawEq(currEquation, xPos, yPos);
       
     xPos += xDir * 14;
-    if (xPos > 2500 || xPos < 1500)
+    if (xPos > 2500 || xPos < 1000)
       xDir *= -1;
     
     yPos += yDir * 8;
