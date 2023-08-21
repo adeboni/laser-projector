@@ -223,35 +223,88 @@ void bubbles() {
   }
 }
 
+struct quad {
+  int x1;
+  int y1;
+  int x2;
+  int y2;
+  int x3;
+  int y3;
+  int x4;
+  int y4;
+};
 
+#define NUM_QUADS 5
 void quads() {
-  static int xPos[] = {1500, 1500, 2500, 2500};
-  static int yPos[] = {1500, 2500, 2500, 1500};
+  static quad qs[NUM_QUADS];
   static int xDir[] = {1, 1, -1, -1};
   static int yDir[] = {1, -1, -1, 1};
+  static int nextUpdate = 0;
 
   lasersOff();
   lasers[0].setColorRGB(255, 0, 255);
   lasers[0].on();
   lasers[0].setDelays(-1, 350);
 
+  qs[0].x1 = 2200;
+  qs[0].y1 = 2200;
+  qs[0].x2 = 2200;
+  qs[0].y2 = 2200;
+  qs[0].x3 = 2200;
+  qs[0].y3 = 2200;
+  qs[0].x4 = 2200;
+  qs[0].y4 = 2200;
+  for (int i = 1; i < NUM_QUADS; i++) {
+    qs[i].x1 = qs[i-1].x1 + random(20, 40) * xDir[0];
+    qs[i].y1 = qs[i-1].y1 + random(20, 40) * yDir[0];
+    qs[i].x2 = qs[i-1].x2 + random(20, 40) * xDir[1];
+    qs[i].y2 = qs[i-1].y2 + random(20, 40) * yDir[1];
+    qs[i].x3 = qs[i-1].x3 + random(20, 40) * xDir[2];
+    qs[i].y3 = qs[i-1].y3 + random(20, 40) * yDir[2];
+    qs[i].x4 = qs[i-1].x4 + random(20, 40) * xDir[3];
+    qs[i].y4 = qs[i-1].y4 + random(20, 40) * yDir[3];
+
+    if (qs[i].x1 > 2500 || qs[i].x1 < 2000) xDir[0] *= -1;
+    if (qs[i].y1 > 2500 || qs[i].y1 < 2000) yDir[0] *= -1;
+    if (qs[i].x2 > 2500 || qs[i].x2 < 2000) xDir[1] *= -1;
+    if (qs[i].y2 > 2500 || qs[i].y2 < 2000) yDir[1] *= -1;
+    if (qs[i].x3 > 2500 || qs[i].x3 < 2000) xDir[2] *= -1;
+    if (qs[i].y3 > 2500 || qs[i].y3 < 2000) yDir[2] *= -1;
+    if (qs[i].x4 > 2500 || qs[i].x4 < 2000) xDir[3] *= -1;
+    if (qs[i].y4 > 2500 || qs[i].y4 < 2000) yDir[3] *= -1;
+  }
+
   while (currMode == 3) {
-    for (int i = 0; i < 3; i++) {
-      for (int p = 0; p < 5; p++) {
-        lasers[0].sendTo(xPos[p % 4] + i * 40, yPos[p % 4] + i * 35);
-        lasers[0].on();
-      }
+    for (int i = nextUpdate; i < nextUpdate + NUM_QUADS; i++) {
+      lasers[0].sendTo(qs[i % NUM_QUADS].x1, qs[i % NUM_QUADS].y1);
+      lasers[0].on();
+      lasers[0].sendTo(qs[i % NUM_QUADS].x2, qs[i % NUM_QUADS].y2);
+      lasers[0].sendTo(qs[i % NUM_QUADS].x3, qs[i % NUM_QUADS].y3);
+      lasers[0].sendTo(qs[i % NUM_QUADS].x4, qs[i % NUM_QUADS].y4);
+      lasers[0].sendTo(qs[i % NUM_QUADS].x1, qs[i % NUM_QUADS].y1);
       lasers[0].off();
     }
-      
-    for (int p = 0; p < 4; p++) {
-      xPos[p] += xDir[p] * random(20);
-      if (xPos[p] > 2500 || xPos[p] < 1000) 
-        xDir[p] *= -1;
-      yPos[p] += yDir[p] * random(20);
-      if (yPos[p] > 2500 || yPos[p] < 1500) 
-        yDir[p] *= -1;
-    }
+
+    int prev = nextUpdate == 0 ? (NUM_QUADS - 1) : nextUpdate - 1;
+    qs[nextUpdate].x1 = qs[prev].x1 + random(20, 40) * xDir[0];
+    qs[nextUpdate].y1 = qs[prev].y1 + random(20, 40) * yDir[0];
+    qs[nextUpdate].x2 = qs[prev].x2 + random(20, 40) * xDir[1];
+    qs[nextUpdate].y2 = qs[prev].y2 + random(20, 40) * yDir[1];
+    qs[nextUpdate].x3 = qs[prev].x3 + random(20, 40) * xDir[2];
+    qs[nextUpdate].y3 = qs[prev].y3 + random(20, 40) * yDir[2];
+    qs[nextUpdate].x4 = qs[prev].x4 + random(20, 40) * xDir[3];
+    qs[nextUpdate].y4 = qs[prev].y4 + random(20, 40) * yDir[3];
+    
+    if (qs[nextUpdate].x1 > 2500 || qs[nextUpdate].x1 < 2000) xDir[0] *= -1;
+    if (qs[nextUpdate].y1 > 2500 || qs[nextUpdate].y1 < 2000) yDir[0] *= -1;
+    if (qs[nextUpdate].x2 > 2500 || qs[nextUpdate].x2 < 2000) xDir[1] *= -1;
+    if (qs[nextUpdate].y2 > 2500 || qs[nextUpdate].y2 < 2000) yDir[1] *= -1;
+    if (qs[nextUpdate].x3 > 2500 || qs[nextUpdate].x3 < 2000) xDir[2] *= -1;
+    if (qs[nextUpdate].y3 > 2500 || qs[nextUpdate].y3 < 2000) yDir[2] *= -1;
+    if (qs[nextUpdate].x4 > 2500 || qs[nextUpdate].x4 < 2000) xDir[3] *= -1;
+    if (qs[nextUpdate].y4 > 2500 || qs[nextUpdate].y4 < 2000) yDir[3] *= -1;
+
+    nextUpdate = (nextUpdate + 1) % NUM_QUADS;
 
     checkMode();
   }
@@ -283,6 +336,11 @@ void etchasketch() {
   static int currX = 2048;
   static int currY = 2048;
   static bool currPen = true;
+  static bool isPanning = false;
+  static int xPan = 0;
+  static int yPan = 0;
+  static int xDir = 1;
+  static int yDir = 1;
 
   lasersOff();
   lasers[0].setDelays(-1, 350);
@@ -292,6 +350,9 @@ void etchasketch() {
   
     if (gpio.isButtonReleased(NES_SELECT))
       numPoints = 0;
+
+    if (gpio.isButtonReleased(NES_START))
+      isPanning = !isPanning;
   
     if (gpio.isButtonReleased(NES_B))
       currPen = !currPen;
@@ -312,27 +373,35 @@ void etchasketch() {
     for (int i = 0; i < numPoints; i++) {
       if (penDown[i] && i > 0) lasers[0].on();
       else lasers[0].off();
-      lasers[0].sendTo(xPos[i], yPos[i]);
+      lasers[0].sendTo(xPos[i] + (isPanning ? xPan : 0), yPos[i] + (isPanning ? yPan : 0));
     }
   
     if (currPen) lasers[0].setColorRGB(0, 0, 255);
     else lasers[0].setColorRGB(255, 0, 0);
   
     lasers[0].on();
-    lasers[0].sendTo(currX, currY);
+    lasers[0].sendTo(currX + (isPanning ? xPan : 0), currY + (isPanning ? yPan : 0));
     delay(50);
     lasers[0].off();
+
+    xPan += xDir * 14;
+    if (xPan > 750 || xPan < -750)
+      xDir *= -1;
+    
+    yPan += yDir * 8;
+    if (yPan > 750 || yPan < -750)
+      yDir *= -1;
 
     checkMode();
   }
 }
 
-#define NUM_EQUATIONS 39
+#define NUM_EQUATIONS 37
 void _drawEq(int i, int x, int y) {
   switch (i) {
-    case 0: Drawing::drawObject(draw_quadratic, sizeof(draw_quadratic) / 4, x, y, 1); break;
-    case 1: Drawing::drawObject(draw_eqn01b, sizeof(draw_eqn01b) / 4, x, y, 1); break;
-    case 2: Drawing::drawObject(draw_eqn02, sizeof(draw_eqn02) / 4, x, y, 1); break;
+    case 0: Drawing::drawObject(draw_eqn35, sizeof(draw_eqn35) / 4, x, y, 1); break;
+    case 1: Drawing::drawObject(draw_eqn36, sizeof(draw_eqn36) / 4, x, y, 1); break;
+    case 2: Drawing::drawObject(draw_eqn01b, sizeof(draw_eqn01b) / 4, x, y, 1); break;
     case 3: Drawing::drawObject(draw_eqn02a, sizeof(draw_eqn02a) / 4, x, y, 1); break;
     case 4: Drawing::drawObject(draw_eqn02b, sizeof(draw_eqn02b) / 4, x, y, 1); break;
     case 5: Drawing::drawObject(draw_eqn03, sizeof(draw_eqn03) / 4, x, y, 1); break;
@@ -367,8 +436,6 @@ void _drawEq(int i, int x, int y) {
     case 34: Drawing::drawObject(draw_eqn31, sizeof(draw_eqn31) / 4, x, y, 1); break;
     case 35: Drawing::drawObject(draw_eqn32, sizeof(draw_eqn32) / 4, x, y, 1); break;
     case 36: Drawing::drawObject(draw_eqn33, sizeof(draw_eqn33) / 4, x, y, 1); break;
-    case 37: Drawing::drawObject(draw_eqn35, sizeof(draw_eqn35) / 4, x, y, 1); break;
-    case 38: Drawing::drawObject(draw_eqn36, sizeof(draw_eqn36) / 4, x, y, 1); break;
   }
 }
 
@@ -379,6 +446,10 @@ void equations() {
   static int yDir = 1;
   static int currEquation = 0;
   static unsigned long lastEquationUpdate = millis();
+  static int cr[7] = {0,   255, 0,   255, 255, 255, 0};
+  static int cb[7] = {255, 255, 255, 0,   0,   255, 0};
+  static int cg[7] = {255, 0,   0,   0,   255, 255, 255};
+  static int currentColor = 0;
 
   lasersOff();
   lasers[0].setColorRGB(0, 255, 0);
@@ -393,13 +464,16 @@ void equations() {
       xDir *= -1;
     
     yPos += yDir * 8;
-    if (yPos > 2500 || yPos < 1500)
+    if (yPos > 2500 || yPos < 1000)
       yDir *= -1;
 
     unsigned long newEquationTime = millis();
     if (newEquationTime - lastEquationUpdate > 10000) {
       lastEquationUpdate = newEquationTime;
       currEquation = (currEquation + 1) % NUM_EQUATIONS;
+    
+      currentColor = (currentColor + 1) % 7;
+      lasers[0].setColorRGB(cr[currentColor], cb[currentColor], cg[currentColor]);
     }
 
     checkMode();
@@ -407,11 +481,90 @@ void equations() {
 }
 
 void graphics() {
-  //setup
+  static int xPos = -1;
+  static int yPos = -1;
+  static int graphicMode = 1;
+  static int wingPosition = 0;
+  static int showToast = 0;
+  static unsigned long lastWingUpdate = millis();
+  static unsigned long lastGraphicChange = millis();
+  
   lasersOff();
+  lasers[0].setDelays(-1, 350);
 
   while (currMode == 5) {
-    //loop
+    if (xPos == -1 || yPos == -1) {
+    if (graphicMode == 0) {
+      xPos = 1000;
+      yPos = random(1000, 2500);
+    } else if (graphicMode == 1) {
+      xPos = 2500;
+      yPos = random(1500, 2500);
+      showToast = (showToast + 1) % 2;
+    }
+  }
+  
+  if (graphicMode == 0) {
+    lasers[0].setColorRGB(0, 255, 0); lasers[0].on();
+    Drawing::drawObject(draw_catjustcat, sizeof(draw_catjustcat) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(0, 255, 255); lasers[0].on();
+    Drawing::drawObject(draw_cattail1, sizeof(draw_cattail1) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(255, 255, 255); lasers[0].on();
+    Drawing::drawObject(draw_cattail2, sizeof(draw_cattail2) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(255, 0, 0); lasers[0].on();
+    Drawing::drawObject(draw_cattail3, sizeof(draw_cattail3) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(0, 0, 255); lasers[0].on();
+    Drawing::drawObject(draw_cattail4, sizeof(draw_cattail4) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(0, 255, 255); lasers[0].on();
+    Drawing::drawObject(draw_cattail5, sizeof(draw_cattail5) / 4, xPos, yPos, 0.5);
+    lasers[0].setColorRGB(255, 255, 0); lasers[0].on();
+    Drawing::drawObject(draw_cattail6, sizeof(draw_cattail6) / 4, xPos, yPos, 0.5);
+    
+    xPos += 40;
+    if (xPos > 2500)
+      xPos = -1;
+  } else if (graphicMode == 1) {
+    if (showToast) {
+      lasers[0].setColorRGB(255, 255, 0); lasers[0].on();
+      Drawing::drawObject(draw_toast, sizeof(draw_toast) / 4, xPos, yPos, 0.5);
+    }
+    else {
+      lasers[0].setColorRGB(0, 0, 255); lasers[0].on();
+      Drawing::drawObject(draw_toaster, sizeof(draw_toaster) / 4, xPos, yPos, 0.5);
+      lasers[0].setColorRGB(255, 255, 255); lasers[0].on();
+      switch (wingPosition) {
+        case 0:
+          Drawing::drawObject(draw_wingdown, sizeof(draw_wingdown) / 4, xPos, yPos, 0.5);
+          break;
+        case 1:
+          Drawing::drawObject(draw_wingmid, sizeof(draw_wingmid) / 4, xPos, yPos, 0.5);
+          break;
+        case 2:
+          Drawing::drawObject(draw_wingtop, sizeof(draw_wingtop) / 4, xPos, yPos, 0.5);
+          break;
+      }
+    }
+   
+    unsigned long newWingUpdate = millis();
+    if (newWingUpdate - lastWingUpdate > 500) {
+      lastWingUpdate = newWingUpdate;
+      wingPosition = (wingPosition + 1) % 3;
+    }
+    
+    xPos -= 40;
+    if (xPos < 1000)
+      xPos = -1;
+    
+    yPos -= 20;
+    if (yPos < 1000)
+      yPos = -1;
+  }
+  
+  unsigned long newGraphicTime = millis();
+    if (newGraphicTime - lastGraphicChange > 60000) {
+      lastGraphicChange = newGraphicTime;
+      graphicMode = (graphicMode + 1) % 2;
+    }
 
     checkMode();
   }
