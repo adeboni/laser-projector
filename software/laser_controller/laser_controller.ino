@@ -179,10 +179,10 @@ void bubbles() {
         doReset = false;
   
     if (doReset) {
-      int x = random(1000, 3000);
+      int x = random(1500, 2500);
       //currentLaser = (currentLaser + 1) % 3;
       currentColor = (currentColor + 1) % 7;
-      lasers[currentLaser].setColorRGB(cr[currentColor], cb[currentColor], cg[currentColor]);
+      lasers[currentLaser].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
       lasers[currentLaser].setDelays(-1, 150);
       for (int i = 0; i < NUM_BUBBLES; i++) {
         xPos[i] = random(x - 500, x + 500);
@@ -235,43 +235,50 @@ struct quad {
 };
 
 #define NUM_QUADS 5
+#define QUAD_MIN 2000
+#define QUAD_MAX 2500
 void quads() {
   static quad qs[NUM_QUADS];
   static int xDir[] = {1, 1, -1, -1};
   static int yDir[] = {1, -1, -1, 1};
   static int nextUpdate = 0;
+  static int cr[7] = {0,   255, 0,   255, 255, 255, 0};
+  static int cb[7] = {255, 255, 255, 0,   0,   255, 0};
+  static int cg[7] = {255, 0,   0,   0,   255, 255, 255};
+  static int currentColor = 0;
+  static unsigned long lastColorUpdate = millis();
 
   lasersOff();
   lasers[0].setColorRGB(255, 0, 255);
   lasers[0].on();
   lasers[0].setDelays(-1, 350);
 
-  qs[0].x1 = 2200;
-  qs[0].y1 = 2200;
-  qs[0].x2 = 2200;
-  qs[0].y2 = 2200;
-  qs[0].x3 = 2200;
-  qs[0].y3 = 2200;
-  qs[0].x4 = 2200;
-  qs[0].y4 = 2200;
+  qs[0].x1 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].y1 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].x2 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].y2 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].x3 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].y3 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].x4 = random(QUAD_MIN, QUAD_MAX);
+  qs[0].y4 = random(QUAD_MIN, QUAD_MAX);
   for (int i = 1; i < NUM_QUADS; i++) {
-    qs[i].x1 = qs[i-1].x1 + random(20, 40) * xDir[0];
-    qs[i].y1 = qs[i-1].y1 + random(20, 40) * yDir[0];
-    qs[i].x2 = qs[i-1].x2 + random(20, 40) * xDir[1];
-    qs[i].y2 = qs[i-1].y2 + random(20, 40) * yDir[1];
-    qs[i].x3 = qs[i-1].x3 + random(20, 40) * xDir[2];
-    qs[i].y3 = qs[i-1].y3 + random(20, 40) * yDir[2];
-    qs[i].x4 = qs[i-1].x4 + random(20, 40) * xDir[3];
-    qs[i].y4 = qs[i-1].y4 + random(20, 40) * yDir[3];
+    qs[i].x1 = qs[i-1].x1 + 30 * xDir[0];
+    qs[i].y1 = qs[i-1].y1 + 30 * yDir[0];
+    qs[i].x2 = qs[i-1].x2 + 30 * xDir[1];
+    qs[i].y2 = qs[i-1].y2 + 30 * yDir[1];
+    qs[i].x3 = qs[i-1].x3 + 30 * xDir[2];
+    qs[i].y3 = qs[i-1].y3 + 30 * yDir[2];
+    qs[i].x4 = qs[i-1].x4 + 30 * xDir[3];
+    qs[i].y4 = qs[i-1].y4 + 30 * yDir[3];
 
-    if (qs[i].x1 > 2500 || qs[i].x1 < 2000) xDir[0] *= -1;
-    if (qs[i].y1 > 2500 || qs[i].y1 < 2000) yDir[0] *= -1;
-    if (qs[i].x2 > 2500 || qs[i].x2 < 2000) xDir[1] *= -1;
-    if (qs[i].y2 > 2500 || qs[i].y2 < 2000) yDir[1] *= -1;
-    if (qs[i].x3 > 2500 || qs[i].x3 < 2000) xDir[2] *= -1;
-    if (qs[i].y3 > 2500 || qs[i].y3 < 2000) yDir[2] *= -1;
-    if (qs[i].x4 > 2500 || qs[i].x4 < 2000) xDir[3] *= -1;
-    if (qs[i].y4 > 2500 || qs[i].y4 < 2000) yDir[3] *= -1;
+    if (qs[i].x1 > QUAD_MAX || qs[i].x1 < QUAD_MIN) xDir[0] *= -1;
+    if (qs[i].y1 > QUAD_MAX || qs[i].y1 < QUAD_MIN) yDir[0] *= -1;
+    if (qs[i].x2 > QUAD_MAX || qs[i].x2 < QUAD_MIN) xDir[1] *= -1;
+    if (qs[i].y2 > QUAD_MAX || qs[i].y2 < QUAD_MIN) yDir[1] *= -1;
+    if (qs[i].x3 > QUAD_MAX || qs[i].x3 < QUAD_MIN) xDir[2] *= -1;
+    if (qs[i].y3 > QUAD_MAX || qs[i].y3 < QUAD_MIN) yDir[2] *= -1;
+    if (qs[i].x4 > QUAD_MAX || qs[i].x4 < QUAD_MIN) xDir[3] *= -1;
+    if (qs[i].y4 > QUAD_MAX || qs[i].y4 < QUAD_MIN) yDir[3] *= -1;
   }
 
   while (currMode == 3) {
@@ -286,26 +293,35 @@ void quads() {
     }
 
     int prev = nextUpdate == 0 ? (NUM_QUADS - 1) : nextUpdate - 1;
-    qs[nextUpdate].x1 = qs[prev].x1 + random(20, 40) * xDir[0];
-    qs[nextUpdate].y1 = qs[prev].y1 + random(20, 40) * yDir[0];
-    qs[nextUpdate].x2 = qs[prev].x2 + random(20, 40) * xDir[1];
-    qs[nextUpdate].y2 = qs[prev].y2 + random(20, 40) * yDir[1];
-    qs[nextUpdate].x3 = qs[prev].x3 + random(20, 40) * xDir[2];
-    qs[nextUpdate].y3 = qs[prev].y3 + random(20, 40) * yDir[2];
-    qs[nextUpdate].x4 = qs[prev].x4 + random(20, 40) * xDir[3];
-    qs[nextUpdate].y4 = qs[prev].y4 + random(20, 40) * yDir[3];
+    qs[nextUpdate].x1 = qs[prev].x1 + 30 * xDir[0];
+    qs[nextUpdate].y1 = qs[prev].y1 + 30 * yDir[0];
+    qs[nextUpdate].x2 = qs[prev].x2 + 30 * xDir[1];
+    qs[nextUpdate].y2 = qs[prev].y2 + 30 * yDir[1];
+    qs[nextUpdate].x3 = qs[prev].x3 + 30 * xDir[2];
+    qs[nextUpdate].y3 = qs[prev].y3 + 30 * yDir[2];
+    qs[nextUpdate].x4 = qs[prev].x4 + 30 * xDir[3];
+    qs[nextUpdate].y4 = qs[prev].y4 + 30 * yDir[3];
     
-    if (qs[nextUpdate].x1 > 2500 || qs[nextUpdate].x1 < 2000) xDir[0] *= -1;
-    if (qs[nextUpdate].y1 > 2500 || qs[nextUpdate].y1 < 2000) yDir[0] *= -1;
-    if (qs[nextUpdate].x2 > 2500 || qs[nextUpdate].x2 < 2000) xDir[1] *= -1;
-    if (qs[nextUpdate].y2 > 2500 || qs[nextUpdate].y2 < 2000) yDir[1] *= -1;
-    if (qs[nextUpdate].x3 > 2500 || qs[nextUpdate].x3 < 2000) xDir[2] *= -1;
-    if (qs[nextUpdate].y3 > 2500 || qs[nextUpdate].y3 < 2000) yDir[2] *= -1;
-    if (qs[nextUpdate].x4 > 2500 || qs[nextUpdate].x4 < 2000) xDir[3] *= -1;
-    if (qs[nextUpdate].y4 > 2500 || qs[nextUpdate].y4 < 2000) yDir[3] *= -1;
+    if (qs[nextUpdate].x1 > QUAD_MAX || qs[nextUpdate].x1 < QUAD_MIN) xDir[0] *= -1;
+    if (qs[nextUpdate].y1 > QUAD_MAX || qs[nextUpdate].y1 < QUAD_MIN) yDir[0] *= -1;
+    if (qs[nextUpdate].x2 > QUAD_MAX || qs[nextUpdate].x2 < QUAD_MIN) xDir[1] *= -1;
+    if (qs[nextUpdate].y2 > QUAD_MAX || qs[nextUpdate].y2 < QUAD_MIN) yDir[1] *= -1;
+    if (qs[nextUpdate].x3 > QUAD_MAX || qs[nextUpdate].x3 < QUAD_MIN) xDir[2] *= -1;
+    if (qs[nextUpdate].y3 > QUAD_MAX || qs[nextUpdate].y3 < QUAD_MIN) yDir[2] *= -1;
+    if (qs[nextUpdate].x4 > QUAD_MAX || qs[nextUpdate].x4 < QUAD_MIN) xDir[3] *= -1;
+    if (qs[nextUpdate].y4 > QUAD_MAX || qs[nextUpdate].y4 < QUAD_MIN) yDir[3] *= -1;
 
     nextUpdate = (nextUpdate + 1) % NUM_QUADS;
 
+    
+    unsigned long newColorTime = millis();
+    if (newColorTime - lastColorUpdate > 10000) {
+      lastColorUpdate = newColorTime;
+      currentColor = (currentColor + 1) % 7;
+      lasers[0].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
+    }
+    
+    
     checkMode();
   }
 }
@@ -348,20 +364,27 @@ void etchasketch() {
   while (currMode == 7) {
     gpio.readUart();
   
-    if (gpio.isButtonReleased(NES_SELECT))
+    if (gpio.isButtonPressed(NES_SELECT)) {
       numPoints = 0;
+      delay(200);
+    }
 
-    if (gpio.isButtonReleased(NES_START))
+    if (gpio.isButtonPressed(NES_START)) {
       isPanning = !isPanning;
+      delay(200);
+    }
   
-    if (gpio.isButtonReleased(NES_B))
+    if (gpio.isButtonPressed(NES_B)) {
       currPen = !currPen;
+      delay(200);
+    }
   
-    if (gpio.isButtonReleased(NES_A)) {
+    if (gpio.isButtonPressed(NES_A)) {
       xPos[numPoints] = currX;
       yPos[numPoints] = currY;
       penDown[numPoints] = currPen;
       numPoints++;
+      delay(200);
     }
   
     if (gpio.isButtonPressed(NES_LEFT))  currX = constrain(currX - 8, 1500, 2500);
@@ -396,46 +419,45 @@ void etchasketch() {
   }
 }
 
-#define NUM_EQUATIONS 37
-void _drawEq(int i, int x, int y) {
+#define NUM_EQUATIONS 36
+void _drawEq(int i, int x, int y, float scale = 1) {
   switch (i) {
-    case 0: Drawing::drawObject(draw_eqn35, sizeof(draw_eqn35) / 4, x, y, 1); break;
-    case 1: Drawing::drawObject(draw_eqn36, sizeof(draw_eqn36) / 4, x, y, 1); break;
-    case 2: Drawing::drawObject(draw_eqn01b, sizeof(draw_eqn01b) / 4, x, y, 1); break;
-    case 3: Drawing::drawObject(draw_eqn02a, sizeof(draw_eqn02a) / 4, x, y, 1); break;
-    case 4: Drawing::drawObject(draw_eqn02b, sizeof(draw_eqn02b) / 4, x, y, 1); break;
-    case 5: Drawing::drawObject(draw_eqn03, sizeof(draw_eqn03) / 4, x, y, 1); break;
-    case 6: Drawing::drawObject(draw_eqn04, sizeof(draw_eqn04) / 4, x, y, 1); break;
-    case 7: Drawing::drawObject(draw_eqn05, sizeof(draw_eqn05) / 4, x, y, 1); break;
-    case 8: Drawing::drawObject(draw_eqn06, sizeof(draw_eqn06) / 4, x, y, 1); break;
-    case 9: Drawing::drawObject(draw_eqn07, sizeof(draw_eqn07) / 4, x, y, 1); break;
-    case 10: Drawing::drawObject(draw_eqn08, sizeof(draw_eqn08) / 4, x, y, 1); break;
-    case 11: Drawing::drawObject(draw_eqn09, sizeof(draw_eqn09) / 4, x, y, 1); break;
-    case 12: Drawing::drawObject(draw_eqn10, sizeof(draw_eqn10) / 4, x, y, 1); break;
-    case 13: Drawing::drawObject(draw_eqn11, sizeof(draw_eqn11) / 4, x, y, 1); break;
-    case 14: Drawing::drawObject(draw_eqn12, sizeof(draw_eqn12) / 4, x, y, 1); break;
-    case 15: Drawing::drawObject(draw_eqn13, sizeof(draw_eqn13) / 4, x, y, 1); break;
-    case 16: Drawing::drawObject(draw_eqn14, sizeof(draw_eqn14) / 4, x, y, 1); break;
-    case 17: Drawing::drawObject(draw_eqn14, sizeof(draw_eqn14) / 4, x, y, 1); break;
-    case 18: Drawing::drawObject(draw_eqn15, sizeof(draw_eqn15) / 4, x, y, 1); break;
-    case 19: Drawing::drawObject(draw_eqn16, sizeof(draw_eqn16) / 4, x, y, 1); break;
-    case 20: Drawing::drawObject(draw_eqn17, sizeof(draw_eqn17) / 4, x, y, 1); break;
-    case 21: Drawing::drawObject(draw_eqn18, sizeof(draw_eqn18) / 4, x, y, 1); break;
-    case 22: Drawing::drawObject(draw_eqn19, sizeof(draw_eqn19) / 4, x, y, 1); break;
-    case 23: Drawing::drawObject(draw_eqn20, sizeof(draw_eqn20) / 4, x, y, 1); break;
-    case 24: Drawing::drawObject(draw_eqn21, sizeof(draw_eqn21) / 4, x, y, 1); break;
-    case 25: Drawing::drawObject(draw_eqn22, sizeof(draw_eqn22) / 4, x, y, 1); break;
-    case 26: Drawing::drawObject(draw_eqn23, sizeof(draw_eqn23) / 4, x, y, 1); break;
-    case 27: Drawing::drawObject(draw_eqn24, sizeof(draw_eqn24) / 4, x, y, 1); break;
-    case 28: Drawing::drawObject(draw_eqn25, sizeof(draw_eqn25) / 4, x, y, 1); break;
-    case 29: Drawing::drawObject(draw_eqn26, sizeof(draw_eqn26) / 4, x, y, 1); break;
-    case 30: Drawing::drawObject(draw_eqn27, sizeof(draw_eqn27) / 4, x, y, 1); break;
-    case 31: Drawing::drawObject(draw_eqn28, sizeof(draw_eqn28) / 4, x, y, 1); break;
-    case 32: Drawing::drawObject(draw_eqn29, sizeof(draw_eqn29) / 4, x, y, 1); break;
-    case 33: Drawing::drawObject(draw_eqn30, sizeof(draw_eqn30) / 4, x, y, 1); break;
-    case 34: Drawing::drawObject(draw_eqn31, sizeof(draw_eqn31) / 4, x, y, 1); break;
-    case 35: Drawing::drawObject(draw_eqn32, sizeof(draw_eqn32) / 4, x, y, 1); break;
-    case 36: Drawing::drawObject(draw_eqn33, sizeof(draw_eqn33) / 4, x, y, 1); break;
+    case 0: Drawing::drawObject(draw_eqn35, sizeof(draw_eqn35) / 4, x, y, scale); break;
+    case 1: Drawing::drawObject(draw_eqn36, sizeof(draw_eqn36) / 4, x, y, scale); break;
+    case 2: Drawing::drawObject(draw_eqn01b, sizeof(draw_eqn01b) / 4, x, y, scale); break;
+    case 3: Drawing::drawObject(draw_eqn02a, sizeof(draw_eqn02a) / 4, x, y, scale); break;
+    case 4: Drawing::drawObject(draw_eqn02b, sizeof(draw_eqn02b) / 4, x, y, scale); break;
+    case 5: Drawing::drawObject(draw_eqn03, sizeof(draw_eqn03) / 4, x, y, scale); break;
+    case 6: Drawing::drawObject(draw_eqn04, sizeof(draw_eqn04) / 4, x, y, scale); break;
+    case 7: Drawing::drawObject(draw_eqn05, sizeof(draw_eqn05) / 4, x, y, scale); break;
+    case 8: Drawing::drawObject(draw_eqn06, sizeof(draw_eqn06) / 4, x, y, scale); break;
+    case 9: Drawing::drawObject(draw_eqn07, sizeof(draw_eqn07) / 4, x, y, scale); break;
+    case 10: Drawing::drawObject(draw_eqn08, sizeof(draw_eqn08) / 4, x, y, scale); break;
+    case 11: Drawing::drawObject(draw_eqn09, sizeof(draw_eqn09) / 4, x, y, scale); break;
+    case 12: Drawing::drawObject(draw_eqn10, sizeof(draw_eqn10) / 4, x, y, scale); break;
+    case 13: Drawing::drawObject(draw_eqn11, sizeof(draw_eqn11) / 4, x, y, scale); break;
+    case 14: Drawing::drawObject(draw_eqn12, sizeof(draw_eqn12) / 4, x, y, scale); break;
+    case 15: Drawing::drawObject(draw_eqn13, sizeof(draw_eqn13) / 4, x, y, scale); break;
+    case 16: Drawing::drawObject(draw_eqn14, sizeof(draw_eqn14) / 4, x, y, scale); break;
+    case 17: Drawing::drawObject(draw_eqn33, sizeof(draw_eqn33) / 4, x, y, scale); break;
+    case 18: Drawing::drawObject(draw_eqn15, sizeof(draw_eqn15) / 4, x, y, scale); break;
+    case 19: Drawing::drawObject(draw_eqn16, sizeof(draw_eqn16) / 4, x, y, scale); break;
+    case 20: Drawing::drawObject(draw_eqn17, sizeof(draw_eqn17) / 4, x, y, scale); break;
+    case 21: Drawing::drawObject(draw_eqn18, sizeof(draw_eqn18) / 4, x, y, scale); break;
+    case 22: Drawing::drawObject(draw_eqn19, sizeof(draw_eqn19) / 4, x, y, scale); break;
+    case 23: Drawing::drawObject(draw_eqn20, sizeof(draw_eqn20) / 4, x, y, scale); break;
+    case 24: Drawing::drawObject(draw_eqn21, sizeof(draw_eqn21) / 4, x, y, scale); break;
+    case 25: Drawing::drawObject(draw_eqn22, sizeof(draw_eqn22) / 4, x, y, scale); break;
+    case 26: Drawing::drawObject(draw_eqn23, sizeof(draw_eqn23) / 4, x, y, scale); break;
+    case 27: Drawing::drawObject(draw_eqn24, sizeof(draw_eqn24) / 4, x, y, scale); break;
+    case 28: Drawing::drawObject(draw_eqn25, sizeof(draw_eqn25) / 4, x, y, scale); break;
+    case 29: Drawing::drawObject(draw_eqn26, sizeof(draw_eqn26) / 4, x, y, scale); break;
+    case 30: Drawing::drawObject(draw_eqn27, sizeof(draw_eqn27) / 4, x, y, scale); break;
+    case 31: Drawing::drawObject(draw_eqn28, sizeof(draw_eqn28) / 4, x, y, scale); break;
+    case 32: Drawing::drawObject(draw_eqn29, sizeof(draw_eqn29) / 4, x, y, scale); break;
+    case 33: Drawing::drawObject(draw_eqn30, sizeof(draw_eqn30) / 4, x, y, scale); break;
+    case 34: Drawing::drawObject(draw_eqn31, sizeof(draw_eqn31) / 4, x, y, scale); break;
+    case 35: Drawing::drawObject(draw_eqn32, sizeof(draw_eqn32) / 4, x, y, scale); break;
   }
 }
 
@@ -446,9 +468,9 @@ void equations() {
   static int yDir = 1;
   static int currEquation = 0;
   static unsigned long lastEquationUpdate = millis();
-  static int cr[7] = {0,   255, 0,   255, 255, 255, 0};
+  static int cr[7] = {0,   255, 255, 255, 255, 255, 0};
   static int cb[7] = {255, 255, 255, 0,   0,   255, 0};
-  static int cg[7] = {255, 0,   0,   0,   255, 255, 255};
+  static int cg[7] = {255, 0,   255, 0,   255, 255, 255};
   static int currentColor = 0;
 
   lasersOff();
@@ -460,11 +482,11 @@ void equations() {
     _drawEq(currEquation, xPos, yPos);
       
     xPos += xDir * 14;
-    if (xPos > 2500 || xPos < 1000)
+    if (xPos > 2000 || xPos < 900)
       xDir *= -1;
     
     yPos += yDir * 8;
-    if (yPos > 2500 || yPos < 1000)
+    if (yPos > 2300 || yPos < 300)
       yDir *= -1;
 
     unsigned long newEquationTime = millis();
@@ -473,7 +495,7 @@ void equations() {
       currEquation = (currEquation + 1) % NUM_EQUATIONS;
     
       currentColor = (currentColor + 1) % 7;
-      lasers[0].setColorRGB(cr[currentColor], cb[currentColor], cg[currentColor]);
+      lasers[0].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
     }
 
     checkMode();
@@ -542,13 +564,16 @@ void graphics() {
         case 2:
           Drawing::drawObject(draw_wingtop, sizeof(draw_wingtop) / 4, xPos, yPos, 0.5);
           break;
+        case 3:
+          Drawing::drawObject(draw_wingmid, sizeof(draw_wingmid) / 4, xPos, yPos, 0.5);
+          break;
       }
     }
    
     unsigned long newWingUpdate = millis();
-    if (newWingUpdate - lastWingUpdate > 500) {
+    if (newWingUpdate - lastWingUpdate > 250) {
       lastWingUpdate = newWingUpdate;
-      wingPosition = (wingPosition + 1) % 3;
+      wingPosition = (wingPosition + 1) % 4;
     }
     
     xPos -= 40;
