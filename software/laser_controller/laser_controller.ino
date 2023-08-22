@@ -313,7 +313,6 @@ void quads() {
 
     nextUpdate = (nextUpdate + 1) % NUM_QUADS;
 
-    
     unsigned long newColorTime = millis();
     if (newColorTime - lastColorUpdate > 10000) {
       lastColorUpdate = newColorTime;
@@ -321,24 +320,71 @@ void quads() {
       lasers[0].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
     }
     
-    
     checkMode();
   }
 }
 
 void lissajou() {
-  static int i = 0;
-
+  static int cr[7] = {0,   255, 0,   255, 255, 255, 0};
+  static int cb[7] = {255, 255, 255, 0,   0,   255, 0};
+  static int cg[7] = {255, 0,   0,   0,   255, 255, 255};
+  static int currentColor = 0;
+  static unsigned long lastColorUpdate = millis();
+  static float xPan = 0;
+  static float yPan = 0;
+  static int xDir = 1;
+  static int yDir = 1;
+  
+  float r2 = 75;
+  float x = 0.5;
+  int r1 = 105;
+  float scale = 4;
+  float t = 0;
+  int xd = 1;
+  int r2d = 1;
+  
   lasersOff();
   lasers[0].setDelays(-1, 150);
   lasers[0].setColorRGB(255, 0, 255);
   lasers[0].on();
 
   while (currMode == 6) {
-    int x = (int)(sin((millis() / 30 + i) * PI / 360) * 500 + 2048);
-    int y = (int)(cos((millis() / 40 - i * 2) * PI / 180) * 500 + 2048);
-    lasers[0].sendTo(x, y);
-    i += 10;
+    float q1 = t;
+    float s1 = sin(q1);
+    float c1 = cos(q1);
+    float q2 = q1 * r1 / r2;
+    float s2 = sin(q2);
+    float c2 = cos(q2);
+    float xx = r1 * s1 + x * r2 * (-s1 + c2 * s1 - c1 * s2);
+    float yy = -r1 * c1 + x * r2 * (c1 - c1 * c2 - s1 * s2);
+    lasers[0].sendTo((int)(xx * scale + 2048 + xPan), (int)(yy * scale + 2048 + yPan));
+
+    unsigned long newColorTime = millis();
+    if (newColorTime - lastColorUpdate > 15000) {
+      lastColorUpdate = newColorTime;
+      currentColor = (currentColor + 1) % 7;
+      lasers[0].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
+      lasers[0].on();
+    }
+
+    x += 0.00002 * xd;
+    if (x > 0.9 || x < 0.3) {
+      xd *= -1;
+      
+      r2 += 0.2 * r2d;
+      if (r2 > 78 || r2 < 40)
+        r2d *= -1;
+    }
+
+    t += 0.1;
+
+    xPan += xDir * 0.02;
+    if (xPan > 750 || xPan < -750)
+      xDir *= -1;
+    
+    yPan += yDir * 0.03;
+    if (yPan > 750 || yPan < -750)
+      yDir *= -1;
 
     checkMode();
   }
@@ -496,6 +542,7 @@ void equations() {
     
       currentColor = (currentColor + 1) % 7;
       lasers[0].setColorRGB(cr[currentColor], cg[currentColor], cb[currentColor]);
+      lasers[0].on();
     }
 
     checkMode();
