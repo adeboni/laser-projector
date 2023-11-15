@@ -5,3 +5,5 @@ songs/
 __pycache__/
 obj/
 bin/
+build/
+.vscode
