@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "pico/stdlib.h"
 #include "pico/float.h"
+#include "pico/stdlib.h"
+#include "pico/util/queue.h"
+#include "pico/multicore.h"
 #include "hardware/pwm.h"
 #include "hardware/spi.h"
 #include "hardware/clocks.h"
 #include "wizchip_conf.h"
 #include "w5x00_spi.h"
-#include "e131.h"
 
 #define DAC_PIN_SCK  10
 #define DAC_PIN_MOSI 11
@@ -20,12 +21,21 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define NUM_BUBBLES 6
-
+#define POINT_BUFFER_LEN        2048
+#define POINT_BUFFER_THRESHOLD  1024
 #define PLL_SYS_KHZ (133 * 1000)
 
-static wiz_NetInfo g_net_info =
-{
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} laser_point_t;
+
+queue_t data_buf;
+
+static wiz_NetInfo g_net_info = {
 	.mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x11}, // MAC address
 	.ip = {192, 168, 11, 11},                    // IP address
 	.sn = {255, 255, 255, 0},                    // Subnet Mask
@@ -34,8 +44,7 @@ static wiz_NetInfo g_net_info =
 	.dhcp = NETINFO_STATIC                       // DHCP enable/disable
 };
 
-static void set_clock_khz(void)
-{
+static void set_clock_khz(void) {
 	set_sys_clock_khz(PLL_SYS_KHZ, true);
 	clock_configure(
         clk_peri,
@@ -46,13 +55,13 @@ static void set_clock_khz(void)
 	);
 }
 
-static void set_laser(uint8_t r, uint8_t g, uint8_t b) {
+void set_laser(uint8_t r, uint8_t g, uint8_t b) {
     pwm_set_gpio_level(RED_PIN, r >> 1);
     pwm_set_gpio_level(GRN_PIN, g >> 1);
     pwm_set_gpio_level(BLU_PIN, b >> 1);
 }
 
-static void mcp4922_write(uint16_t x, uint16_t y) {
+void mcp4922_write(uint16_t x, uint16_t y) {
     if (x > 4095) x = 4095;
     if (y > 4095) y = 4095;
     y = 4095 - y;
@@ -92,6 +101,60 @@ void init_spi() {
     gpio_put(DAC_PIN_CS, 1);
 }
 
+void init_w5500() {
+    wizchip_spi_initialize();
+	wizchip_cris_initialize();
+	wizchip_reset();
+	wizchip_initialize();
+	wizchip_check();
+	network_initialize(g_net_info);
+	//print_network_information(g_net_info);
+}
+
+void core1_entry() {
+    while (1) {
+        if (queue_get_level_unsafe(&data_buf) < 1024) {
+            //get more points from server
+            for (int i = 0; i <= 360; i += 8) {
+                uint16_t x = (uint16_t)(1000 * sin(i * 3.14 / 180) + 2048);
+                uint16_t y = (uint16_t)(1000 * cos(i * 3.14 / 180) + 2048);
+                uint8_t r = i % 255;
+                uint8_t g = (i + 60) % 255;
+                uint8_t b = (i + 120) % 255;
+                laser_point_t new_point = {x, y, r, g, b};
+                queue_add_blocking(&data_buf, &new_point);
+            }
+        }
+    }
+}
+
+int main() {
+    set_clock_khz();
+    stdio_init_all();
+
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    gpio_put(PICO_DEFAULT_LED_PIN, 0);
+
+    init_spi();
+    init_pin(RED_PIN);
+    init_pin(GRN_PIN);
+    init_pin(BLU_PIN);
+    init_w5500();    
+
+    queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_LEN);
+    multicore_launch_core1(core1_entry);
+    laser_point_t new_point;
+
+	while (1)
+	{
+        queue_remove_blocking(&data_buf, &new_point);
+        set_laser(new_point.r, new_point.g, new_point.b);
+        mcp4922_write(new_point.x, new_point.y);
+        sleep_us(150);
+	}
+}
+
 void test_circle() {
     for (int i = 0; i <= 360; i += 8) {
         uint16_t x = (uint16_t)(1000 * sin(i * 3.14 / 180) + 2048);
@@ -105,6 +168,7 @@ void test_circle() {
     }
 }
 
+/*
 int main() {
     set_clock_khz();
     stdio_init_all();
@@ -125,6 +189,8 @@ int main() {
 	wizchip_check();
 	network_initialize(g_net_info);
 	//print_network_information(g_net_info);
+
+
 
 	int sockfd;
 	e131_packet_t packet;
@@ -186,3 +252,4 @@ int main() {
         */
 	}
 }
+*/

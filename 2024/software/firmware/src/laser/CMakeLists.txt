@@ -13,7 +13,7 @@ target_sources(laser PUBLIC
 )
 
 # pull in common dependencies and additional spi hardware support
-target_link_libraries(laser PUBLIC pico_stdlib pico_multicore pico_float hardware_spi hardware_clocks hardware_pwm hardware_dma)
+target_link_libraries(laser PUBLIC pico_stdlib pico_float pico_multicore hardware_spi hardware_clocks hardware_pwm hardware_dma)
 
 pico_enable_stdio_usb(laser 1)
 pico_enable_stdio_uart(laser 0)
