@@ -1,2 +1,7 @@
 *-backups
 gerbers/
+.venv
+songs/
+__pycache__/
+obj/
+bin/
