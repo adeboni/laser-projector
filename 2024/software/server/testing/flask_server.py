@@ -30,8 +30,6 @@ def get_laser_data(num_points) -> Response:
     for s, c in zip([i[1] for i in segments], colors):
         return_buf.extend(xy_to_bytes(*s))
         return_buf.extend([c[0], c[1], c[2]])
-
-    #return Response(b'', mimetype='application/octet-stream')
     return Response(bytes(return_buf), mimetype='application/octet-stream')
 
 if __name__ == '__main__':
