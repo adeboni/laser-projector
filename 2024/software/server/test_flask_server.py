@@ -2,14 +2,12 @@
 from threading import Thread
 from queue import Queue
 from flask import Flask, Response
-import numpy as np
-from utils.helper_functions import *
-from utils.laser_point import *
+from laser_point import *
 from laser_generators import *
 
 flask_app = Flask(__name__)
 
-point_gen = circle()
+point_gen = rainbow_circle()
 queue = Queue(1024)
 
 @flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])

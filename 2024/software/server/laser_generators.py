@@ -1,5 +1,5 @@
 import numpy as np
-from utils.laser_point import *
+from laser_point import *
 
 def rainbow_circle() -> LaserPoint:
     """Generates a rainbow circle"""

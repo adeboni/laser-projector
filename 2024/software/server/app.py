@@ -17,7 +17,7 @@ class MainApp(tk.Tk):
         self.current_number = 0
         self.current_mode = 0
 
-        self.laser_server = LaserServer(num_lasers, None)
+        self.laser_server = LaserServer(num_lasers)
         self.laser_server.start()
 
         self._setup_labels()
