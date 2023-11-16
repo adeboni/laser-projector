@@ -22,6 +22,7 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
+#define LASER_ID 1 //change this to read from the dip switches
 #define POINT_BUFFER_LEN        2048
 #define POINT_BUFFER_THRESHOLD  1024
 #define PLL_SYS_KHZ (133 * 1000)
@@ -116,7 +117,7 @@ void core1_entry() {
     uint8_t ip_address[4]  = {0,};
     uint8_t domain_name[] = "192.168.11.10:8100";
     uint8_t uri[20];
-    sprintf(uri, "/laser_data/%d/", POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD);
+    sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD);
     uint8_t g_send_buf[(POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD) * 6 + 512];
     uint8_t g_recv_buf[(POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD) * 6 + 512];
     httpc_init(0, ip_address, 8101, g_send_buf, g_recv_buf);

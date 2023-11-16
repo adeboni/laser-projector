@@ -1,60 +1,48 @@
 """Main entry point"""
 import tkinter as tk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 import psutil
-import laser
-import laser_generator
-import song_handler
+from laser_server import LaserServer
+from song_handler import SongHandler
 
 class MainApp(tk.Tk):
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title('Laser Control Station')
-        self.geometry('1200x600')
+        self.geometry('1000x300')
         self.resizable(False, False)
-        self.songs = song_handler.SongHandler()
-        self.fig = Figure(figsize=(12, 4), dpi=100)
-        self.laser_gen = laser_generator.LaserGenerator(num_lasers, self._laser_gen_callback)
-        self.lasers = [laser.Laser(self.fig.add_subplot(1, num_lasers, pos + 1), pos) for pos in range(num_lasers)]
-        self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=3)
-
+        self.songs = SongHandler()
+        
         self.current_letter = ord('A')
         self.current_number = 0
         self.current_mode = 0
 
+        self.laser_server = LaserServer(num_lasers, None)
+        self.laser_server.start()
+
         self._setup_labels()
         self._setup_binding()
         self._update_power_status()
-        self._update_laser_plots()
         self._update_song_status()
+
         self._update_selection(None)
         self._update_mode(None)
 
-        self.laser_gen.start()
-        self.protocol("WM_DELETE_WINDOW", self._on_closing)
-
-    def _on_closing(self):
-        self.laser_gen.stop()
-        self.destroy()
-
     def _setup_labels(self):
         self.mode = tk.Label(self, font=('Arial', 25))
-        self.mode.grid(row=1, column=0)
+        self.mode.pack()
 
         self.power_status = tk.Label(self, font=('Arial', 25))
-        self.power_status.grid(row=1, column=1)
+        self.power_status.pack()
 
         self.song_selection = tk.Label(self, font=('Arial', 25))
-        self.song_selection.grid(row=1, column=2)
+        self.song_selection.pack()
 
         self.current_song = tk.Label(self, font=('Arial', 25))
-        self.current_song.grid(row=2, column=0, columnspan=3)
+        self.current_song.pack()
 
         self.song_queue = tk.Label(self, font=('Arial', 25))
-        self.song_queue.grid(row=3, column=0, columnspan=3)
+        self.song_queue.pack()
 
     def _setup_binding(self):
         for c in ['<Up>', '<Down>', '<Left>', '<Right>']:
@@ -79,14 +67,8 @@ class MainApp(tk.Tk):
     def _update_mode(self, e):
         if e is not None:
             self.current_mode = int(e.char)
-            self.laser_gen.mode = self.current_mode
+            self.laser_server.mode = self.current_mode
         self.mode.config(text = f'Mode: {self.current_mode}')
-
-    def _update_laser_plots(self):
-        for l in self.lasers:
-            l.update_plot()
-        self.fig.canvas.draw()
-        self.after(30, self._update_laser_plots)
 
     def _update_song_status(self):
         self.songs.update()
@@ -107,14 +89,6 @@ class MainApp(tk.Tk):
         self.plugged_in = psutil.sensors_battery().power_plugged
         self.power_status.config(text=f'Power Status: {"Plugged In" if self.plugged_in else "Unplugged"}')
         self.after(1000, self._update_power_status)
-
-    def _laser_gen_callback(self, laser_data):
-        if laser_data:
-            for i, data in enumerate(laser_data):
-                self.lasers[i].update_data(*data)
-        else:
-            for i in range(self.laser_gen.num_lasers):
-                self.lasers[i].update_data([], [])
-
+                
 if __name__ == '__main__':
     MainApp(num_lasers=3).mainloop()
