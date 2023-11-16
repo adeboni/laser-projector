@@ -7,3 +7,5 @@ obj/
 bin/
 build/
 .vscode
+!*.uf2
+fp_info_cache

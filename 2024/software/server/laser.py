@@ -1,6 +1,5 @@
 """Module providing laser update and display functionality"""
 import os
-from typing import List
 from matplotlib import collections as mc
 import sacn
 
@@ -25,11 +24,11 @@ class Laser:
         """Returns True if address is pingable"""
         return not os.system(f'ping {address} -n 1')
 
-    def _xy_to_sacn(self, x, y) -> List[int]:
+    def _xy_to_sacn(self, x, y) -> list[int]:
         """Converts two 12 bit values to three 8 bit values for sACN"""
         return [x >> 4, (x & 0xf) << 4 | y >> 8, y & 0xff]
 
-    def _divide_chunks(self, l, n) -> List[List]:
+    def _divide_chunks(self, l, n) -> list[list]:
         """Splits a list into chunks of size n"""
         for i in range(0, len(l), n):
             yield l[i:i + n]

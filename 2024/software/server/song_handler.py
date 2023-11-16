@@ -1,6 +1,5 @@
 """Module providing song handling functionality"""
 import os
-from typing import Tuple
 from pygame import mixer
 from mutagen.mp3 import MP3
 
@@ -14,7 +13,7 @@ class Song:
         self.author, self.title, self.year = os.path.splitext(os.path.basename(path))[0].split(' - ')
 
     @property
-    def song_id(self) -> Tuple[int, int]:
+    def song_id(self) -> tuple[int, int]:
         """Returns the song ID as a tuple"""
         return (ord('A') + self.index // 10, self.index % 10)
 

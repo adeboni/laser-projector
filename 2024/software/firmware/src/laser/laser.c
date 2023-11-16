@@ -10,6 +10,7 @@
 #include "hardware/clocks.h"
 #include "wizchip_conf.h"
 #include "w5x00_spi.h"
+#include "httpClient.h"
 
 #define DAC_PIN_SCK  10
 #define DAC_PIN_MOSI 11
@@ -112,9 +113,41 @@ void init_w5500() {
 }
 
 void core1_entry() {
+    uint8_t ip_address[4]  = {0,};
+    uint8_t domain_name[] = "192.168.11.10:8100";
+    uint8_t uri[20];
+    sprintf(uri, "/laser_data/%d/", POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD);
+    uint8_t g_send_buf[(POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD) * 6 + 512];
+    uint8_t g_recv_buf[(POINT_BUFFER_LEN - POINT_BUFFER_THRESHOLD) * 6 + 512];
+    httpc_init(0, ip_address, 8101, g_send_buf, g_recv_buf);
+    bool sent_request = false;
+
     while (1) {
-        if (queue_get_level_unsafe(&data_buf) < 1024) {
-            //get more points from server
+        if (queue_get_level_unsafe(&data_buf) < POINT_BUFFER_THRESHOLD) {
+            httpc_connection_handler();
+            if (httpc_isSockOpen)
+				httpc_connect();
+			
+            if (httpc_isConnected) {
+                if (!sent_request) {
+                    request.method = (uint8_t *)HTTP_GET;
+                    request.uri = (uint8_t *)uri;
+                    request.host = (uint8_t *)domain_name;
+                    httpc_send(&request, g_recv_buf, g_send_buf, 0);
+                    sent_request = true;
+                }
+
+                if (httpc_isReceived > 0) {
+                    int len = httpc_recv(g_recv_buf, httpc_isReceived);
+                    printf(" >> HTTP Response - Received len: %d\r\n", len);
+                    printf("======================================================\r\n");
+                    for(i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
+                    printf("\r\n");
+                    printf("======================================================\r\n");
+                    sent_request = false;
+                }
+            }
+            
             for (int i = 0; i <= 360; i += 8) {
                 uint16_t x = (uint16_t)(1000 * sin(i * 3.14 / 180) + 2048);
                 uint16_t y = (uint16_t)(1000 * cos(i * 3.14 / 180) + 2048);
