@@ -10,6 +10,7 @@ target_sources(laser PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/w5500.c
         ${CMAKE_CURRENT_LIST_DIR}/wizchip_conf.c
         ${CMAKE_CURRENT_LIST_DIR}/e131.c
+        ${CMAKE_CURRENT_LIST_DIR}/httpClient.c
 )
 
 # pull in common dependencies and additional spi hardware support

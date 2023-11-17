@@ -142,7 +142,7 @@ void core1_entry() {
                     int len = httpc_recv(g_recv_buf, httpc_isReceived);
                     printf(" >> HTTP Response - Received len: %d\r\n", len);
                     printf("======================================================\r\n");
-                    for(i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
+                    for (int i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
                     printf("\r\n");
                     printf("======================================================\r\n");
                     sent_request = false;
@@ -257,7 +257,6 @@ int main() {
 
         test_circle();
 
-        /*
         for (int i = 0; i < packet.dmp.prop_val_cnt; i += 6) {
             uint16_t b0 = packet.dmp.prop_val[i];
             uint16_t b1 = packet.dmp.prop_val[i + 1];
@@ -276,14 +275,11 @@ int main() {
             mcp4922_write(x, y);
             sleep_us(150);
         }
-        */
 
-        /*
         gpio_put(PICO_DEFAULT_LED_PIN, 1);
         sleep_ms(100);
         gpio_put(PICO_DEFAULT_LED_PIN, 0);
         sleep_ms(100);
-        */
 	}
 }
 */
