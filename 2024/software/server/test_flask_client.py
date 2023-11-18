@@ -21,7 +21,7 @@ class MainApp(tk.Tk):
         self._update_laser_plot()
 
     def _update_laser_plot(self):
-        r = requests.get(f'http://127.0.0.1:8100/laser_data/{self.laser_id}/1024/')
+        r = requests.get(f'http://10.0.0.2/laser_data/{self.laser_id}/1024/')
         raw_bytes = list(r.content)
         
         segments = []

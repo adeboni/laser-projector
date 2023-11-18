@@ -8,7 +8,7 @@ from laser_generators import *
 flask_app = Flask(__name__)
 
 point_gen = rainbow_circle()
-queue = Queue(1024)
+queue = Queue(8192)
 
 @flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])
 def get_laser_data(laser_id: int, num_points: int) -> Response:
@@ -20,6 +20,10 @@ def get_laser_data(laser_id: int, num_points: int) -> Response:
             break
         return_buf.extend(b.get_bytes())
     return Response(bytes(return_buf), mimetype='application/octet-stream')
+	
+@flask_app.route('/')
+def index():
+    return 'Laser server is running!'
 
 def producer(queue: Queue):
     while True:
@@ -30,5 +34,5 @@ producer = Thread(target=producer, args=(queue,), daemon=True)
 producer.start()
 
 if __name__ == '__main__':
-    flask_app.run(host='192.168.11.10', port=8100)
-	#flask_app.run(host='127.0.0.1', port=8100)
+    flask_app.run(host='10.0.0.2', port=80)
+	#flask_app.run(host='127.0.0.1', port=80)

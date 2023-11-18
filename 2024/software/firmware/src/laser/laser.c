@@ -23,7 +23,7 @@
 #define BLU_PIN 4
 
 #define LASER_ID 0 // change this to read from the dip switches
-#define POINT_BUFFER_LEN        2048
+#define POINT_BUFFER_LEN        16384
 #define POINT_BUFFER_THRESHOLD  256
 #define PLL_SYS_KHZ (133 * 1000)
 
@@ -38,10 +38,10 @@ typedef struct {
 queue_t data_buf;
 
 static wiz_NetInfo g_net_info = {
-	.mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x11 + LASER_ID}, // MAC address
-	.ip = {192, 168, 11, 11 + LASER_ID},                    // IP address
+	.mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x10 + LASER_ID}, // MAC address
+	.ip = {10, 0, 0, 10 + LASER_ID},                        // IP address
 	.sn = {255, 255, 255, 0},                               // Subnet Mask
-	.gw = {192, 168, 11, 1},                                // Gateway
+	.gw = {10, 0, 0, 1},                                    // Gateway
 	.dns = {8, 8, 8, 8},                                    // DNS server
 	.dhcp = NETINFO_STATIC                                  // DHCP enable/disable
 };
@@ -114,52 +114,68 @@ void init_w5500() {
 }
 
 void core1_entry() {
-    uint8_t ip_address[4]  = {192, 168, 11, 10};
-    uint8_t domain_name[] = "192.168.11.10:8100";
+    uint8_t ip_address[4]  = {10, 0, 0, 2};
+    uint8_t domain_name[] = "10.0.0.2";
     uint8_t uri[40];
     sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_BUFFER_THRESHOLD);
-    uint8_t g_send_buf[DATA_BUF_SIZE];
     uint8_t g_recv_buf[DATA_BUF_SIZE];
-    httpc_init(0, ip_address, 8100, g_send_buf, g_recv_buf);
-    bool sent_request = false;
+    uint8_t point_buf[POINT_BUFFER_THRESHOLD * 6];
+    uint8_t sent_request = 0;
+    uint16_t total_len = 0, len = 0, i = 0;
+    uint16_t b0, b1, b2, x, y;
+    uint8_t r, g, b;
+    uint8_t packet_num = 0;
+
+    init_w5500();
+    httpc_init(0, ip_address, 80);
 
     while (1) {
-        if (POINT_BUFFER_LEN - queue_get_level_unsafe(&data_buf) > POINT_BUFFER_THRESHOLD) {
-            httpc_connection_handler();
-            if (httpc_isSockOpen)
-				httpc_connect();
+        if (POINT_BUFFER_LEN - queue_get_level_unsafe(&data_buf) < POINT_BUFFER_THRESHOLD)
+            continue;
 
-            if (httpc_isConnected) {
-                if (!sent_request) {
-                    request.method = (uint8_t *)HTTP_GET;
-                    request.uri = (uint8_t *)uri;
-                    request.host = (uint8_t *)domain_name;
-                    httpc_send(&request, g_recv_buf, g_send_buf, 0);
-                    sent_request = true;
-                }
+        httpc_connection_handler();
+        if (httpc_isSockOpen)
+            httpc_connect();
 
-                if (httpc_isReceived > 0) {
-                    uint16_t len = httpc_recv(g_recv_buf, httpc_isReceived);
-                    printf(" >> HTTP Response - Received len: %d\r\n", len);
-                    printf("======================================================\r\n");
-                    for (uint16_t i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
-                    printf("\r\n");
-                    printf("======================================================\r\n");
-                    sent_request = false;
-                }
+        if (!httpc_isConnected)
+            continue;
+            
+        if (sent_request == 0) {
+            request.uri = (uint8_t *)uri;
+            request.host = (uint8_t *)domain_name;
+            httpc_send(&request, g_recv_buf, 0);
+            sent_request = 1;
+        }
 
-                /*
-                for (int i = 0; i <= 360; i += 8) {
-                    uint16_t x = (uint16_t)(1000 * sin(i * 3.14 / 180) + 2048);
-                    uint16_t y = (uint16_t)(1000 * cos(i * 3.14 / 180) + 2048);
-                    uint8_t r = i % 255;
-                    uint8_t g = (i + 60) % 255;
-                    uint8_t b = (i + 120) % 255;
-                    laser_point_t new_point = {x, y, r, g, b};
-                    queue_add_blocking(&data_buf, &new_point);
+        if (httpc_isReceived > 0) {
+            len = httpc_recv(g_recv_buf, httpc_isReceived);
+            packet_num++;
+            sent_request = 0;
+
+            if (packet_num != 1) {
+                for (i = 0; i < len; i++)
+                    point_buf[i + total_len] = g_recv_buf[i];
+                total_len += len;
+
+                if (total_len == POINT_BUFFER_THRESHOLD * 6) {
+                    total_len = 0;
+                    packet_num = 0;
+                    httpc_disconnect();
+                    
+                    for (i = 0; i < len; i += 6) {
+                        b0 = point_buf[i];
+                        b1 = point_buf[i + 1];
+                        b2 = point_buf[i + 2];
+                        r = point_buf[i + 3];
+                        g = point_buf[i + 4];
+                        b = point_buf[i + 5];
+                        x = b0 << 4 | b1 >> 4;
+                        y = (b1 & 0x0f) << 8 | b2;
+                        laser_point_t new_point = {x, y, r, g, b};
+                        queue_try_add(&data_buf, &new_point); //TODO: handle false case for this
+                    }                  
                 }
-                */
-            }            
+            }
         }
     }
 }
@@ -176,17 +192,19 @@ int main() {
     init_pin(RED_PIN);
     init_pin(GRN_PIN);
     init_pin(BLU_PIN);
-    init_w5500();    
 
     queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_LEN);
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
 
+    sleep_ms(3000); // remove this?
+
 	while (1)
 	{
-        queue_remove_blocking(&data_buf, &new_point);
-        set_laser(new_point.r, new_point.g, new_point.b);
-        mcp4922_write(new_point.x, new_point.y);
-        sleep_us(150);
+        if (queue_try_remove(&data_buf, &new_point)) {
+            set_laser(new_point.r, new_point.g, new_point.b);
+            mcp4922_write(new_point.x, new_point.y);
+            sleep_us(150);
+        }
 	}
 }
