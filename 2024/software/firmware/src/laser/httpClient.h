@@ -9,7 +9,6 @@
 #define HTTPCLIENT_H_
 
 #include <stdint.h>
-#include <stdio.h>
 
 // HTTP client debug message enable
 #define _HTTPCLIENT_DEBUG_

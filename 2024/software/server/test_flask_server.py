@@ -30,4 +30,5 @@ producer = Thread(target=producer, args=(queue,), daemon=True)
 producer.start()
 
 if __name__ == '__main__':
-    flask_app.run(host='127.0.0.1', port=8100)
+    flask_app.run(host='192.168.11.10', port=8100)
+	#flask_app.run(host='127.0.0.1', port=8100)
