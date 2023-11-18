@@ -11,14 +11,13 @@ class MainApp(tk.Tk):
     def __init__(self, laser_id: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title('Test Laser Client')
-        self.geometry('600x600')
-        self.resizable(False, False)
+        self.geometry('400x400')
         self.laser_id = laser_id
         self.prev_point = LaserPoint(self.laser_id)
-        self.fig = Figure(figsize=(6, 6), dpi=100)
+        self.fig = Figure()
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self._update_laser_plot()
 
     def _update_laser_plot(self):
