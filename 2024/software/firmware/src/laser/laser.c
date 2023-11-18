@@ -17,15 +17,17 @@
 #define DAC_PIN_MISO 12
 #define DAC_PIN_CS   13
 #define DAC_SPI_PORT spi1
+#define PLL_SYS_KHZ (133 * 1000)
 
 #define RED_PIN 2
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define LASER_ID 0 // change this to read from the dip switches
+#define LASER_ID      0 // change this to read from the dip switches
+#define LASER_TIMEOUT 3000
+
 #define POINT_BUFFER_LEN 16384
 #define POINT_REQ_LEN    4096
-#define PLL_SYS_KHZ (133 * 1000)
 
 typedef struct {
     uint16_t x;
@@ -192,12 +194,18 @@ int main() {
     queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_LEN);
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
+    uint32_t last_update = to_ms_since_boot(get_absolute_time());
 
 	while (1)
 	{
-        queue_remove_blocking(&data_buf, &new_point);
-        set_laser(new_point.r, new_point.g, new_point.b);
-        mcp4922_write(new_point.x, new_point.y);
-        sleep_us(150);
+        if (queue_try_remove(&data_buf, &new_point)) {
+            last_update = to_ms_since_boot(get_absolute_time());
+            set_laser(new_point.r, new_point.g, new_point.b);
+            mcp4922_write(new_point.x, new_point.y);
+            sleep_us(150);
+        }
+
+        if (to_ms_since_boot(get_absolute_time()) - last_update > LASER_TIMEOUT)
+            set_laser(0, 0, 0);
 	}
 }
