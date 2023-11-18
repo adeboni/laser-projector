@@ -23,8 +23,8 @@
 #define BLU_PIN 4
 
 #define LASER_ID 0 // change this to read from the dip switches
-#define POINT_BUFFER_LEN        16384
-#define POINT_BUFFER_THRESHOLD  256
+#define POINT_BUFFER_LEN 16384
+#define POINT_REQ_LEN    4096
 #define PLL_SYS_KHZ (133 * 1000)
 
 typedef struct {
@@ -113,13 +113,21 @@ void init_w5500() {
 	//print_network_information(g_net_info);
 }
 
+void bytes_to_point(uint8_t *buf, uint16_t i, laser_point_t *target) {
+    target->x = buf[i] << 4 | buf[i + 1] >> 4;
+    target->y = (buf[i + 1] & 0x0f) << 8 | buf[i + 2];
+    target->r = buf[i + 3];
+    target->g = buf[i + 4];
+    target->b = buf[i + 5];
+}
+
 void core1_entry() {
     uint8_t ip_address[4]  = {10, 0, 0, 2};
     uint8_t domain_name[] = "10.0.0.2";
     uint8_t uri[40];
-    sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_BUFFER_THRESHOLD);
+    sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_REQ_LEN);
     uint8_t g_recv_buf[DATA_BUF_SIZE];
-    uint8_t point_buf[POINT_BUFFER_THRESHOLD * 6];
+    uint8_t point_buf[POINT_REQ_LEN * 6]; //TODO: remove this buffer, points arrive in order
     uint8_t sent_request = 0;
     uint16_t total_len = 0, len = 0, i = 0;
     uint16_t b0, b1, b2, x, y;
@@ -130,9 +138,6 @@ void core1_entry() {
     httpc_init(0, ip_address, 80);
 
     while (1) {
-        if (POINT_BUFFER_LEN - queue_get_level_unsafe(&data_buf) < POINT_BUFFER_THRESHOLD)
-            continue;
-
         httpc_connection_handler();
         if (httpc_isSockOpen)
             httpc_connect();
@@ -157,7 +162,7 @@ void core1_entry() {
                     point_buf[i + total_len] = g_recv_buf[i];
                 total_len += len;
 
-                if (total_len == POINT_BUFFER_THRESHOLD * 6) {
+                if (total_len == POINT_REQ_LEN * 6) {
                     total_len = 0;
                     packet_num = 0;
                     httpc_disconnect();
@@ -172,7 +177,7 @@ void core1_entry() {
                         x = b0 << 4 | b1 >> 4;
                         y = (b1 & 0x0f) << 8 | b2;
                         laser_point_t new_point = {x, y, r, g, b};
-                        queue_try_add(&data_buf, &new_point); //TODO: handle false case for this
+                        queue_add_blocking(&data_buf, &new_point);
                     }                  
                 }
             }
@@ -197,14 +202,11 @@ int main() {
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
 
-    sleep_ms(3000); // remove this?
-
 	while (1)
 	{
-        if (queue_try_remove(&data_buf, &new_point)) {
-            set_laser(new_point.r, new_point.g, new_point.b);
-            mcp4922_write(new_point.x, new_point.y);
-            sleep_us(150);
-        }
+        queue_remove_blocking(&data_buf, &new_point);
+        set_laser(new_point.r, new_point.g, new_point.b);
+        mcp4922_write(new_point.x, new_point.y);
+        sleep_us(150);
 	}
 }
