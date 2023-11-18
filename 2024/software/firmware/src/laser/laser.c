@@ -127,12 +127,10 @@ void core1_entry() {
     uint8_t uri[40];
     sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_REQ_LEN);
     uint8_t g_recv_buf[DATA_BUF_SIZE];
-    uint8_t point_buf[POINT_REQ_LEN * 6]; //TODO: remove this buffer, points arrive in order
+    uint8_t point_buf[POINT_REQ_LEN * 6];
     uint8_t sent_request = 0;
-    uint16_t total_len = 0, len = 0, i = 0;
-    uint16_t b0, b1, b2, x, y;
-    uint8_t r, g, b;
     uint8_t packet_num = 0;
+    uint16_t total_len = 0;
 
     init_w5500();
     httpc_init(0, ip_address, 80);
@@ -153,12 +151,12 @@ void core1_entry() {
         }
 
         if (httpc_isReceived > 0) {
-            len = httpc_recv(g_recv_buf, httpc_isReceived);
+            uint16_t len = httpc_recv(g_recv_buf, httpc_isReceived);
             packet_num++;
             sent_request = 0;
 
             if (packet_num != 1) {
-                for (i = 0; i < len; i++)
+                for (uint16_t i = 0; i < len; i++)
                     point_buf[i + total_len] = g_recv_buf[i];
                 total_len += len;
 
@@ -167,16 +165,9 @@ void core1_entry() {
                     packet_num = 0;
                     httpc_disconnect();
                     
-                    for (i = 0; i < len; i += 6) {
-                        b0 = point_buf[i];
-                        b1 = point_buf[i + 1];
-                        b2 = point_buf[i + 2];
-                        r = point_buf[i + 3];
-                        g = point_buf[i + 4];
-                        b = point_buf[i + 5];
-                        x = b0 << 4 | b1 >> 4;
-                        y = (b1 & 0x0f) << 8 | b2;
-                        laser_point_t new_point = {x, y, r, g, b};
+                    for (uint16_t i = 0; i < POINT_REQ_LEN * 6; i += 6) {
+                        laser_point_t new_point;
+                        bytes_to_point(point_buf, i, &new_point);
                         queue_add_blocking(&data_buf, &new_point);
                     }                  
                 }
