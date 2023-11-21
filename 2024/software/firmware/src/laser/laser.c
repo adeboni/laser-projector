@@ -178,6 +178,14 @@ void core1_entry() {
     }
 }
 
+bool valid_point(laser_point_t *target) {
+    return target->x != 0 ||
+           target->y != 0 ||
+           target->r != 0 ||
+           target->g != 0 ||
+           target->b != 0;
+}
+
 int main() {
     set_clock_khz();
     stdio_init_all();
@@ -199,9 +207,11 @@ int main() {
 	while (1)
 	{
         if (queue_try_remove(&data_buf, &new_point)) {
-            last_update = to_ms_since_boot(get_absolute_time());
-            set_laser(new_point.r, new_point.g, new_point.b);
-            mcp4922_write(new_point.x, new_point.y);
+            if (valid_point(&new_point)) {
+                last_update = to_ms_since_boot(get_absolute_time());
+                set_laser(new_point.r, new_point.g, new_point.b);
+                mcp4922_write(new_point.x, new_point.y);
+            }
             sleep_us(150);
         }
 
