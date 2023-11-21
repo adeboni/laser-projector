@@ -1,16 +1,17 @@
 """Main entry point"""
 import tkinter as tk
-import psutil
 from laser_server import LaserServer
 from song_handler import SongHandler
+from sacn_handler import SACNHandler
 
 class MainApp(tk.Tk):
     """Class representing the GUI"""
-    def __init__(self, num_lasers: int, *args, **kwargs):
+    def __init__(self, num_lasers: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.title('Laser Control Station')
         self.geometry('1000x300')
         self.resizable(False, False)
+        self.sacn = SACNHandler()
         self.songs = SongHandler()
         
         self.current_letter = ord('A')
@@ -22,7 +23,6 @@ class MainApp(tk.Tk):
 
         self._setup_labels()
         self._setup_binding()
-        self._update_power_status()
         self._update_song_status()
 
         self._update_selection(None)
@@ -31,9 +31,6 @@ class MainApp(tk.Tk):
     def _setup_labels(self):
         self.mode = tk.Label(self, font=('Arial', 25))
         self.mode.pack()
-
-        self.power_status = tk.Label(self, font=('Arial', 25))
-        self.power_status.pack()
 
         self.song_selection = tk.Label(self, font=('Arial', 25))
         self.song_selection.pack()
@@ -84,11 +81,6 @@ class MainApp(tk.Tk):
             self.song_queue.config(text='Song Queue: Empty')
 
         self.after(100, self._update_song_status)
-
-    def _update_power_status(self):
-        self.plugged_in = psutil.sensors_battery().power_plugged
-        self.power_status.config(text=f'Power Status: {"Plugged In" if self.plugged_in else "Unplugged"}')
-        self.after(1000, self._update_power_status)
                 
 if __name__ == '__main__':
     MainApp(num_lasers=3).mainloop()

@@ -5,7 +5,7 @@ from mutagen.mp3 import MP3
 
 class Song:
     """Class implementing a song"""
-    def __init__(self, path: str, index: int):
+    def __init__(self, path: str, index: int) -> None:
         self.path = path
         self.index = index
         self.played_length_s = 0

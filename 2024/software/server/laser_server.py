@@ -7,8 +7,8 @@ from laser_generators import *
 
 class LaserServer:
     """This class generates data for the lasers"""
-    def __init__(self, num_lasers: int):
-		host_ip = '10.0.0.2'
+    def __init__(self, num_lasers: int) -> None:
+        host_ip = '10.0.0.2'
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {0: circle(), 1: rainbow_circle()}
@@ -33,9 +33,9 @@ class LaserServer:
                     break
             return Response(bytes(return_buf), mimetype='application/octet-stream')
 			
-		@self.flask_app.route('/')
-		def index():
-			return 'Laser server is running!'
+        @self.flask_app.route('/')
+        def index():
+            return 'Laser server is running!'
         
     def start(self) -> None:
         """Starts the server and generator"""

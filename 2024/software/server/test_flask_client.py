@@ -8,7 +8,7 @@ from laser_point import *
 
 class MainApp(tk.Tk):
     """Class representing the GUI"""
-    def __init__(self, laser_id: int, *args, **kwargs):
+    def __init__(self, laser_id: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.title('Test Laser Client')
         self.geometry('400x400')

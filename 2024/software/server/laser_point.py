@@ -9,7 +9,7 @@ def xy_to_bytes(x: int, y: int) -> list[int]:
     return [x >> 4, (x & 0xf) << 4 | y >> 8, y & 0xff]
 
 class LaserPoint:
-    def __init__(self, id: int, x: int = 0, y: int = 0, r: int = 0, g: int = 0, b: int = 0):
+    def __init__(self, id: int, x: int = 0, y: int = 0, r: int = 0, g: int = 0, b: int = 0) -> None:
         self.id = id
         self.x = x
         self.y = y
