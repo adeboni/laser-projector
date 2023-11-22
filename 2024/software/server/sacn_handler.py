@@ -21,6 +21,14 @@ class SACNHandler:
         """
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
 
+    def set_display(self, disp_num, line1, line2):
+        if disp_num == 0:
+            self.outputs[0:40] = list(line1.ljust(40).encode())
+            self.outputs[40:80] = list(line2.ljust(40).encode())
+        elif disp_num == 1:
+            self.outputs[80:120] = list(line1.ljust(40).encode())
+            self.outputs[120:160] = list(line2.ljust(40).encode())
+
     def update_output(self) -> None:
         self.sender[1].dmx_data = tuple(self.outputs)
 
