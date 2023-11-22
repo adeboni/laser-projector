@@ -31,3 +31,20 @@ class SACNHandler:
     def stop(self) -> None:
         """Stops sACN output"""
         self.sender.stop()
+
+if __name__ == '__main__':
+    import time
+    sacn = SACNHandler()
+    sacn.start()
+    for i in range(160, 181, 1):
+        print(f'Updating {i}')
+        for j in range(0, 256, 16):
+            sacn.outputs[i] = j
+            sacn.update_output()
+            time.sleep(0.02)
+        for j in range(0, 256, 16):
+            sacn.outputs[i] = 255 - j
+            sacn.update_output()
+            time.sleep(0.02)
+
+    sacn.stop()
