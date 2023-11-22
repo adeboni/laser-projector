@@ -51,13 +51,16 @@ class LaserServer:
 
 if __name__ == '__main__':
     import time
-    #server = LaserServer(num_lasers=3, ip_address='10.0.0.2')
-    server = LaserServer(num_lasers=3, ip_address='127.0.0.1')
+    server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
+    #server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
+    server.mode = 1
     server.start()
     while True:
+        #time.sleep(1)
+        #continue
         server.mode = 0
         time.sleep(5)
         server.mode = 1
         time.sleep(5)
-        server.mode = 2
-        time.sleep(5)
+        #server.mode = 2
+        #time.sleep(5)

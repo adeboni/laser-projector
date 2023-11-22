@@ -206,16 +206,15 @@ int main() {
 
 	while (1)
 	{
-        if (queue_try_remove(&data_buf, &new_point)) {
-            if (valid_point(&new_point)) {
-                last_update = to_ms_since_boot(get_absolute_time());
-                set_laser(new_point.r, new_point.g, new_point.b);
-                mcp4922_write(new_point.x, new_point.y);
-            }
-            sleep_us(150);
+        if (queue_try_remove(&data_buf, &new_point) && valid_point(&new_point)) {
+            last_update = to_ms_since_boot(get_absolute_time());
+            set_laser(new_point.r, new_point.g, new_point.b);
+            mcp4922_write(new_point.x, new_point.y);   
         }
 
         if (to_ms_since_boot(get_absolute_time()) - last_update > LASER_TIMEOUT)
             set_laser(0, 0, 0);
+
+        sleep_us(150);
 	}
 }
