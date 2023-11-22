@@ -8,11 +8,12 @@ from laser_point import *
 
 class MainApp(tk.Tk):
     """Class representing the GUI"""
-    def __init__(self, laser_id: int, *args, **kwargs) -> None:
+    def __init__(self, laser_id: int, ip_address: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.title('Test Laser Client')
         self.geometry('400x400')
         self.laser_id = laser_id
+        self.ip_address = ip_address
         self.prev_point = LaserPoint(self.laser_id)
         self.fig = Figure()
         self.ax = self.fig.add_subplot(111)
@@ -21,7 +22,7 @@ class MainApp(tk.Tk):
         self._update_laser_plot()
 
     def _update_laser_plot(self):
-        r = requests.get(f'http://10.0.0.2/laser_data/{self.laser_id}/1024/')
+        r = requests.get(f'http://{self.ip_address}/laser_data/{self.laser_id}/1024/')
         raw_bytes = list(r.content)
         
         segments = []
@@ -45,4 +46,5 @@ class MainApp(tk.Tk):
         self.after(100, self._update_laser_plot)
 
 if __name__ == '__main__':
-    MainApp(laser_id=0).mainloop()
+    MainApp(laser_id=0, ip_address='127.0.0.1').mainloop()
+    #MainApp(laser_id=0, ip_address='10.0.0.2').mainloop()

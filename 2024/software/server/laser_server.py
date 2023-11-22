@@ -7,14 +7,13 @@ from laser_generators import *
 
 class LaserServer:
     """This class generates data for the lasers"""
-    def __init__(self, num_lasers: int) -> None:
-        host_ip = '10.0.0.2'
+    def __init__(self, num_lasers: int, host_ip: str) -> None:
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {0: circle(), 1: rainbow_circle()}
 
         self.flask_app = Flask(__name__)
-        self.flask_app.queues = [Queue(1024) for _ in range(self.num_lasers)]
+        self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
         self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 80}, daemon=True)
         self.gen = Thread(target=self.producer, args=(self.flask_app.queues,), daemon=True)
         
@@ -49,3 +48,16 @@ class LaserServer:
         while True:
             if self.mode in self.mode_list and not queues[0].full():
                 queues[0].put(next(self.mode_list[self.mode]))
+
+if __name__ == '__main__':
+    import time
+    #server = LaserServer(num_lasers=3, ip_address='10.0.0.2')
+    server = LaserServer(num_lasers=3, ip_address='127.0.0.1')
+    server.start()
+    while True:
+        server.mode = 0
+        time.sleep(5)
+        server.mode = 1
+        time.sleep(5)
+        server.mode = 2
+        time.sleep(5)

@@ -4,10 +4,10 @@ import sacn
 class SACNHandler:
     """This class implements sACN output functions"""
 
-    def __init__(self) -> None:
+    def __init__(self, target_ip: str) -> None:
         self.sender = sacn.sACNsender()
         self.sender.activate_output(1)
-        self.sender[1].destination = "10.0.0.20"
+        self.sender[1].destination = target_ip
 
         """
         Outputs:
@@ -21,7 +21,7 @@ class SACNHandler:
         """
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
 
-    def set_display(self, disp_num, line1, line2):
+    def set_display(self, disp_num, line1, line2) -> None:
         if disp_num == 0:
             self.outputs[0:40] = list(line1.ljust(40).encode())
             self.outputs[40:80] = list(line2.ljust(40).encode())
@@ -42,8 +42,11 @@ class SACNHandler:
 
 if __name__ == '__main__':
     import time
-    sacn = SACNHandler()
+    sacn = SACNHandler('127.0.0.1')
+    #sacn = SACNHandler('10.0.0.20')
     sacn.start()
+    sacn.set_display(0, "Hello", "World")
+    sacn.set_display(1, "Test", "Second Display")
     for i in range(160, 181, 1):
         print(f'Updating {i}')
         for j in range(0, 256, 16):
