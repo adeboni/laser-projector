@@ -105,7 +105,7 @@ void init_spi() {
     gpio_put(DAC_PIN_CS, 1);
 }
 
-void init_w5500() {
+void w5500_init() {
     wizchip_spi_initialize();
 	wizchip_cris_initialize();
 	wizchip_reset();
@@ -134,7 +134,7 @@ void core1_entry() {
     uint8_t packet_num = 0;
     uint16_t total_len = 0;
 
-    init_w5500();
+    w5500_init();
     httpc_init(0, ip_address, 80);
 
     while (1) {
