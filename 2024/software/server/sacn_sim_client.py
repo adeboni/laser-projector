@@ -10,7 +10,7 @@ class MainApp(tk.Tk):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.title('UI Simulator')
-        self.geometry('1120x780')
+        self.geometry('900x530')
         self.resizable(False, False)
         self._setup_labels()
 
@@ -37,13 +37,13 @@ class MainApp(tk.Tk):
         self.display_0 = []
         for r in range(2):
             for c in range(40):
-                self.display_0.append(tk.Label(self.display_0_frame, text=' ', font=('Courier', 25), bg='blue', fg='white', highlightthickness=1, highlightbackground='white'))
+                self.display_0.append(tk.Label(self.display_0_frame, text=' ', font=('Courier', 18), bg='blue', fg='white', highlightthickness=1, highlightbackground='white'))
                 self.display_0[-1].grid(row=r, column=c)
 
         self.display_1 = []
         for r in range(2):
             for c in range(40):
-                self.display_1.append(tk.Label(self.display_1_frame, text=' ', font=('Courier', 25), bg='blue', fg='white', highlightthickness=1, highlightbackground='white'))
+                self.display_1.append(tk.Label(self.display_1_frame, text=' ', font=('Courier', 18), bg='blue', fg='white', highlightthickness=1, highlightbackground='white'))
                 self.display_1[-1].grid(row=r, column=c)
 
         self.mouth_frame = tk.Frame(self)
@@ -51,7 +51,7 @@ class MainApp(tk.Tk):
 
         self.mouth = []
         for r in range(15):
-            self.mouth.append(tk.Label(self.mouth_frame, font=('Courier', 8), bg='black', highlightthickness=1, highlightbackground='white'))
+            self.mouth.append(tk.Label(self.mouth_frame, font=('Courier', 2), bg='black', highlightthickness=1, highlightbackground='white'))
             self.mouth[-1].pack(side=tk.TOP, fill=tk.X)
 
         self.dots_frame = tk.Frame(self)
@@ -59,7 +59,7 @@ class MainApp(tk.Tk):
 
         self.dots = []
         for c in range(6):
-            self.dots.append(tk.Label(self.dots_frame, text=f'  D{c}  ', font=('Courier', 25), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
+            self.dots.append(tk.Label(self.dots_frame, text=f'  D{c}  ', font=('Courier', 18), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
             self.dots[-1].grid(row=0, column=c)
 
         self.motors_lamp_frame = tk.Frame(self)
@@ -67,9 +67,9 @@ class MainApp(tk.Tk):
 
         self.motors_lamp = []
         for c in range(3):
-            self.motors_lamp.append(tk.Label(self.motors_lamp_frame, text=f'  M{c}  ', font=('Courier', 25), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
+            self.motors_lamp.append(tk.Label(self.motors_lamp_frame, text=f'  M{c}  ', font=('Courier', 18), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
             self.motors_lamp[-1].grid(row=0, column=c)
-        self.motors_lamp.append(tk.Label(self.motors_lamp_frame, text=f' LAMP ', font=('Courier', 25), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
+        self.motors_lamp.append(tk.Label(self.motors_lamp_frame, text=f' LAMP ', font=('Courier', 18), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
         self.motors_lamp[-1].grid(row=0, column=3)
 
         self.buttons_frame = tk.Frame(self)
@@ -77,7 +77,7 @@ class MainApp(tk.Tk):
 
         self.buttons = []
         for c in range(7):
-            self.buttons.append(tk.Label(self.buttons_frame, text=f'  B{c}  ', font=('Courier', 25), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
+            self.buttons.append(tk.Label(self.buttons_frame, text=f'  B{c}  ', font=('Courier', 18), bg='black', fg='blue', highlightthickness=1, highlightbackground='white'))
             self.buttons[-1].grid(row=0, column=c)
             
     def _on_closing(self) -> None:
