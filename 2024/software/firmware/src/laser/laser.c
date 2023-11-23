@@ -157,12 +157,18 @@ void core1_entry() {
             packet_num++;
             sent_request = 0;
 
-            if (packet_num != 1) {
+            if (packet_num == 1) {
+                if (strstr(g_recv_buf, "Content-Length: 0")) {
+                    total_len = 0;
+                    packet_num = 0;
+                    httpc_disconnect();
+                }
+            } else {
                 for (uint16_t i = 0; i < len; i++)
                     point_buf[i + total_len] = g_recv_buf[i];
                 total_len += len;
 
-                if (total_len == POINT_REQ_LEN * 6) {
+                if (total_len >= POINT_REQ_LEN * 6) {
                     total_len = 0;
                     packet_num = 0;
                     httpc_disconnect();
