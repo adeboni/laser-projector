@@ -23,9 +23,7 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define LASER_ID      0 // change this to read from the dip switches
 #define LASER_TIMEOUT 3000
-
 #define POINT_BUFFER_LEN 16384
 #define POINT_REQ_LEN    4096
 
@@ -38,15 +36,6 @@ typedef struct {
 } laser_point_t;
 
 queue_t data_buf;
-
-static wiz_NetInfo g_net_info = {
-	.mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x10 + LASER_ID}, // MAC address
-	.ip = {10, 0, 0, 10 + LASER_ID},                        // IP address
-	.sn = {255, 255, 255, 0},                               // Subnet Mask
-	.gw = {10, 0, 0, 1},                                    // Gateway
-	.dns = {8, 8, 8, 8},                                    // DNS server
-	.dhcp = NETINFO_STATIC                                  // DHCP enable/disable
-};
 
 static void set_clock_khz(void) {
 	set_sys_clock_khz(PLL_SYS_KHZ, true);
@@ -105,14 +94,40 @@ void init_spi() {
     gpio_put(DAC_PIN_CS, 1);
 }
 
+uint8_t get_board_id() {
+    gpio_init(6);
+    gpio_set_dir(6, GPIO_IN);
+    gpio_pull_up(6);
+    gpio_init(7);
+    gpio_set_dir(7, GPIO_IN);
+    gpio_pull_up(7);
+    gpio_init(8);
+    gpio_set_dir(8, GPIO_IN);
+    gpio_pull_up(8);
+    uint8_t b0 = 1 - gpio_get(6);
+    uint8_t b1 = 1 - gpio_get(7);
+    uint8_t b2 = 1 - gpio_get(8);
+    return b0 | (b1 << 1) | (b2 << 2);
+}
+
 void w5500_init() {
     wizchip_spi_initialize();
 	wizchip_cris_initialize();
 	wizchip_reset();
 	wizchip_initialize();
 	wizchip_check();
+
+    uint8_t board_id = get_board_id();
+    wiz_NetInfo g_net_info = {
+        .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x10 + board_id}, // MAC address
+        .ip = {10, 0, 0, 10 + board_id},                        // IP address
+        .sn = {255, 255, 255, 0},                               // Subnet Mask
+        .gw = {10, 0, 0, 1},                                    // Gateway
+        .dns = {8, 8, 8, 8},                                    // DNS server
+        .dhcp = NETINFO_STATIC                                  // DHCP enable/disable
+    };
+
 	network_initialize(g_net_info);
-	//print_network_information(g_net_info);
 }
 
 void bytes_to_point(uint8_t *buf, uint16_t i, laser_point_t *target) {
