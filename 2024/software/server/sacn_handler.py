@@ -42,8 +42,8 @@ class SACNHandler:
 
 if __name__ == '__main__':
     import time
-    sacn = SACNHandler('127.0.0.1')
-    #sacn = SACNHandler('10.0.0.20')
+    #sacn = SACNHandler('127.0.0.1')
+    sacn = SACNHandler('10.0.0.20')
     sacn.start()
     sacn.set_display(0, "Hello", "World")
     sacn.set_display(1, "Test", "Second Display")
@@ -57,5 +57,4 @@ if __name__ == '__main__':
             sacn.outputs[i] = 255 - j
             sacn.update_output()
             time.sleep(0.02)
-
     sacn.stop()

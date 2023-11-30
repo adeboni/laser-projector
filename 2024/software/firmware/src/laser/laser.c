@@ -110,14 +110,13 @@ uint8_t get_board_id() {
     return b0 | (b1 << 1) | (b2 << 2);
 }
 
-void w5500_init() {
+void w5500_init(uint8_t board_id) {
     wizchip_spi_initialize();
 	wizchip_cris_initialize();
 	wizchip_reset();
 	wizchip_initialize();
 	wizchip_check();
-
-    uint8_t board_id = get_board_id();
+    
     wiz_NetInfo g_net_info = {
         .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x10 + board_id}, // MAC address
         .ip = {10, 0, 0, 10 + board_id},                        // IP address
@@ -142,15 +141,16 @@ void core1_entry() {
     uint8_t ip_address[4]  = {10, 0, 0, 2};
     uint8_t domain_name[] = "10.0.0.2";
     uint8_t uri[40];
-    sprintf(uri, "/laser_data/%d/%d/", LASER_ID, POINT_REQ_LEN);
     uint8_t g_recv_buf[DATA_BUF_SIZE];
     uint8_t point_buf[POINT_REQ_LEN * 6];
     uint8_t sent_request = 0;
     uint8_t packet_num = 0;
     uint16_t total_len = 0;
 
-    w5500_init();
+    uint8_t board_id = get_board_id();
+    w5500_init(board_id);
     httpc_init(0, ip_address, 80);
+    sprintf(uri, "/laser_data/%d/%d/", board_id, POINT_REQ_LEN);
 
     while (1) {
         httpc_connection_handler();
