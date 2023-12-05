@@ -28,7 +28,7 @@ class Song:
         """Returns a display string with the current time"""
         pm, ps = divmod(self.played_length_s, 60)
         tm, ts = divmod(self.length_s, 60)
-        return f'({self.song_id_str}) {self.author} - {self.title} [{f'{pm:02d}:{ps:02d}'}/{f'{tm:02d}:{ts:02d}'}]'
+        return f'({self.song_id_str}) {self.author} - {self.title} [{pm:02d}:{ps:02d}/{tm:02d}:{ts:02d}]'
 
     def __str__(self):
         return f'({self.song_id_str}) {self.author} - {self.title}'
