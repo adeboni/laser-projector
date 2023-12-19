@@ -84,7 +84,7 @@ class MainApp(tk.Tk):
         self.sacn.stop()
         self.destroy()
 
-    def _update_display(self, display_num, packet) -> None:
+    def _update_display(self, display_num: int, packet) -> None:
         if display_num == 0:
             for i in range(80):
                 self.display_0[i].config(text=chr(packet.dmxData[i]))
@@ -93,7 +93,7 @@ class MainApp(tk.Tk):
                 self.display_1[i].config(text=chr(packet.dmxData[i + 80]))
 
     def _update_mouth(self, packet) -> None:
-        label_indexes = [0, 3, 6, 9, 12, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14]
+        label_indexes = [0, 3, 6, 9, 12, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14]        
         for i in range(15):
             data = packet.dmxData[i + 160]
             if i // 5 == 0: # red

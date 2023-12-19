@@ -21,7 +21,8 @@ class SACNHandler:
         """
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
 
-    def set_display(self, disp_num, line1, line2) -> None:
+    def set_display(self, disp_num: int, line1: str, line2: str) -> None:
+        """Updates the display buffers"""
         if disp_num == 0:
             self.outputs[0:40] = list(line1.ljust(40).encode())
             self.outputs[40:80] = list(line2.ljust(40).encode())
@@ -30,6 +31,7 @@ class SACNHandler:
             self.outputs[120:160] = list(line2.ljust(40).encode())
 
     def update_output(self) -> None:
+        """Sends the pending buffer out to the network"""
         self.sender[1].dmx_data = tuple(self.outputs)
 
     def start(self) -> None:
@@ -42,19 +44,46 @@ class SACNHandler:
 
 if __name__ == '__main__':
     import time
-    #sacn = SACNHandler('127.0.0.1')
-    sacn = SACNHandler('10.0.0.20')
+    import math
+
+    def clamp(x, min_val, max_val):
+        return max(min(max_val, x), min_val)
+
+    def cube(x):
+        return clamp((int)(x * x * x / 255 / 255), 0, 255)
+
+    def nightrider():
+        while True:
+            dotIndex = math.sin(time.time() * 4) * 5 + 2.5
+            yield [cube(255 - 51 * abs(i - dotIndex)) for i in range(6)]
+
+    def pulse():
+        output = [0 for _ in range(15)]
+        while True:
+            mouthColorIndex = math.sin(time.time() * 50 * math.pi / 180) + 1
+            mouthRedLevel = cube(255 - 85 * abs(0 - mouthColorIndex))
+            mouthWhiteLevel = cube(255 - 85 * abs(1 - mouthColorIndex))
+            mouthBlueLevel = cube(255 - 85 * abs(2 - mouthColorIndex))
+            for i in range(5):
+                output[i] = int((math.sin(time.time() * 4) + 1) * 128 * mouthRedLevel / 255)
+                output[i + 5] = int((math.sin(time.time() * 4) + 1) * 128 * mouthWhiteLevel / 255)
+                output[i + 10] = int((math.sin(time.time() * 4) + 1) * 128 * mouthBlueLevel / 255)
+            yield output
+
+
+    dots_gen = nightrider()
+    mouth_gen = pulse()
+
+    sacn = SACNHandler('127.0.0.1')
+    #sacn = SACNHandler('10.0.0.20')
     sacn.start()
     sacn.set_display(0, "Hello", "World")
     sacn.set_display(1, "Test", "Second Display")
-    for i in range(160, 181, 1):
-        print(f'Updating {i}')
-        for j in range(0, 256, 16):
-            sacn.outputs[i] = j
-            sacn.update_output()
-            time.sleep(0.02)
-        for j in range(0, 256, 16):
-            sacn.outputs[i] = 255 - j
-            sacn.update_output()
-            time.sleep(0.02)
+
+    start_time = time.time()
+    while time.time() - start_time < 10:
+        sacn.outputs[160:175] = next(mouth_gen)
+        sacn.outputs[175:181] = next(dots_gen)
+        sacn.update_output()
+        time.sleep(0.02)
     sacn.stop()
