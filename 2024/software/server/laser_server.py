@@ -1,6 +1,7 @@
 """This module generates data for the lasers"""
 from threading import Thread
 from queue import Queue
+from gevent.pywsgi import WSGIServer
 from flask import Flask, Response, current_app
 from laser_point import *
 from laser_generators import *
@@ -8,13 +9,15 @@ from laser_generators import *
 class LaserServer:
     """This class generates data for the lasers"""
     def __init__(self, num_lasers: int, host_ip: str) -> None:
+        self.host_ip = host_ip
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {0: circle(), 1: rainbow_circle()}
 
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
-        self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 80}, daemon=True)
+        #self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 80, 'threaded': True}, daemon=True)
+        self.server = Thread(target=lambda: WSGIServer((self.host_ip, 80), self.flask_app).serve_forever(), daemon=True)
         self.gen = Thread(target=self.producer, args=(self.flask_app.queues,), daemon=True)
         
         @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])
@@ -35,12 +38,12 @@ class LaserServer:
         @self.flask_app.route('/')
         def index():
             return 'Laser server is running!'
-        
-    def start(self) -> None:
-        """Starts the server and generator"""
+    
+    def start_server(self) -> None:
         if not self.server.is_alive():
             self.server.start()
 
+    def start_generator(self) -> None:
         if not self.gen.is_alive():
             self.gen.start()
 
@@ -54,7 +57,8 @@ if __name__ == '__main__':
     server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
     #server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
     server.mode = 1
-    server.start()
+    server.start_generator()
+    server.start_server()
     while True:
         #time.sleep(1)
         #continue

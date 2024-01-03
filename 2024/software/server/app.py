@@ -17,7 +17,7 @@ class MainApp(tk.Tk):
         self.current_mode = 0
 
         self.laser_server = LaserServer(num_lasers, host_ip)
-        self.laser_server.start()
+        self.laser_server.start_generator()
 
         self.sacn = SACNHandler(target_ip)
         self.sacn.start()
@@ -28,6 +28,9 @@ class MainApp(tk.Tk):
 
         self._update_selection(None)
         self._update_mode(None)
+
+    def start_server(self) -> None:
+        self.laser_server.start_server()
 
     def _on_closing(self) -> None:
         self.sacn.stop()
@@ -89,5 +92,7 @@ class MainApp(tk.Tk):
         self.after(100, self._update_song_status)
                 
 if __name__ == '__main__':
-    #MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1').mainloop()
-    MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20').mainloop()
+    app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
+    # app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
+    app.start_server()
+    app.mainloop()
