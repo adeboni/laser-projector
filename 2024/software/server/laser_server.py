@@ -1,7 +1,7 @@
 """This module generates data for the lasers"""
 from threading import Thread
 from queue import Queue
-from gevent.pywsgi import WSGIServer
+from waitress import serve
 from flask import Flask, Response, current_app
 from laser_point import *
 from laser_generators import *
@@ -9,7 +9,6 @@ from laser_generators import *
 class LaserServer:
     """This class generates data for the lasers"""
     def __init__(self, num_lasers: int, host_ip: str) -> None:
-        self.host_ip = host_ip
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {0: circle(), 1: rainbow_circle()}
@@ -17,7 +16,7 @@ class LaserServer:
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
         #self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 80, 'threaded': True}, daemon=True)
-        self.server = Thread(target=lambda: WSGIServer((self.host_ip, 80), self.flask_app).serve_forever(), daemon=True)
+        self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=80), daemon=True)
         self.gen = Thread(target=self.producer, args=(self.flask_app.queues,), daemon=True)
         
         @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])

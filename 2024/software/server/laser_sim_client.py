@@ -43,7 +43,7 @@ class MainApp(tk.Tk):
         self.ax.set_aspect('equal')
         self.ax.set_title(f'Laser {self.laser_id + 1}')
         self.fig.canvas.draw()
-        self.after(100, self._update_laser_plot)
+        self.after(10, self._update_laser_plot)
 
 if __name__ == '__main__':
     MainApp(laser_id=0, ip_address='127.0.0.1').mainloop()
