@@ -9,3 +9,4 @@ build/
 .vscode
 !*.uf2
 fp-info-cache
+booklet.pdf
