@@ -29,21 +29,10 @@ class MainApp:
     def show_screen(self) -> None:
         screen = pygame.display.set_mode(self.window_size)
         pygame.display.set_caption('Laser Control Station')
-        clock = pygame.time.Clock()
-        time_since_song_update = 0
-
-        def update_display():
-            screen.fill((255, 255, 255))
-            self._draw_labels(screen)
-            pygame.display.update()
+        update_songs = pygame.USEREVENT
+        pygame.time.set_timer(update_songs, 100) 
 
         while True:
-            time_since_song_update += clock.tick()
-            if time_since_song_update > 100:
-                time_since_song_update = 0
-                self._update_song_status()
-                update_display()
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.sacn.stop()
@@ -60,8 +49,12 @@ class MainApp:
                         self.songs.add_to_queue(self.current_letter, self.current_number)
                     elif event.key == pygame.K_SPACE:
                         self.songs.play_next_song()
+                elif event.type == update_songs:
+                    self._update_song_status()
 
-                update_display()
+                screen.fill((255, 255, 255))
+                self._draw_labels(screen)
+                pygame.display.update()
                 
     def start_server(self) -> None:
         self.laser_server.start_server()
