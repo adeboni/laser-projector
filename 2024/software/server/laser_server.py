@@ -59,11 +59,7 @@ if __name__ == '__main__':
     server.start_generator()
     server.start_server()
     while True:
-        #time.sleep(1)
-        #continue
         server.mode = 0
         time.sleep(5)
         server.mode = 1
         time.sleep(5)
-        #server.mode = 2
-        #time.sleep(5)

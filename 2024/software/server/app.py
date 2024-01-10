@@ -8,7 +8,6 @@ class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
-        self.window_size = (750, 300)
         self.font = pygame.font.SysFont('Arial', 32)
         self.labels = {'Mode': '0',
                        'Song Input': 'A0',
@@ -27,7 +26,7 @@ class MainApp:
         self.sacn.start()
 
     def show_screen(self) -> None:
-        screen = pygame.display.set_mode(self.window_size)
+        screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption('Laser Control Station')
         update_songs = pygame.USEREVENT
         pygame.time.set_timer(update_songs, 100) 
@@ -50,21 +49,22 @@ class MainApp:
                     elif event.key == pygame.K_SPACE:
                         self.songs.play_next_song()
                 elif event.type == update_songs:
-                    self._update_song_status()
+                    self.songs.update()
+                    song_queue = ", ".join([x.song_id_str for x in self.songs.song_queue])
+                    self.labels['Current Song'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
+                    self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
 
+                x = screen.get_size()[0] // 2
                 screen.fill((255, 255, 255))
-                self._draw_labels(screen)
+                for i, (name, value) in enumerate(self.labels.items()):
+                    text = self.font.render(f'{name}: {value}', True, (0, 0, 0))
+                    rect = text.get_rect()
+                    rect.center = (x, 15 + i * 40)
+                    screen.blit(text, rect)
                 pygame.display.update()
                 
     def start_server(self) -> None:
         self.laser_server.start_server()
-
-    def _draw_labels(self, screen: pygame.Surface) -> None:
-        for i, (name, value) in enumerate(self.labels.items()):
-            text = self.font.render(f'{name}: {value}', True, (0, 0, 0))
-            rect = text.get_rect()
-            rect.center = (self.window_size[0] // 2, 15 + i * 40)
-            screen.blit(text, rect)
 
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
@@ -76,20 +76,7 @@ class MainApp:
         elif key == pygame.K_RIGHT and self.current_number != 9:
             self.current_number += 1
         self.labels['Song Input'] = f'{chr(self.current_letter)}{self.current_number}'
-
-    def _update_song_status(self) -> None:
-        self.songs.update()
-
-        if self.songs.current_song is None:
-            self.labels['Current Song'] = 'None'
-        else:
-            self.labels['Current Song'] = self.songs.current_song.running_str
-
-        if any(self.songs.song_queue):
-            self.labels['Song Queue'] = ", ".join([x.song_id_str for x in self.songs.song_queue])
-        else:
-            self.labels['Song Queue'] = 'Empty'
-                
+       
 if __name__ == '__main__':
     app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     # app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
