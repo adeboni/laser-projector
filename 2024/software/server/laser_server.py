@@ -15,8 +15,8 @@ class LaserServer:
 
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
-        #self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 80, 'threaded': True}, daemon=True)
-        self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=80), daemon=True)
+        #self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 8080, 'threaded': True}, daemon=True)
+        self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=8080), daemon=True)
         self.gen = Thread(target=self.producer, args=(self.flask_app.queues,), daemon=True)
         
         @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])

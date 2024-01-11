@@ -149,7 +149,7 @@ void core1_entry() {
 
     uint8_t board_id = get_board_id();
     w5500_init(board_id);
-    httpc_init(0, ip_address, 80);
+    httpc_init(0, ip_address, 8080);
     sprintf(uri, "/laser_data/%d/%d/", board_id, POINT_REQ_LEN);
 
     while (1) {
