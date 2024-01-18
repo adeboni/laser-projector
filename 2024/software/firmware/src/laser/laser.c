@@ -23,9 +23,10 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define LASER_TIMEOUT 3000
-#define POINT_BUFFER_LEN 16384
-#define POINT_REQ_LEN    4096
+#define LASER_WAIT_US  150
+#define LASER_TIMEOUT  3000
+#define POINT_BUFF_LEN 16384
+#define POINT_REQ_LEN  4096
 
 typedef struct {
     uint16_t x;
@@ -220,22 +221,21 @@ int main() {
     init_pin(GRN_PIN);
     init_pin(BLU_PIN);
 
-    queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_LEN);
+    queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFF_LEN);
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
     uint32_t last_update = to_ms_since_boot(get_absolute_time());
 
-	while (1)
-	{
+	while (1) {
         if (queue_try_remove(&data_buf, &new_point) && valid_point(&new_point)) {
             last_update = to_ms_since_boot(get_absolute_time());
             set_laser(new_point.r, new_point.g, new_point.b);
-            mcp4922_write(new_point.x, new_point.y);   
+            mcp4922_write(new_point.x, new_point.y);
         }
 
         if (to_ms_since_boot(get_absolute_time()) - last_update > LASER_TIMEOUT)
             set_laser(0, 0, 0);
 
-        sleep_us(150);
+        sleep_us(LASER_WAIT_US);
 	}
 }
