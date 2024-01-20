@@ -80,7 +80,7 @@ class SongHandler:
 
     def get_booklet_letter_limit(self) -> str:
         """Returns the maximum booklet letter"""
-        return chr(ord('A') + len(self.songs) // 10)
+        return chr(ord('A') + (len(self.songs) - 1) // 10)
 
     def update(self) -> None:
         """Updates the current song timestamp and plays the next song if it finishes"""
