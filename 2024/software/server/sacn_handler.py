@@ -43,8 +43,8 @@ class SACNHandler:
         self.sender.stop()
 
 if __name__ == '__main__':
-    import time
     import math
+    import time
 
     def clamp(x, min_val, max_val):
         return max(min(max_val, x), min_val)

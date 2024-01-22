@@ -28,10 +28,16 @@ class Song:
         """Returns a display string with the current time"""
         pm, ps = divmod(self.played_length_s, 60)
         tm, ts = divmod(self.length_s, 60)
-        return f'({self.song_id_str}) {self.author} - {self.title} [{pm:02d}:{ps:02d}/{tm:02d}:{ts:02d}]'
+        time_str = f'{pm:02d}:{ps:02d}/{tm:02d}:{ts:02d}'
+        title_str = self.title
+        # Shorten the title string to 12 chars to fit a 40 char display
+        # Playing: ID - <Title> - MM:SS/MM:SS
+        if len(title_str) > 12:
+            title_str = f'{title_str[:9]}...'
+        return f'{self.song_id_str} - {title_str} - {time_str}'
 
     def __str__(self):
-        return f'({self.song_id_str}) {self.author} - {self.title}'
+        return f'{self.song_id_str} - {self.author} - {self.title}'
 
     def play(self) -> None:
         """Plays the song"""

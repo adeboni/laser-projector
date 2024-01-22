@@ -9,15 +9,24 @@ class MainApp:
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
         self.font = pygame.font.SysFont('Arial', 32)
-        self.labels = {'Mode': '0',
+        self.labels = {'Mode': '0 - Invalid Mode',
                        'Song Input': 'A0',
-                       'Current Song': 'None',
+                       'Playing': 'None',
                        'Song Queue': 'Empty'}
 
         self.songs = SongHandler()
         self.current_letter = ord('A')
         self.current_number = 0
         self.current_mode = 0
+
+        self.mode_names = {1: 'Jukebox', 
+                           2: 'Wand', 
+                           3: 'Pong', 
+                           4: 'Mode 4', 
+                           5: 'Mode 5', 
+                           6: 'Mode 6', 
+                           7: 'Mode 7', 
+                           8: 'Mode 8'}
 
         self.laser_server = LaserServer(num_lasers, host_ip)
         self.laser_server.start_generator()
@@ -41,7 +50,8 @@ class MainApp:
                     if event.key in range(48, 58):
                         self.current_mode = event.key - 48
                         self.laser_server.mode = self.current_mode
-                        self.labels['Mode'] = f'{self.current_mode}'
+                        mode_name = f'{self.current_mode} - {self.mode_names[self.current_mode] if self.current_mode in self.mode_names else "Invalid Mode"}'
+                        self.labels['Mode'] = mode_name
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
                     elif event.key == pygame.K_RETURN:
@@ -51,8 +61,11 @@ class MainApp:
                 elif event.type == update_songs:
                     self.songs.update()
                     song_queue = ", ".join([x.song_id_str for x in self.songs.song_queue])
-                    self.labels['Current Song'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
+                    if len(song_queue) > 28:
+                        song_queue = f'{song_queue[:25]}...'
+                    self.labels['Playing'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
                     self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
+                    self._update_lcds()
 
                 x = screen.get_size()[0] // 2
                 screen.fill((255, 255, 255))
@@ -76,6 +89,15 @@ class MainApp:
         elif key == pygame.K_RIGHT and self.current_number != 9:
             self.current_number += 1
         self.labels['Song Input'] = f'{chr(self.current_letter)}{self.current_number}'
+
+    def _update_lcds(self) -> None:
+        row1 = f'Mode: {self.labels["Mode"]}'
+        row2 = f'Song Selection: {self.labels["Song Input"]}'
+        row3 = f'Playing: {self.labels["Playing"]}'
+        row4 = f'Queue: {self.labels["Song Queue"]}'
+        self.sacn.set_display(0, row1, row2)
+        self.sacn.set_display(1, row3, row4)
+        self.sacn.update_output()
        
 if __name__ == '__main__':
     app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')

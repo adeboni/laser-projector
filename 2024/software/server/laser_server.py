@@ -11,7 +11,7 @@ class LaserServer:
     def __init__(self, num_lasers: int, host_ip: str) -> None:
         self.mode = 0
         self.num_lasers = num_lasers
-        self.mode_list = {0: circle(), 1: rainbow_circle()}
+        self.mode_list = {1: circle(), 2: rainbow_circle()}
 
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
