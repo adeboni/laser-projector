@@ -38,7 +38,7 @@ class MainApp:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption('Laser Control Station')
         update_songs = pygame.USEREVENT
-        pygame.time.set_timer(update_songs, 100) 
+        pygame.time.set_timer(update_songs, 100)
 
         while True:
             for event in pygame.event.get():

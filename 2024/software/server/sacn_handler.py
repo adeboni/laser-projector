@@ -1,4 +1,5 @@
 """This module handles all the sACN ouputs"""
+import time
 import sacn
 
 class SACNHandler:
@@ -20,6 +21,34 @@ class SACNHandler:
         185-191 = Buttons
         """
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
+
+    def set_mouth(self, values: list[int]) -> None:
+        """Sets the mouth buffers"""
+        if len(values) != 15:
+            raise ValueError(f'Set_mouth requires 15 values, but we received {len(values)} values')
+        self.outputs[160:175] = values
+
+    def set_dots(self, values: list[int]) -> None:
+        """Sets the dot buffers"""
+        if len(values) != 6:
+            raise ValueError(f'Set_dots requires 6 values, but we received {len(values)} values')
+        self.outputs[175:181] = values
+
+    def set_buttons(self, values: list[int]) -> None:
+        """Sets the button buffers"""
+        if len(values) != 7:
+            raise ValueError(f'Set_buttons requires 7 values, but we received {len(values)} values')
+        self.outputs[181:184] = values
+
+    def set_motors(self, values: list[int]) -> None:
+        """Sets the motor buffers"""
+        if len(values) != 3:
+            raise ValueError(f'Set_motors requires 3 values, but we received {len(values)} values')
+        self.outputs[185:192] = values
+
+    def set_lamp(self, value: int) -> None:
+        """Sets the lamp buffer"""
+        self.outputs[184] = value
 
     def set_display(self, disp_num: int, line1: str, line2: str) -> None:
         """Updates the display buffers"""
@@ -43,42 +72,21 @@ class SACNHandler:
         self.sender.stop()
 
 if __name__ == '__main__':
-    import math
-    import time
+    from robbie_generators import *
 
-    def clamp(x, min_val, max_val):
-        return max(min(max_val, x), min_val)
+    dots_gen = dots_nightrider()
+    mouth_gen = mouth_pulse()
 
-    def cube(x):
-        return clamp((int)(x * x * x / 255 / 255), 0, 255)
-
-    def nightrider():
-        while True:
-            dotIndex = math.sin(time.time() * 4) * 5 + 2.5
-            yield [cube(255 - 51 * abs(i - dotIndex)) for i in range(6)]
-
-    def pulse():
-        output = [0 for _ in range(15)]
-        while True:
-            mouthColorIndex = math.sin(time.time() * 50 * math.pi / 180) + 1
-            mouthRedLevel = cube(255 - 85 * abs(0 - mouthColorIndex))
-            mouthWhiteLevel = cube(255 - 85 * abs(1 - mouthColorIndex))
-            mouthBlueLevel = cube(255 - 85 * abs(2 - mouthColorIndex))
-            for i in range(5):
-                output[i] = int((math.sin(time.time() * 4) + 1) * 128 * mouthRedLevel / 255)
-                output[i + 5] = int((math.sin(time.time() * 4) + 1) * 128 * mouthWhiteLevel / 255)
-                output[i + 10] = int((math.sin(time.time() * 4) + 1) * 128 * mouthBlueLevel / 255)
-            yield output
-
-
-    dots_gen = nightrider()
-    mouth_gen = pulse()
-
-    sacn = SACNHandler('127.0.0.1')
-    #sacn = SACNHandler('10.0.0.20')
+    #sacn = SACNHandler('127.0.0.1')
+    sacn = SACNHandler('10.0.0.20')
     sacn.start()
-    sacn.set_display(0, "Hello", "World")
-    sacn.set_display(1, "Test", "Second Display")
+
+    for i in range(160, 192, 1):
+        sacn.outputs[i] = 255
+        sacn.update_output()
+        time.sleep(0.2)
+        sacn.outputs[i] = 0
+    sacn.update_output()
 
     start_time = time.time()
     while time.time() - start_time < 10:
@@ -86,4 +94,9 @@ if __name__ == '__main__':
         sacn.outputs[175:181] = next(dots_gen)
         sacn.update_output()
         time.sleep(0.02)
+
+    sacn.outputs[:] = [0] * len(sacn.outputs)
+    sacn.update_output()
+    time.sleep(0.1)
+
     sacn.stop()
