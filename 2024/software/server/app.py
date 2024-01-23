@@ -60,7 +60,7 @@ class MainApp:
                         self.songs.play_next_song()
                 elif event.type == update_songs:
                     self.songs.update()
-                    song_queue = ", ".join([x.song_id_str for x in self.songs.song_queue])
+                    song_queue = " ".join([x.song_id_str for x in self.songs.song_queue])
                     if len(song_queue) > 28:
                         song_queue = f'{song_queue[:25]}...'
                     self.labels['Playing'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
@@ -100,7 +100,7 @@ class MainApp:
         self.sacn.update_output()
        
 if __name__ == '__main__':
-    app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
-    # app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
+    #app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
+    app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
     app.start_server()
     app.show_screen()
