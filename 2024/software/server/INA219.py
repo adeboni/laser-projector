@@ -194,7 +194,7 @@ if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(22, GPIO.OUT)
     GPIO.output(22, 1)
-    readings = [1, 1, 1]
+    readings = [10] * 5
     while True:
         readings.pop(0)
         bus_voltage = ina219.getBusVoltage_V()             # voltage on V- (load side)
@@ -205,10 +205,10 @@ if __name__ == '__main__':
         if (p > 100): p = 100
         if (p < 0): p = 0
         
-        readings.append(current)
-        if all(r < 0 for r in readings):
+        readings.append(bus_voltage)
+        if all(r < 7.95 for r in readings):
             print("Shutting down")
-            #os.system("sudo shutdown -h now")
+            os.system("sudo shutdown -h now")
 
         # INA219 measure bus voltage on the load side. So PSU voltage = bus_voltage + shunt_voltage
         print("PSU Voltage:   {:6.3f} V".format(bus_voltage + shunt_voltage))
