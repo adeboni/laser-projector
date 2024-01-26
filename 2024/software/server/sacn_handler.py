@@ -38,13 +38,13 @@ class SACNHandler:
         """Sets the button buffers"""
         if len(values) != 7:
             raise ValueError(f'Set_buttons requires 7 values, but we received {len(values)} values')
-        self.outputs[181:184] = values
+        self.outputs[185:192] = values
 
     def set_motors(self, values: list[int]) -> None:
         """Sets the motor buffers"""
         if len(values) != 3:
             raise ValueError(f'Set_motors requires 3 values, but we received {len(values)} values')
-        self.outputs[185:192] = values
+        self.outputs[181:184] = values
 
     def set_lamp(self, value: int) -> None:
         """Sets the lamp buffer"""
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     for i in range(160, 192, 1):
         sacn.outputs[i] = 255
         sacn.update_output()
-        time.sleep(0.2)
+        time.sleep(0.5)
         sacn.outputs[i] = 0
     sacn.update_output()
 
