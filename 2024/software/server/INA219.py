@@ -194,27 +194,28 @@ if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(22, GPIO.OUT)
     GPIO.output(22, 1)
+    GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     readings = [10] * 5
+
     while True:
         readings.pop(0)
         bus_voltage = ina219.getBusVoltage_V()             # voltage on V- (load side)
         shunt_voltage = ina219.getShuntVoltage_mV() / 1000 # voltage between V+ and V- across the shunt
-        current = ina219.getCurrent_mA()                   # current in mA
+        current = ina219.getCurrent_mA() / 1000            # current in A
         power = ina219.getPower_W()                        # power in W
         p = (bus_voltage - 6) / 2.4 * 100
         if (p > 100): p = 100
         if (p < 0): p = 0
         
-        readings.append(bus_voltage)
-        if all(r < 7.95 for r in readings):
+        readings.append(current)
+        if all(r < -0.09 for r in readings) and not GPIO.input(21):
             print("Shutting down")
             os.system("sudo shutdown -h now")
 
-        # INA219 measure bus voltage on the load side. So PSU voltage = bus_voltage + shunt_voltage
         print("PSU Voltage:   {:6.3f} V".format(bus_voltage + shunt_voltage))
         print("Shunt Voltage: {:9.6f} V".format(shunt_voltage))
         print("Load Voltage:  {:6.3f} V".format(bus_voltage))
-        print("Current:       {:9.6f} A".format(current/1000))
+        print("Current:       {:9.6f} A".format(current))
         print("Power:         {:6.3f} W".format(power))
         print("Percent:       {:3.1f}%".format(p))
         print("")
