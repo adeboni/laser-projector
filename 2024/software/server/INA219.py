@@ -199,6 +199,7 @@ if __name__ == '__main__':
 
     while True:
         readings.pop(0)
+        jumper = GPIO.input(21)
         bus_voltage = ina219.getBusVoltage_V()             # voltage on V- (load side)
         shunt_voltage = ina219.getShuntVoltage_mV() / 1000 # voltage between V+ and V- across the shunt
         current = ina219.getCurrent_mA() / 1000            # current in A
@@ -208,7 +209,7 @@ if __name__ == '__main__':
         if (p < 0): p = 0
         
         readings.append(current)
-        if all(r < -0.09 for r in readings) and not GPIO.input(21):
+        if all(r < -0.09 for r in readings) and not jumper:
             print("Shutting down")
             os.system("sudo shutdown -h now")
 
@@ -218,6 +219,7 @@ if __name__ == '__main__':
         print("Current:       {:9.6f} A".format(current))
         print("Power:         {:6.3f} W".format(power))
         print("Percent:       {:3.1f}%".format(p))
+        print("Jumper:        {}".format(jumper))
         print("")
 
         time.sleep(1)
