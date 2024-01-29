@@ -1,6 +1,8 @@
 """This module handles all the sACN ouputs"""
 import time
+from threading import Thread
 import sacn
+import robbie_generators
 
 class SACNHandler:
     """This class implements sACN output functions"""
@@ -22,33 +24,43 @@ class SACNHandler:
         """
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
 
-    def set_mouth(self, values: list[int]) -> None:
+        self.animations = [
+            (self.set_dots, robbie_generators.dots_nightrider),
+            (self.set_mouth, robbie_generators.mouth_pulse)
+        ]
+        self.animation_thread = Thread(target=self._animation_thread, daemon=True)
+        self.animation_running = False
+
+    def set_mouth(self, values: list[int] | None) -> None:
         """Sets the mouth buffers"""
-        if len(values) != 15:
+        if values and len(values) != 15:
             raise ValueError(f'Set_mouth requires 15 values, but we received {len(values)} values')
-        self.outputs[160:175] = values
+        self.outputs[160:175] = values if values else [0] * 15
 
-    def set_dots(self, values: list[int]) -> None:
+    def set_dots(self, values: list[int] | None) -> None:
         """Sets the dot buffers"""
-        if len(values) != 6:
+        if values and len(values) != 6:
             raise ValueError(f'Set_dots requires 6 values, but we received {len(values)} values')
-        self.outputs[175:181] = values
+        self.outputs[175:181] = values if values else [0] * 6
 
-    def set_buttons(self, values: list[int]) -> None:
+    def set_buttons(self, values: list[int] | None) -> None:
         """Sets the button buffers"""
-        if len(values) != 7:
+        if values and len(values) != 7:
             raise ValueError(f'Set_buttons requires 7 values, but we received {len(values)} values')
-        self.outputs[185:192] = values
+        self.outputs[185:192] = values if values else [0] * 7
 
-    def set_motors(self, values: list[int]) -> None:
+    def set_motors(self, values: list[int] | None) -> None:
         """Sets the motor buffers"""
-        if len(values) != 3:
+        if values and len(values) != 3:
             raise ValueError(f'Set_motors requires 3 values, but we received {len(values)} values')
-        self.outputs[181:184] = values
+        self.outputs[181:184] = values if values else [0] * 3
 
-    def set_lamp(self, value: int) -> None:
+    def set_lamp(self, value: int | None) -> None:
         """Sets the lamp buffer"""
-        self.outputs[184] = value
+        self.outputs[184] = value if value else 0
+
+    def clear_display(self, disp_num: int) -> None:
+        self.set_display(disp_num, " ", " ")
 
     def set_display(self, disp_num: int, line1: str, line2: str) -> None:
         """Updates the display buffers"""
@@ -69,17 +81,43 @@ class SACNHandler:
 
     def stop(self) -> None:
         """Stops sACN output"""
+        if self.animation_running:
+            self.stop_animations()
         self.sender.stop()
 
+    def _animation_thread(self) -> None:
+        while self.animation_running:
+            for set_func, generator in self.animations:
+                gen = generator()
+                start_time = time.time()
+                while time.time() - start_time < 10 and self.animation_running:
+                    set_func(next(gen))
+                    sacn.update_output()
+                    time.sleep(0.02)
+                set_func(None)
+                sacn.update_output()
+                start_time = time.time()
+                while time.time() - start_time < 10 and self.animation_running:
+                    pass
+
+    def start_animations(self) -> None:
+        self.animation_running = True
+        if not self.animation_thread.is_alive():
+            self.animation_thread.start()
+
+    def stop_animations(self) -> None:
+        self.animation_running = False
+        while self.animation_thread.is_alive():
+            pass
+
+
 if __name__ == '__main__':
-    from robbie_generators import *
-
-    dots_gen = dots_nightrider()
-    mouth_gen = mouth_pulse()
-
     #sacn = SACNHandler('127.0.0.1')
     sacn = SACNHandler('10.0.0.20')
     sacn.start()
+
+    sacn.clear_display(0)
+    sacn.clear_display(1)
 
     for i in range(160, 192, 1):
         sacn.outputs[i] = 255
@@ -88,14 +126,9 @@ if __name__ == '__main__':
         sacn.outputs[i] = 0
     sacn.update_output()
 
-    start_time = time.time()
-    while time.time() - start_time < 10:
-        sacn.outputs[160:175] = next(mouth_gen)
-        sacn.outputs[175:181] = next(dots_gen)
-        sacn.update_output()
-        time.sleep(0.02)
-
     sacn.outputs[:] = [0] * len(sacn.outputs)
+    sacn.clear_display(0)
+    sacn.clear_display(1)
     sacn.update_output()
     time.sleep(0.1)
 

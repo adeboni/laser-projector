@@ -9,10 +9,12 @@ class MainApp:
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
         self.font = pygame.font.SysFont('Arial', 32)
+        self.joysticks = {}
         self.labels = {'Mode': '0 - Invalid Mode',
                        'Song Input': 'A0',
                        'Playing': 'None',
-                       'Song Queue': 'Empty'}
+                       'Song Queue': 'Empty',
+                       'Joysticks': 'None'}
 
         self.songs = SongHandler()
         self.current_letter = ord('A')
@@ -33,6 +35,7 @@ class MainApp:
 
         self.sacn = SACNHandler(target_ip)
         self.sacn.start()
+        self.sacn.start_animations()
 
     def show_screen(self) -> None:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
@@ -66,6 +69,14 @@ class MainApp:
                     self.labels['Playing'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
                     self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
                     self._update_lcds()
+                elif event.type == pygame.JOYDEVICEADDED:
+                    joystick = pygame.joystick.Joystick(event.device_index)
+                    self.joysticks[joystick.get_instance_id()] = joystick
+                    self.labels['Joysticks'] = ', '.join([x.get_name() for x in self.joysticks.items()])
+                elif event.type == pygame.JOYDEVICEREMOVED:
+                    self.joysticks[event.instance_id].quit()
+                    del self.joysticks[event.instance_id]
+                    self.labels['Joysticks'] = ', '.join([x.get_name() for x in self.joysticks.items()])
 
                 x = screen.get_size()[0] // 2
                 screen.fill((255, 255, 255))
