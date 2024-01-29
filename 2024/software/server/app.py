@@ -37,6 +37,16 @@ class MainApp:
         self.sacn.start()
         self.sacn.start_animations()
 
+    def _update_screen(self, screen: pygame.Surface) -> None:
+        x = screen.get_size()[0] // 2
+        screen.fill((255, 255, 255))
+        for i, (name, value) in enumerate(self.labels.items()):
+            text = self.font.render(f'{name}: {value}', True, (0, 0, 0))
+            rect = text.get_rect()
+            rect.center = (x, 15 + i * 40)
+            screen.blit(text, rect)
+        pygame.display.update()
+
     def show_screen(self) -> None:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption('Laser Control Station')
@@ -61,14 +71,16 @@ class MainApp:
                         self.songs.add_to_queue(self.current_letter, self.current_number)
                     elif event.key == pygame.K_SPACE:
                         self.songs.play_next_song()
+                    self._update_screen(screen)
                 elif event.type == update_songs:
                     self.songs.update()
-                    song_queue = " ".join([x.song_id_str for x in self.songs.song_queue])
+                    song_queue = ' '.join([x.song_id_str for x in self.songs.song_queue])
                     if len(song_queue) > 28:
                         song_queue = f'{song_queue[:25]}...'
                     self.labels['Playing'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
                     self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
                     self._update_lcds()
+                    self._update_screen(screen)
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     self.joysticks[joystick.get_instance_id()] = joystick
@@ -77,15 +89,6 @@ class MainApp:
                     self.joysticks[event.instance_id].quit()
                     del self.joysticks[event.instance_id]
                     self.labels['Joysticks'] = ', '.join([x.get_name() for x in self.joysticks.items()])
-
-                x = screen.get_size()[0] // 2
-                screen.fill((255, 255, 255))
-                for i, (name, value) in enumerate(self.labels.items()):
-                    text = self.font.render(f'{name}: {value}', True, (0, 0, 0))
-                    rect = text.get_rect()
-                    rect.center = (x, 15 + i * 40)
-                    screen.blit(text, rect)
-                pygame.display.update()
                 
     def start_server(self) -> None:
         self.laser_server.start_server()
