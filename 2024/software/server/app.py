@@ -108,10 +108,10 @@ class MainApp:
         self.labels['Song Input'] = f'{chr(self.current_letter)}{self.current_number}'
 
     def _update_lcds(self) -> None:
-        row1 = f'Mode: {self.labels["Mode"]}'
-        row2 = f'Song Selection: {self.labels["Song Input"]}'
-        row3 = f'Playing: {self.labels["Playing"]}'
-        row4 = f'Queue: {self.labels["Song Queue"]}'
+        row1 = f'Playing: {self.labels["Playing"]}'
+        row2 = f'Queue: {self.labels["Song Queue"]}'
+        row3 = f'Mode: {self.labels["Mode"]}'
+        row4 = f'Song Selection: {self.labels["Song Input"]}'
         self.sacn.set_display(0, row1, row2)
         self.sacn.set_display(1, row3, row4)
         self.sacn.update_output()
