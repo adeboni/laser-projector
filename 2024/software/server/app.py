@@ -14,7 +14,7 @@ class MainApp:
                        'Song Input': 'A0',
                        'Playing': 'None',
                        'Song Queue': 'Empty',
-                       'Joysticks': 'None'}
+                       'Joysticks': '0'}
 
         self.songs = SongHandler()
         self.current_letter = ord('A')
@@ -87,11 +87,11 @@ class MainApp:
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     self.joysticks[joystick.get_instance_id()] = joystick
-                    self.labels['Joysticks'] = ', '.join([x.get_name() for x in self.joysticks.items()])
+                    self.labels['Joysticks'] = f'{len(self.joysticks)}'
                 elif event.type == pygame.JOYDEVICEREMOVED:
                     self.joysticks[event.instance_id].quit()
                     del self.joysticks[event.instance_id]
-                    self.labels['Joysticks'] = ', '.join([x.get_name() for x in self.joysticks.items()])
+                    self.labels['Joysticks'] = f'{len(self.joysticks)}'
                 
     def start_server(self) -> None:
         self.laser_server.start_server()
