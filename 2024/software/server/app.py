@@ -72,6 +72,9 @@ class MainApp:
                     elif event.key == pygame.K_SPACE:
                         self.songs.play_next_song()
                     self._update_screen(screen)
+                    self.sacn.key_down(event.key)
+                elif event.type == pygame.KEYUP:
+                    self.sacn.key_up(event.key)
                 elif event.type == update_songs:
                     self.songs.update()
                     song_queue = ' '.join([x.song_id_str for x in self.songs.song_queue])

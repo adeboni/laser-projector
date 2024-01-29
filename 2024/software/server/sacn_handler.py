@@ -1,6 +1,7 @@
 """This module handles all the sACN ouputs"""
 import time
 from threading import Thread
+import pygame
 import sacn
 import robbie_generators
 
@@ -25,11 +26,33 @@ class SACNHandler:
         self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
 
         self.animations = [
-            (self.set_dots, robbie_generators.dots_nightrider),
-            (self.set_mouth, robbie_generators.mouth_pulse)
+            (self.set_dots, robbie_generators.dots_nightrider()),
+            (self.set_mouth, robbie_generators.mouth_pulse()),
+            (self.set_motors, robbie_generators.motors_spin()),
+            (self.set_lamp, robbie_generators.lamp_morse_code())
         ]
         self.animation_thread = Thread(target=self._animation_thread, daemon=True)
         self.animation_running = False
+
+        self.button_key_map = {
+            pygame.K_UP: 185,
+            pygame.K_DOWN: 186,
+            pygame.K_LEFT: 187,
+            pygame.K_RIGHT: 188,
+            pygame.K_RETURN: 189,
+            pygame.K_SPACE: 190,
+            pygame.K_POWER: 191
+        }
+
+    def key_down(self, key: int) -> None:
+        if key in self.button_key_map:
+            self.outputs[self.button_key_map[key]] = 255
+            self.update_output()
+
+    def key_up(self, key: int) -> None:
+        if key in self.button_key_map:
+            self.outputs[self.button_key_map[key]] = 0
+            self.update_output()
 
     def set_mouth(self, values: list[int] | None) -> None:
         """Sets the mouth buffers"""
@@ -87,8 +110,7 @@ class SACNHandler:
 
     def _animation_thread(self) -> None:
         while self.animation_running:
-            for set_func, generator in self.animations:
-                gen = generator()
+            for set_func, gen in self.animations:
                 start_time = time.time()
                 while time.time() - start_time < 10 and self.animation_running:
                     set_func(next(gen))
