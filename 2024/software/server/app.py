@@ -86,12 +86,16 @@ class MainApp:
                     self._update_screen(screen)
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
-                    self.joysticks[joystick.get_instance_id()] = joystick
-                    self.labels['Joysticks'] = f'{len(self.joysticks)}'
+                    if joystick.get_numaxes() >= 8:
+                        self.joysticks[joystick.get_instance_id()] = joystick
+                        self.labels['Joysticks'] = f'{len(self.joysticks)}'
+                    else:
+                        joystick.quit()
                 elif event.type == pygame.JOYDEVICEREMOVED:
-                    self.joysticks[event.instance_id].quit()
-                    del self.joysticks[event.instance_id]
-                    self.labels['Joysticks'] = f'{len(self.joysticks)}'
+                    if event.instance_id in self.joysticks:
+                        self.joysticks[event.instance_id].quit()
+                        del self.joysticks[event.instance_id]
+                        self.labels['Joysticks'] = f'{len(self.joysticks)}'
                 
     def start_server(self) -> None:
         self.laser_server.start_server()

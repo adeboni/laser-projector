@@ -208,8 +208,8 @@ if __name__ == '__main__':
         if (p > 100): p = 100
         if (p < 0): p = 0
         
-        readings.append(current)
-        if all(r < -0.09 for r in readings) and not jumper:
+        readings.append(bus_voltage)
+        if all(r < 7.95 for r in readings) and not jumper:
             print("Shutting down")
             os.system("sudo shutdown -h now")
 

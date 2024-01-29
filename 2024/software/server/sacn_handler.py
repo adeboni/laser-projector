@@ -109,18 +109,20 @@ class SACNHandler:
         self.sender.stop()
 
     def _animation_thread(self) -> None:
+        print('Starting animation thread')
         while self.animation_running:
             for set_func, gen in self.animations:
                 start_time = time.time()
                 while time.time() - start_time < 10 and self.animation_running:
                     set_func(next(gen))
-                    sacn.update_output()
+                    self.update_output()
                     time.sleep(0.02)
                 set_func(None)
-                sacn.update_output()
+                self.update_output()
                 start_time = time.time()
                 while time.time() - start_time < 10 and self.animation_running:
                     pass
+        print('Animation thread ended')
 
     def start_animations(self) -> None:
         self.animation_running = True
