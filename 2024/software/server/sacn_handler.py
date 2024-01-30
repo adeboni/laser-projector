@@ -44,15 +44,17 @@ class SACNHandler:
             pygame.K_POWER: 191
         }
 
+    def _key_thread(self, output_num: int) -> None:
+        self.outputs[output_num] = 255
+        self.update_output()
+        time.sleep(0.4)
+        self.outputs[output_num] = 0
+        self.update_output()
+
     def key_down(self, key: int) -> None:
         if key in self.button_key_map:
-            self.outputs[self.button_key_map[key]] = 255
-            self.update_output()
-
-    def key_up(self, key: int) -> None:
-        if key in self.button_key_map:
-            self.outputs[self.button_key_map[key]] = 0
-            self.update_output()
+            key_thread = Thread(target=self._key_thread, args=(self.button_key_map[key],), daemon=True)
+            key_thread.start()            
 
     def set_mouth(self, values: list[int] | None) -> None:
         """Sets the mouth buffers"""
