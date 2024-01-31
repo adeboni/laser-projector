@@ -35,12 +35,12 @@ class SACNHandler:
         self.animation_running = False
 
         self.button_key_map = {
-            pygame.K_UP: 185,
-            pygame.K_DOWN: 186,
-            pygame.K_LEFT: 187,
+            pygame.K_UP: 190,
+            pygame.K_DOWN: 187,
+            pygame.K_LEFT: 186,
             pygame.K_RIGHT: 188,
             pygame.K_RETURN: 189,
-            pygame.K_SPACE: 190,
+            pygame.K_SPACE: 185,
             pygame.K_POWER: 191
         }
 
