@@ -1,4 +1,5 @@
 """Main entry point"""
+import asyncio
 import pygame 
 from laser_server import LaserServer
 from song_handler import SongHandler
@@ -32,8 +33,10 @@ class MainApp:
 
         self.laser_server = LaserServer(num_lasers, host_ip)
         self.laser_server.start_generator()
-
         self.sacn = SACNHandler(target_ip)
+
+    async def start_sacn(self):
+        await asyncio.sleep(5)
         self.sacn.start()
         self.sacn.start_animations()
 
@@ -95,9 +98,6 @@ class MainApp:
                         del self.joysticks[event.instance_id]
                         self.labels['Joysticks'] = f'{len(self.joysticks)}'
                 
-    def start_server(self) -> None:
-        self.laser_server.start_server()
-
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
             self.current_letter += 1
@@ -121,5 +121,6 @@ class MainApp:
 if __name__ == '__main__':
     #app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
-    app.start_server()
+    app.laser_server.start_server()
+    app.start_sacn()
     app.show_screen()
