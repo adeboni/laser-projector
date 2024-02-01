@@ -35,7 +35,7 @@ class MainApp:
         self.laser_server.start_generator()
         self.sacn = SACNHandler(target_ip)
 
-    @decorators.threaded_time_delay(3)
+    @decorators.threaded_time_delay(5)
     def start_sacn(self):
         self.sacn.start()
         self.sacn.start_animations()

@@ -3,7 +3,7 @@ import threading
 import time
 
 def threaded_time_delay(time_delay):
-    def _threaded(func):
+    def _threaded_time_delay(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             def delayed_func(*args, **kwargs):
@@ -12,7 +12,7 @@ def threaded_time_delay(time_delay):
             t = threading.Thread(target=delayed_func, args=args, kwargs=kwargs)
             t.start()
         return wrapper
-    return _threaded
+    return _threaded_time_delay
 
 def threaded(func):
     @functools.wraps(func)
