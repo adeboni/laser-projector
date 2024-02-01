@@ -1,6 +1,6 @@
 """Main entry point"""
-import asyncio
 import pygame 
+import decorators
 from laser_server import LaserServer
 from song_handler import SongHandler
 from sacn_handler import SACNHandler
@@ -35,8 +35,8 @@ class MainApp:
         self.laser_server.start_generator()
         self.sacn = SACNHandler(target_ip)
 
-    async def start_sacn(self):
-        await asyncio.sleep(5)
+    @decorators.threaded_time_delay(3)
+    def start_sacn(self):
         self.sacn.start()
         self.sacn.start_animations()
 
