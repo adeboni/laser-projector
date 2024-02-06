@@ -148,25 +148,25 @@ def draw_example():
 # draw_example()
 
 laser_lines = [None] * 3
-def _laser_thread():
-    while True:
-        for laser in range(3):
-            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser}/1024/')
+def _laser_thread(laser_index):
+    try:
+        while True:
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/1024/')
             raw_bytes = list(r.content)
-            
             segments = []
             for i in range(0, len(raw_bytes), 6):
                 chunk = raw_bytes[i:i + 6]
                 if len(chunk) != 6:
                     break
-                new_point = LaserPoint.from_bytes(laser, chunk)
-                segments.append(np.dot(transforms[laser], [new_point.x, new_point.y, 0, 1]))
-            laser_lines[laser] = segments
+                new_point = LaserPoint.from_bytes(laser_index, chunk)
+                segments.append(np.dot(transforms[laser_index], [new_point.x, new_point.y, 0, 1]))
+            laser_lines[laser_index] = segments
+            time.sleep(0.1)
+    except:
+        pass
 
-        time.sleep(0.1)
-
-laser_thread = Thread(target=_laser_thread, daemon=True)
-laser_thread.start()
+for i in range(3):
+    Thread(target=_laser_thread, args=(i,), daemon=True).start()
 
 def joystick_quaternion():
     import pygame
