@@ -11,7 +11,10 @@ class LaserServer:
     def __init__(self, num_lasers: int, host_ip: str) -> None:
         self.mode = 0
         self.num_lasers = num_lasers
-        self.mode_list = {1: circle(), 2: rainbow_circle()}
+        self.mode_list = {
+            1: circle(num_lasers), 
+            2: rainbow_circle(num_lasers)
+        }
 
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
@@ -46,10 +49,14 @@ class LaserServer:
         if not self.gen.is_alive():
             self.gen.start()
 
+    # need to fix sync issues
     def producer(self, queues: list[Queue]) -> None:
         while True:
-            if self.mode in self.mode_list and not queues[0].full():
-                queues[0].put(next(self.mode_list[self.mode]))
+            if self.mode not in self.mode_list:
+                continue
+            for p in next(self.mode_list[self.mode]):
+                if not queues[p.id].full():
+                    queues[p.id].put(p)
 
 if __name__ == '__main__':
     import time
@@ -59,7 +66,7 @@ if __name__ == '__main__':
     server.start_generator()
     server.start_server()
     while True:
-        server.mode = 0
-        time.sleep(5)
         server.mode = 1
+        time.sleep(5)
+        server.mode = 2
         time.sleep(5)
