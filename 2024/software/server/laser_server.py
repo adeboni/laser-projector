@@ -13,7 +13,8 @@ class LaserServer:
         self.num_lasers = num_lasers
         self.mode_list = {
             1: circle(num_lasers), 
-            2: rainbow_circle(num_lasers)
+            2: rainbow_circle(num_lasers),
+            3: letters(num_lasers)
         }
 
         self.flask_app = Flask(__name__)
@@ -60,8 +61,8 @@ class LaserServer:
 
 if __name__ == '__main__':
     import time
-    server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
-    #server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
+    #server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
+    server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
     server.mode = 1
     server.start_generator()
     server.start_server()
@@ -69,4 +70,6 @@ if __name__ == '__main__':
         server.mode = 1
         time.sleep(5)
         server.mode = 2
+        time.sleep(5)
+        server.mode = 3
         time.sleep(5)
