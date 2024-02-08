@@ -14,7 +14,8 @@ class LaserServer:
         self.mode_list = {
             1: circle(num_lasers), 
             2: rainbow_circle(num_lasers),
-            3: letters(num_lasers)
+            3: letters(num_lasers),
+            4: images(num_lasers)
         }
 
         self.flask_app = Flask(__name__)
@@ -67,9 +68,6 @@ if __name__ == '__main__':
     server.start_generator()
     server.start_server()
     while True:
-        server.mode = 1
-        time.sleep(5)
-        server.mode = 2
-        time.sleep(5)
-        server.mode = 3
-        time.sleep(5)
+        for i in server.mode_list:
+            server.mode = i
+            time.sleep(5)

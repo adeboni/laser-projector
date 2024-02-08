@@ -59,3 +59,19 @@ def letters(num_lasers: int) -> list[LaserPoint]:
             idxs[i] = (idxs[i] + 1) % len(chars[i])
             output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
         yield verify_points(output)
+
+def images(num_lasers: int) -> list[LaserPoint]:
+    """Generates bike, plane, island on three lasers"""
+    imgs = [interpolate_objects(convert_to_xy(IMG_BIKE, 2048, 2048)), 
+             interpolate_objects(convert_to_xy(IMG_PLANE, 2048, 2048)), 
+             interpolate_objects(convert_to_xy(IMG_ISLAND, 2048, 2048))]
+    idxs = [0, 0, 0]
+    while True:
+        output = []
+        for i in range(num_lasers):
+            if i >= len(imgs):
+                continue
+            x, y, on = imgs[i][idxs[i]]
+            idxs[i] = (idxs[i] + 1) % len(imgs[i])
+            output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
+        yield verify_points(output)
