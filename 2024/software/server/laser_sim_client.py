@@ -37,6 +37,7 @@ for i, ax in enumerate(axs):
     ax.set_xlim([0, 4095])
     ax.set_ylim([0, 4095])
     ax.set_aspect('equal')
+    ax.set_facecolor('black')
     ax.set_title(f'Laser {i + 1}')
     segs, colors = get_segment_data(segments[i])
     coll = mc.LineCollection(segs, colors=colors)
