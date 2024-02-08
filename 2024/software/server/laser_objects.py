@@ -1,10 +1,10 @@
 """Defines objects for laser graphics"""
 
 def convert_to_xy(obj: list[int], x_offset: int=0, y_offset: int=0, 
-                                  x_scale: float=1, y_scale: float=1) -> list[int]:
-    return [[min(max(int((obj[i] & 0x7FFF) * x_scale + x_offset), 0), 4095), 
-             min(max(int(obj[i+1] * y_scale + y_offset), 0), 4095), 
-             1 if obj[i] & 0x8000 else 0] 
+                                  x_scale: float=1, y_scale: float=1) -> list[list[int]]:
+    return [[int((obj[i] & 0x7FFF) * x_scale + x_offset), 
+             int(obj[i+1] * y_scale + y_offset), 
+             1 if obj[i] & 0x8000 else 0]
             for i in range(0, len(obj), 2)]
 
 CHAR_A = [
