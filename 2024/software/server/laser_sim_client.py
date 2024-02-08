@@ -1,50 +1,56 @@
-"""Flask client test"""
-import tkinter as tk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
-from matplotlib import collections as mc
+from threading import Thread
 import requests
+import time
+import traceback
+from matplotlib import pyplot as plt
+from matplotlib import collections as mc
+from matplotlib import animation
 from laser_point import *
 
-class MainApp(tk.Tk):
-    """Class representing the GUI"""
-    def __init__(self, laser_id: int, ip_address: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.title('Test Laser Client')
-        self.geometry('400x400')
-        self.laser_id = laser_id
-        self.ip_address = ip_address
-        self.prev_point = LaserPoint(self.laser_id)
-        self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        self._update_laser_plot()
+NUM_LASERS = 3
+NUM_POINTS = 1000
 
-    def _update_laser_plot(self):
-        r = requests.get(f'http://{self.ip_address}:8080/laser_data/{self.laser_id}/1024/')
-        raw_bytes = list(r.content)
-        
-        segments = []
-        colors = []
-        for i in range(0, len(raw_bytes), 6):
-            chunk = raw_bytes[i:i + 6]
-            if len(chunk) != 6:
-                break
-            new_point = LaserPoint.from_bytes(self.laser_id, chunk)
-            segments.append([[self.prev_point.x, self.prev_point.y], [new_point.x, new_point.y]])
-            colors.append([new_point.r / 255, new_point.g / 255, new_point.b / 255])
-            self.prev_point = new_point
+segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 
-        self.ax.clear()
-        self.ax.add_collection(mc.LineCollection(segments, colors=colors))
-        self.ax.set_xlim([0, 4095])
-        self.ax.set_ylim([0, 4095])
-        self.ax.set_aspect('equal')
-        self.ax.set_title(f'Laser {self.laser_id + 1}')
-        self.fig.canvas.draw()
-        self.after(10, self._update_laser_plot)
+def _laser_thread(laser_index):
+    try:
+        while True:
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/1024/')
+            raw_bytes = list(r.content)
+            for i in range(0, len(raw_bytes), 6):
+                chunk = raw_bytes[i:i + 6]
+                if len(chunk) != 6:
+                    break
+                new_point = LaserPoint.from_bytes(laser_index, chunk)
+                segments[laser_index].append(LaserSegment(laser_index, segments[laser_index][-1].end, new_point, 
+                                                          [new_point.r / 255, new_point.g / 255, new_point.b / 255]))
+                while len(segments[laser_index]) > NUM_POINTS:
+                    segments[laser_index].pop(0)
+            time.sleep(0.1)
+    except:
+        traceback.print_exc()
 
-if __name__ == '__main__':
-    MainApp(laser_id=0, ip_address='127.0.0.1').mainloop()
-    #MainApp(laser_id=0, ip_address='10.0.0.2').mainloop()
+fig = plt.figure()
+axs = [fig.add_subplot(100 + 10 * NUM_LASERS + i + 1) for i in range(NUM_LASERS)]
+collections = []
+for i, ax in enumerate(axs):
+    ax.set_xlim([0, 4095])
+    ax.set_ylim([0, 4095])
+    ax.set_aspect('equal')
+    ax.set_title(f'Laser {i + 1}')
+    segs, colors = get_segment_data(segments[i])
+    coll = mc.LineCollection(segs, colors=colors)
+    collections.append(coll)
+    ax.add_collection(coll)
+
+for i in range(NUM_LASERS):
+    Thread(target=_laser_thread, args=(i,), daemon=True).start()
+
+def animate(_):
+    for i in range(NUM_LASERS):
+        segs, colors = get_segment_data(segments[i])
+        collections[i].set_segments(segs)
+        collections[i].set_colors(colors)
+
+ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
+plt.show()

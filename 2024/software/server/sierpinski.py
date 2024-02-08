@@ -159,7 +159,8 @@ def _laser_thread(laser_index):
                 if len(chunk) != 6:
                     break
                 new_point = LaserPoint.from_bytes(laser_index, chunk)
-                segments.append(np.dot(transforms[laser_index], [new_point.x, new_point.y, 0, 1]))
+                segments.append([*np.dot(transforms[laser_index], [new_point.x, new_point.y, 0, 1])[:3], 
+                                 new_point.r, new_point.g, new_point.b])
             laser_lines[laser_index] = segments
             time.sleep(0.1)
     except:
@@ -189,7 +190,7 @@ def mouse_quaternion():
 
 quaternion_generator = mouse_quaternion()
 
-laser_plots = [ax.plot([], [], [], c='r', alpha=0.5) for _ in range(3)]
+laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
 
 def animate(_):
     q = next(quaternion_generator)
@@ -222,7 +223,7 @@ def animate(_):
                 if v[2] > 0 and point_in_surface(s, point):
                     projection[0].set_data([point[0]], [point[1]])
                     projection[0].set_3d_properties([point[2]])
-    return lines
+    return *lines, *laser_plots, projection
 
 ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
 plt.show()

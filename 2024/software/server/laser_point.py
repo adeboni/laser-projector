@@ -29,3 +29,23 @@ class LaserPoint:
     def __repr__(self):
         return f'ID: {self.id}, Point: [{self.x}, {self.y}], Color: [{self.r}, {self.g}, {self.b}]'
     
+    @property
+    def rgb(self):
+        return [self.r, self.g, self.b]
+    
+class LaserSegment:
+    def __init__(self, id: int, p1: LaserPoint=None, p2: LaserPoint=None, color: list[int]=None) -> None:
+        self.start = p1 if p1 else LaserPoint(id)
+        self.end = p2 if p2 else LaserPoint(id)
+        self.color = color if color else [0, 0, 0]
+
+    def __repr__(self):
+        return f'Start: [{self.start.x}, {self.start.y}], End: [{self.end.x}, {self.end.y}], Color: {self.color}'
+
+def get_segment_data(segs: list[LaserSegment]) -> tuple[list, list]:
+    segments = []
+    colors = []
+    for seg in segs:
+        segments.append([[seg.start.x, seg.start.y], [seg.end.x, seg.end.y]])
+        colors.append(seg.color)
+    return (segments, colors)

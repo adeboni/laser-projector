@@ -64,7 +64,6 @@ if __name__ == '__main__':
     import time
     #server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
     server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
-    server.mode = 1
     server.start_generator()
     server.start_server()
     while True:
