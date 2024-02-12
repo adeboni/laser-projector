@@ -1,6 +1,7 @@
 import numpy as np
 from laser_point import *
 from laser_objects import *
+from typing import Generator
 
 def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
     """Constrains point values to valid ranges"""
@@ -24,7 +25,7 @@ def interpolate_objects(obj: list[int], seg_dist: int=50) -> list[int]:
     result.append([obj[i][0], obj[i][1], obj[i][2]])
     return result
 
-def rainbow_circle(num_lasers: int) -> list[LaserPoint]:
+def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates a rainbow circle"""
     d = 0
     while True:
@@ -34,7 +35,7 @@ def rainbow_circle(num_lasers: int) -> list[LaserPoint]:
         yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
         d = (d + 8) % 360
 
-def circle(num_lasers: int) -> list[LaserPoint]:
+def circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates a blue circle"""
     d = 0
     while True:
@@ -44,7 +45,7 @@ def circle(num_lasers: int) -> list[LaserPoint]:
         yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
         d = (d + 8) % 360
 
-def letters(num_lasers: int) -> list[LaserPoint]:
+def letters(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates A, B, C on three lasers"""
     chars = [interpolate_objects(convert_to_xy(CHAR_A, 2048, 2048)), 
              interpolate_objects(convert_to_xy(CHAR_B, 2048, 2048)), 
@@ -60,7 +61,7 @@ def letters(num_lasers: int) -> list[LaserPoint]:
             output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
         yield verify_points(output)
 
-def images(num_lasers: int) -> list[LaserPoint]:
+def images(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates bike, plane, island on three lasers"""
     imgs = [interpolate_objects(convert_to_xy(IMG_BIKE, 2048, 2048)), 
              interpolate_objects(convert_to_xy(IMG_PLANE, 2048, 2048)), 
@@ -75,3 +76,32 @@ def images(num_lasers: int) -> list[LaserPoint]:
             idxs[i] = (idxs[i] + 1) % len(imgs[i])
             output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
         yield verify_points(output)
+
+def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    r1 = 105
+    r2 = 75
+    scale = 4
+    x = 0.5
+    xd = 1
+    r2d = 1
+    t = 0
+    while True:
+        q1 = t
+        s1 = np.sin(q1)
+        c1 = np.cos(q1)
+        q2 = q1 * r1 / r2
+        s2 = np.sin(q2)
+        c2 = np.cos(q2)
+        xx = int((r1 * s1 + x * r2 * (-s1 + c2 * s1 - c1 * s2)) * scale) + 2048
+        yy = int((-r1 * c1 + x * r2 * (c1 - c1 * c2 - s1 * s2)) * scale) + 2048
+        yield verify_points([LaserPoint(i, xx, yy, 255, 0, 0) for i in range(num_lasers)])
+
+        x += 0.00002 * xd
+        if x > 0.9 or x < 0.3:
+            xd *= -1
+        
+        r2 += 0.2 * r2d
+        if r2 > 78 or r2 < 40:
+            r2d *= -1
+        
+        t += 0.1

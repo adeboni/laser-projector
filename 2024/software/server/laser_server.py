@@ -15,7 +15,8 @@ class LaserServer:
             1: circle(num_lasers), 
             2: rainbow_circle(num_lasers),
             3: letters(num_lasers),
-            4: images(num_lasers)
+            4: images(num_lasers),
+            5: spirograph(num_lasers)
         }
 
         self.flask_app = Flask(__name__)

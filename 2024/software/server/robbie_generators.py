@@ -1,6 +1,7 @@
 import math
 import random
 import time
+from typing import Generator
 
 MORSE_CODE_DICT = { 
     'A' : '.-', 'B' : '-...',
@@ -22,12 +23,12 @@ def cube(x) -> int:
     """Cubes x and clamps it between 0 and 255"""
     return clamp((int)(x * x * x / 255 / 255), 0, 255)
 
-def dots_nightrider() -> list[int]:
+def dots_nightrider() -> Generator[list[int], None, None]:
     while True:
         dotIndex = math.sin(time.time() * 4) * 5 + 2.5
         yield [cube(255 - 51 * abs(i - dotIndex)) for i in range(6)]
 
-def mouth_pulse() -> list[int]:
+def mouth_pulse() -> Generator[list[int], None, None]:
     output = [0 for _ in range(15)]
     while True:
         mouthColorIndex = math.sin(time.time() * 50 * math.pi / 180) + 1
@@ -40,7 +41,7 @@ def mouth_pulse() -> list[int]:
             output[i + 10] = int((math.sin(time.time() * 4) + 1) * 128 * mouthBlueLevel / 255)
         yield output
 
-def motors_spin() -> list[int]:
+def motors_spin() -> Generator[list[int], None, None]:
     current_pattern = [255 * random.randint(0, 1) for x in range(3)]
     last_update = time.time()
     while True:
@@ -65,7 +66,7 @@ def expand_morse_code(text: str) -> list[int]:
     result.extend([0] * 7)
     return result
 
-def lamp_morse_code() -> int:
+def lamp_morse_code() -> Generator[int, None, None]:
     time_unit = 0.2
     phrases = ["MATH CAMP", "BURNING MAN", "SIERPINSKI"]
     current_phrase_index = 0
