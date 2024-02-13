@@ -13,16 +13,15 @@ def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
         p.b = min(max(p.b, 0), 255)
     return points
 
-def interpolate_objects(obj: list[int], seg_dist: int=50) -> list[int]:
+def interpolate_objects(obj: list[int], seg_dist: int=32) -> list[int]:
     """Converts line segments longer than seg_dist into multiple segments"""
-    result = []
+    result = [[obj[0][0], obj[0][1], obj[0][2]]]
     for i in range(1, len(obj)):
         num_segments = max(abs(obj[i-1][0] - obj[i][0]) // seg_dist, abs(obj[i-1][1] - obj[i][1]) // seg_dist) + 2
         x_interp = np.linspace(obj[i-1][0], obj[i][0], num_segments)
         y_interp = np.linspace(obj[i-1][1], obj[i][1], num_segments)
-        for x, y in zip(x_interp[:-1], y_interp[:-1]):
+        for x, y in zip(x_interp[1:], y_interp[1:]):
             result.append([int(x), int(y), obj[i][2]])
-    result.append([obj[i][0], obj[i][1], obj[i][2]])
     return result
 
 def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:

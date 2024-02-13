@@ -1,13 +1,11 @@
 import math
 from matplotlib import pyplot as plt
-from laser_point import *
 from laser_objects import *
 
 graphic_raw = CHAR_A
 
-grid_size = int(math.sqrt(len(graphic_raw) // 2)) + 1
-
 fig = plt.figure()
+grid_size = int(math.sqrt(len(graphic_raw) // 2)) + 1
 axs = [fig.add_subplot(grid_size, grid_size, i + 1) for i in range(len(graphic_raw) // 2)]
 
 x = []
