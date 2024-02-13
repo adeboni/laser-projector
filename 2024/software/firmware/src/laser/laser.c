@@ -23,10 +23,10 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define LASER_WAIT_US  150
-#define LASER_TIMEOUT  3000
-#define POINT_BUFF_LEN 4096
-#define POINT_REQ_LEN  2048
+#define LASER_TIMEOUT   3000
+#define LASER_WAIT_US   300   //need to optimize
+#define POINT_REQ_LEN   2048  //need to optimize
+#define POINT_REQ_BYTES 12288 //POINT_REQ_LEN * 6
 
 typedef struct {
     uint16_t x;
@@ -70,8 +70,6 @@ void mcp4922_write(uint16_t x, uint16_t y) {
     gpio_put(DAC_PIN_CS, 0);
     spi_write_blocking(DAC_SPI_PORT, ybuf, 2);
     gpio_put(DAC_PIN_CS, 1);
-
-    sleep_us(150);
 }
 
 void init_pin(uint8_t pin) {
@@ -180,17 +178,19 @@ void core1_entry() {
             //print_packet_info(g_recv_buf, len, packet_num);
 
             if (packet_num > 1) {
-                for (uint16_t i = 0; i < len && i + total_len < POINT_REQ_LEN * 6; i++)
-                    point_buf[i + total_len] = g_recv_buf[i];
+                len = min(len, POINT_REQ_BYTES - total_len);
+                //for (uint16_t i = 0; i < len && i + total_len < POINT_REQ_BYTES; i++)
+                //    point_buf[i + total_len] = g_recv_buf[i];
+                memcpy(&point_buf[total_len], &g_recv_buf[0], len);
                 total_len += len;
 
-                if (total_len >= POINT_REQ_LEN * 6) {
+                if (total_len >= POINT_REQ_BYTES) {
                     total_len = 0;
                     packet_num = 0;
                     sent_request = 0;
                     httpc_disconnect();
 
-                    for (uint16_t i = 0; i < POINT_REQ_LEN * 6; i += 6) {
+                    for (uint16_t i = 0; i < POINT_REQ_BYTES; i += 6) {
                         laser_point_t new_point;
                         bytes_to_point(point_buf, i, &new_point);
                         queue_add_blocking(&data_buf, &new_point);
@@ -222,7 +222,7 @@ int main() {
     init_pin(GRN_PIN);
     init_pin(BLU_PIN);
 
-    queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFF_LEN);
+    queue_init(&data_buf, sizeof(laser_point_t), POINT_REQ_LEN * 2);
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
     uint32_t last_update = to_ms_since_boot(get_absolute_time());
