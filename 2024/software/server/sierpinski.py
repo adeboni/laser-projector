@@ -119,6 +119,7 @@ tp_orig = np.array([
     [2048, 0, 0],
 ])
 transforms = []
+inv_transforms = []
 for idx, laser_center, pn, tp_offset in zip(range(3), laser_centers, plane_normals, tp_offsets):
     v1 = np.array([-pn[1], pn[0], 0])
     v1 = v1 / np.linalg.norm(v1)
@@ -128,6 +129,8 @@ for idx, laser_center, pn, tp_offset in zip(range(3), laser_centers, plane_norma
     b = np.concatenate((tp_new, np.ones((tp_new.shape[0], 1))), axis=1)
     t, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
     transforms.append(t.T)
+    t, _, _, _ = np.linalg.lstsq(b, a, rcond=None)
+    inv_transforms.append(t.T)
 
 laser_lines = [None] * 3
 def _laser_thread(laser_index):
@@ -189,19 +192,22 @@ def animate(_):
             laser_plots[i][0].set_data(xs, ys)
             laser_plots[i][0].set_3d_properties(zs)
 
-    for i, (line, start, end) in enumerate(zip(lines, startpoints, endpoints)):
+    for axis, (line, start, end) in enumerate(zip(lines, startpoints, endpoints)):
         start = q.rotate(start)
         end = q.rotate(end)
         start[2] += HUMAN_HEIGHT
         end[2] += HUMAN_HEIGHT
         line.set_data([start[0], end[0]], [start[1], end[1]])
         line.set_3d_properties([start[2], end[2]])
-        if i == 0:
+        if axis == 0:
             projection[0].set_data([], [])
             projection[0].set_3d_properties([])
-            for pn, pp, s in zip(plane_normals, plane_points, surfaces):
+            for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
                 v = start - end
                 point = end + (np.dot(pp - end, pn / np.dot(v, pn)) * v)
+                # point is in 3D here, but we're transforming it to 2D laser coordinates and then back to 3D
+                laser_x, laser_y = np.dot(inv_transforms[i], [*point, 1])[:2]
+                point = np.dot(transforms[i], [laser_x, laser_y, 0, 1])[:3]
                 if v[2] > 0 and point_in_surface(s, point):
                     projection[0].set_data([point[0]], [point[1]])
                     projection[0].set_3d_properties([point[2]])
