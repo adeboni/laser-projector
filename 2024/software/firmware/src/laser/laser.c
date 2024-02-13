@@ -25,8 +25,8 @@
 
 #define LASER_WAIT_US  150
 #define LASER_TIMEOUT  3000
-#define POINT_BUFF_LEN 16384
-#define POINT_REQ_LEN  4096
+#define POINT_BUFF_LEN 4096
+#define POINT_REQ_LEN  2048
 
 typedef struct {
     uint16_t x;
@@ -138,6 +138,12 @@ void bytes_to_point(uint8_t *buf, uint16_t i, laser_point_t *target) {
     target->b = buf[i + 5];
 }
 
+void print_packet_info(uint8_t *buf, uint16_t len, uint8_t packet_num) {
+    printf("Packet %d: Length = %d\n----------------------\n", packet_num, len);
+    for (uint16_t i = 0; i < len; i++) printf("%c", buf[i]);
+    printf("\n-----------------------\n");
+}
+
 void core1_entry() {
     uint8_t ip_address[4]  = {10, 0, 0, 2};
     uint8_t domain_name[] = "10.0.0.2";
@@ -170,6 +176,7 @@ void core1_entry() {
 
         if (httpc_isReceived > 0) {
             uint16_t len = httpc_recv(g_recv_buf, httpc_isReceived);
+            //print_packet_info(g_recv_buf, len, packet_num);
             packet_num++;
             sent_request = 0;
 

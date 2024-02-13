@@ -15,7 +15,7 @@ segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 def _laser_thread(laser_index):
     try:
         while True:
-            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/1024/')
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/2048/')
             raw_bytes = list(r.content)
             for i in range(0, len(raw_bytes), 6):
                 chunk = raw_bytes[i:i + 6]

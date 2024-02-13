@@ -1,7 +1,7 @@
 """This module generates data for the lasers"""
 from threading import Thread
 from queue import Queue
-from waitress import serve
+#from waitress import serve
 from flask import Flask, Response, current_app
 from laser_point import *
 from laser_generators import *
@@ -15,14 +15,14 @@ class LaserServer:
             1: circle(num_lasers), 
             2: rainbow_circle(num_lasers),
             3: letters(num_lasers),
-            4: images(num_lasers),
-            5: spirograph(num_lasers)
+            4: images(num_lasers)
+            #5: spirograph(num_lasers)
         }
 
         self.flask_app = Flask(__name__)
         self.flask_app.queues = [Queue(8192) for _ in range(self.num_lasers)]
-        #self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 8080, 'threaded': True}, daemon=True)
-        self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=8080), daemon=True)
+        self.server = Thread(target=self.flask_app.run, kwargs={'host': host_ip, 'port': 8080, 'threaded': True}, daemon=True)
+        #self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=8080), daemon=True)
         self.gen = Thread(target=self.producer, args=(self.flask_app.queues,), daemon=True)
         
         @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])
