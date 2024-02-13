@@ -96,12 +96,12 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         yy = int((-r1 * c1 + x * r2 * (c1 - c1 * c2 - s1 * s2)) * scale) + 2048
         yield verify_points([LaserPoint(i, xx, yy, 255, 0, 0) for i in range(num_lasers)])
 
-        x += 0.00002 * xd
-        if x > 0.9 or x < 0.3:
-            xd *= -1
+        # x += 0.00002 * xd
+        # if x > 0.9 or x < 0.3:
+        #     xd *= -1
         
-        r2 += 0.2 * r2d
-        if r2 > 78 or r2 < 40:
-            r2d *= -1
+        # r2 += 0.2 * r2d
+        # if r2 > 78 or r2 < 40:
+        #     r2d *= -1
         
         t += 0.1

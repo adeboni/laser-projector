@@ -124,34 +124,16 @@ for idx, laser_center, pn, tp_offset in zip(range(3), laser_centers, plane_norma
     v1 = v1 / np.linalg.norm(v1)
     v2 = np.cross(pn, v1) 
     tp_new = np.array([laser_center + half_width * (tpo[0] * v1 + tpo[1] * v2) for tpo in tp_offset])
-    #for i, c in enumerate(['r', 'g', 'b', 'y']):
-    #    ax.plot([tp_new[i][0]], [tp_new[i][1]], [tp_new[i][2]], c=c, linestyle='', marker='o')
     a = np.concatenate((tp_orig, np.ones((tp_orig.shape[0], 1))), axis=1)
     b = np.concatenate((tp_new, np.ones((tp_new.shape[0], 1))), axis=1)
     t, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
     transforms.append(t.T)
 
-def draw_example():
-    laser_draw_width = 400
-    laser_lines = np.array([
-        [[2048 - laser_draw_width * 2, 2048 - laser_draw_width, 0, 1], [2048 - laser_draw_width, 2048 + laser_draw_width, 0, 1]],
-        [[2048 - laser_draw_width, 2048 + laser_draw_width, 0, 1], [2048 + laser_draw_width, 2048 + laser_draw_width, 0, 1]],
-        [[2048 + laser_draw_width, 2048 + laser_draw_width, 0, 1], [2048 + laser_draw_width * 2, 2048 - laser_draw_width, 0, 1]],
-        [[2048 + laser_draw_width * 2, 2048 - laser_draw_width, 0, 1], [2048 - laser_draw_width * 2, 2048 - laser_draw_width, 0, 1]]
-    ])
-    for laser_line in laser_lines:
-        for i in range(3):
-            p1 = np.dot(transforms[i], laser_line[0])
-            p2 = np.dot(transforms[i], laser_line[1])
-            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], c='b', alpha=0.5)
-
-# draw_example()
-
 laser_lines = [None] * 3
 def _laser_thread(laser_index):
     try:
         while True:
-            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/1024/')
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/2048/')
             raw_bytes = list(r.content)
             segments = []
             for i in range(0, len(raw_bytes), 6):
@@ -162,7 +144,7 @@ def _laser_thread(laser_index):
                 segments.append([*np.dot(transforms[laser_index], [new_point.x, new_point.y, 0, 1])[:3], 
                                  new_point.r, new_point.g, new_point.b])
             laser_lines[laser_index] = segments
-            time.sleep(0.1)
+            time.sleep(0.3)
     except:
         pass
 

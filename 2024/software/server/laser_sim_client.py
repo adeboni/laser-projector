@@ -27,7 +27,7 @@ def _laser_thread(laser_index):
                 while len(segments[laser_index]) > NUM_POINTS:
                     segments[laser_index].pop(0)
                 
-            time.sleep(0.1)
+            time.sleep(0.3)
     except:
         traceback.print_exc()
 

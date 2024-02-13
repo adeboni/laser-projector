@@ -119,8 +119,11 @@ class MainApp:
         self.sacn.update_output()
        
 if __name__ == '__main__':
-    #app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
-    app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
+    import utilities
+    if utilities.ping('10.0.0.2'):
+        app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
+    else:
+        app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app.laser_server.start_server()
     app.start_sacn()
     app.show_screen()
