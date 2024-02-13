@@ -189,7 +189,7 @@ void core1_entry() {
                     packet_num = 0;
                     sent_request = 0;
                     httpc_disconnect();
-                    
+
                     for (uint16_t i = 0; i < POINT_REQ_LEN * 6; i += 6) {
                         laser_point_t new_point;
                         bytes_to_point(point_buf, i, &new_point);

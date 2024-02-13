@@ -36,9 +36,9 @@ class LaserServer:
                     point = current_app.queues[laser_id].get_nowait()
                     return_buf.extend(point.get_bytes())
                 except:
-                    break
+                    return_buf.extend([0, 0, 0, 0, 0, 0])
             return Response(bytes(return_buf), mimetype='application/octet-stream')
-			
+            
         @self.flask_app.route('/')
         def index():
             return 'Laser server is running!'
@@ -62,8 +62,8 @@ class LaserServer:
 
 if __name__ == '__main__':
     import time
-    server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
-    #server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
+    #server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
+    server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
     server.start_generator()
     server.start_server()
     while True:

@@ -26,6 +26,7 @@ def _laser_thread(laser_index):
                                                           [new_point.r / 255, new_point.g / 255, new_point.b / 255]))
                 while len(segments[laser_index]) > NUM_POINTS:
                     segments[laser_index].pop(0)
+                
             time.sleep(0.1)
     except:
         traceback.print_exc()
@@ -37,7 +38,7 @@ for i, ax in enumerate(axs):
     ax.set_xlim([0, 4095])
     ax.set_ylim([0, 4095])
     ax.set_aspect('equal')
-    ax.set_facecolor('black')
+    #ax.set_facecolor('black')
     ax.set_title(f'Laser {i + 1}')
     segs, colors = get_segment_data(segments[i])
     coll = mc.LineCollection(segs, colors=colors)
