@@ -178,9 +178,7 @@ void core1_entry() {
             //print_packet_info(g_recv_buf, len, packet_num);
 
             if (packet_num > 1) {
-                len = min(len, POINT_REQ_BYTES - total_len);
-                //for (uint16_t i = 0; i < len && i + total_len < POINT_REQ_BYTES; i++)
-                //    point_buf[i + total_len] = g_recv_buf[i];
+                len = MIN(len, POINT_REQ_BYTES - total_len);
                 memcpy(&point_buf[total_len], &g_recv_buf[0], len);
                 total_len += len;
 
