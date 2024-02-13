@@ -32,7 +32,7 @@ def _laser_thread(laser_index):
         traceback.print_exc()
 
 fig = plt.figure()
-axs = [fig.add_subplot(100 + 10 * NUM_LASERS + i + 1) for i in range(NUM_LASERS)]
+axs = [fig.add_subplot(1, NUM_LASERS, i + 1) for i in range(NUM_LASERS)]
 collections = []
 for i, ax in enumerate(axs):
     ax.set_xlim([0, 4095])
