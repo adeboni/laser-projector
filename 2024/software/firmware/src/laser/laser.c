@@ -176,24 +176,18 @@ void core1_entry() {
 
         if (httpc_isReceived > 0) {
             uint16_t len = httpc_recv(g_recv_buf, httpc_isReceived);
-            //print_packet_info(g_recv_buf, len, packet_num);
             packet_num++;
-            sent_request = 0;
+            //print_packet_info(g_recv_buf, len, packet_num);
 
-            if (packet_num == 1) {
-                if (strstr(g_recv_buf, "Content-Length: 0")) {
-                    total_len = 0;
-                    packet_num = 0;
-                    httpc_disconnect();
-                }
-            } else {
-                for (uint16_t i = 0; i < len; i++)
+            if (packet_num > 1) {
+                for (uint16_t i = 0; i < len && i + total_len < POINT_REQ_LEN * 6; i++)
                     point_buf[i + total_len] = g_recv_buf[i];
                 total_len += len;
 
                 if (total_len >= POINT_REQ_LEN * 6) {
                     total_len = 0;
                     packet_num = 0;
+                    sent_request = 0;
                     httpc_disconnect();
                     
                     for (uint16_t i = 0; i < POINT_REQ_LEN * 6; i += 6) {
