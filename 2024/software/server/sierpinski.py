@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
 
+LASER_DELAY_US = 300
+PACKET_SIZE = 2048
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 45 * np.pi / 180
@@ -136,7 +138,7 @@ laser_lines = [None] * 3
 def _laser_thread(laser_index):
     try:
         while True:
-            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/2048/')
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/{PACKET_SIZE}/')
             raw_bytes = list(r.content)
             segments = []
             for i in range(0, len(raw_bytes), 6):
@@ -147,7 +149,7 @@ def _laser_thread(laser_index):
                 segments.append([*np.dot(transforms[laser_index], [new_point.x, new_point.y, 0, 1])[:3], 
                                  new_point.r, new_point.g, new_point.b])
             laser_lines[laser_index] = segments
-            time.sleep(0.3)
+            time.sleep(PACKET_SIZE * LASER_DELAY_US / 1000000)
     except:
         pass
 

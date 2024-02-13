@@ -7,6 +7,8 @@ from matplotlib import collections as mc
 from matplotlib import animation
 from laser_point import *
 
+LASER_DELAY_US = 300
+PACKET_SIZE = 2048
 NUM_LASERS = 3
 NUM_POINTS = 1000
 
@@ -15,7 +17,7 @@ segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 def _laser_thread(laser_index):
     try:
         while True:
-            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/2048/')
+            r = requests.get(f'http://127.0.0.1:8080/laser_data/{laser_index}/{PACKET_SIZE}/')
             raw_bytes = list(r.content)
             for i in range(0, len(raw_bytes), 6):
                 chunk = raw_bytes[i:i + 6]
@@ -26,8 +28,8 @@ def _laser_thread(laser_index):
                                                           [new_point.r / 255, new_point.g / 255, new_point.b / 255]))
                 while len(segments[laser_index]) > NUM_POINTS:
                     segments[laser_index].pop(0)
-                
-            time.sleep(0.3)
+                    
+            time.sleep(PACKET_SIZE * LASER_DELAY_US / 1000000)
     except:
         traceback.print_exc()
 
