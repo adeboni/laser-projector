@@ -55,7 +55,7 @@ class LaserServer:
 
     def producer(self, queues: list[Queue]) -> None:
         while True:
-            if self.mode not in self.mode_list:
+            if self.mode not in self.mode_list or all(q.full() for q in queues):
                 continue
             for p in next(self.mode_list[self.mode]):
                 if not queues[p.id].full():
