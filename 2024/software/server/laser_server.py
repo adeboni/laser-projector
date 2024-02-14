@@ -9,6 +9,7 @@ from laser_generators import *
 class LaserServer:
     """This class generates data for the lasers"""
     def __init__(self, num_lasers: int, host_ip: str) -> None:
+        self.max_queue_size = 4096
         self.host_ip = host_ip
         self.mode = 0
         self.num_lasers = num_lasers
@@ -21,9 +22,9 @@ class LaserServer:
         }
 
         self.flask_app = Flask(__name__)
-        self.queues = [Queue(4096) for _ in range(self.num_lasers)]
+        self.queues = [Queue(self.max_queue_size) for _ in range(self.num_lasers)]
         self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=8080), daemon=True)
-        self.gen = Thread(target=self.producer, args=(self.queues,), daemon=True)
+        self.gen = Thread(target=self.producer, daemon=True)
         
         @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])
         def get_laser_data(laser_id: int, num_points: int) -> Response:
@@ -53,13 +54,15 @@ class LaserServer:
         if not self.gen.is_alive():
             self.gen.start()
 
-    def producer(self, queues: list[Queue]) -> None:
+    def producer(self) -> None:
         while True:
-            if self.mode not in self.mode_list or all(q.full() for q in queues):
+            if self.mode not in self.mode_list or all(q.full() for q in self.queues):
                 continue
-            for p in next(self.mode_list[self.mode]):
-                if not queues[p.id].full():
-                    queues[p.id].put(p)
+            min_size = min(q.qsize() for q in self.queues)
+            if not any(q.full() for q in self.queues) or min_size < self.max_queue_size / 2:
+                for p in next(self.mode_list[self.mode]):
+                    if not self.queues[p.id].full():
+                        self.queues[p.id].put(p)
 
 if __name__ == '__main__':
     import time
