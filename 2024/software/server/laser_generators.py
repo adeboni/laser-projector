@@ -35,12 +35,12 @@ def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         d = (d + 8) % 360
 
 def circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    """Generates a blue circle"""
+    """Generates an rgb circle"""
     d = 0
     while True:
         x = int(200 * np.sin(d * np.pi / 180) + 2048)
         y = int(200 * np.cos(d * np.pi / 180) + 2048)
-        rgb = [0, 0, 255]
+        rgb = [255 if d < 120 else 0, 255 if 120 <= d <= 240 else 0, 255 if d > 240 else 0]
         yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
         d = (d + 8) % 360
 
