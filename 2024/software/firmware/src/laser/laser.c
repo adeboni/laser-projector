@@ -24,9 +24,9 @@
 #define BLU_PIN 4
 
 #define LASER_TIMEOUT   3000
-#define LASER_WAIT_US   300   //need to optimize
-#define POINT_REQ_LEN   2048  //need to optimize
-#define POINT_REQ_BYTES 12288 //POINT_REQ_LEN * 6
+#define LASER_WAIT_US   150
+#define POINT_REQ_LEN   1500
+#define POINT_REQ_BYTES 9000 //POINT_REQ_LEN * 6
 
 typedef struct {
     uint16_t x;
