@@ -8,9 +8,9 @@ from matplotlib import animation
 from laser_point import *
 
 NUM_LASERS = 3
-LASER_DELAY_US = 300
-PACKET_SIZE = 2048
-NUM_POINTS = 3000
+LASER_DELAY_US = 150
+PACKET_SIZE = 1024
+NUM_POINTS = 2000
 
 segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 

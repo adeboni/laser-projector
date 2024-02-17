@@ -7,8 +7,8 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
 
-LASER_DELAY_US = 300
-PACKET_SIZE = 2048
+LASER_DELAY_US = 150
+PACKET_SIZE = 1024
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 45 * np.pi / 180
