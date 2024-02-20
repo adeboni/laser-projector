@@ -1,3 +1,4 @@
+"""This module simulates laser outputs"""
 from threading import Thread
 import requests
 import time
@@ -10,8 +11,7 @@ import sierpinski
 
 NUM_LASERS = 3
 LASER_DELAY_US = 150
-PACKET_SIZE = 1024
-NUM_POINTS = 2000
+PACKET_SIZE = 1500
 
 segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 
@@ -27,7 +27,7 @@ def _laser_thread(laser_index):
                 new_point = LaserPoint.from_bytes(laser_index, chunk)
                 segments[laser_index].append(LaserSegment(laser_index, segments[laser_index][-1].end, new_point, 
                                                           [new_point.r / 255, new_point.g / 255, new_point.b / 255]))
-                while len(segments[laser_index]) > NUM_POINTS:
+                while len(segments[laser_index]) > PACKET_SIZE:
                     segments[laser_index].pop(0)
                     
             time.sleep(PACKET_SIZE * LASER_DELAY_US / 1000000)

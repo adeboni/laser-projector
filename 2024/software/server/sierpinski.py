@@ -1,3 +1,4 @@
+"""This module simulates the sierpinski pyramid"""
 from threading import Thread
 import time
 import numpy as np
@@ -8,7 +9,7 @@ from matplotlib import animation
 from laser_point import *
 
 LASER_DELAY_US = 150
-PACKET_SIZE = 1024
+PACKET_SIZE = 1500
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 45 * np.pi / 180

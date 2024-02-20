@@ -1,3 +1,4 @@
+"""This module defines laser graphics generators"""
 import numpy as np
 from laser_point import *
 from laser_objects import *
