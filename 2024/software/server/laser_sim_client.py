@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from matplotlib import collections as mc
 from matplotlib import animation
 from laser_point import *
+import sierpinski
 
 NUM_LASERS = 3
 LASER_DELAY_US = 150
@@ -34,18 +35,23 @@ def _laser_thread(laser_index):
         traceback.print_exc()
 
 fig = plt.figure()
+
+bounds = sierpinski.get_laser_coordinate_bounds()
 axs = [fig.add_subplot(1, NUM_LASERS, i + 1) for i in range(NUM_LASERS)]
 collections = []
 for i, ax in enumerate(axs):
     ax.set_xlim([0, 4095])
     ax.set_ylim([0, 4095])
     ax.set_aspect('equal')
-    #ax.set_facecolor('black')
     ax.set_title(f'Laser {i + 1}')
     segs, colors = get_segment_data(segments[i])
     coll = mc.LineCollection(segs, colors=colors)
     collections.append(coll)
     ax.add_collection(coll)
+    for i in range(len(bounds)):
+        ax.plot([bounds[i][0], bounds[(i + 1) % len(bounds)][0]], 
+                [bounds[i][1], bounds[(i + 1) % len(bounds)][1]],
+                c='k', alpha=0.3)
 
 for i in range(NUM_LASERS):
     Thread(target=_laser_thread, args=(i,), daemon=True).start()
@@ -56,5 +62,6 @@ def animate(_):
         collections[i].set_segments(segs)
         collections[i].set_colors(colors)
 
-ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
-plt.show()
+if __name__ == '__main__':
+    ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
+    plt.show()

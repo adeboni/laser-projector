@@ -2,6 +2,7 @@ import numpy as np
 from laser_point import *
 from laser_objects import *
 from typing import Generator
+import sierpinski
 
 def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
     """Constrains point values to valid ranges"""
@@ -104,3 +105,43 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             r2d *= -1
         
         t += 0.2
+
+def bouncing_ball(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    x_transitions = sorted([b[0] for b in bounds])
+    min_x = min(b[0] for b in bounds)
+    max_x = max(b[0] for b in bounds)
+    min_y = min(b[1] for b in bounds)
+    max_y = max(b[1] for b in bounds)
+    ball_radius = 20
+    ball_laser = 0
+    ball_x = (max_x - min_x) / 2 + min_x
+    ball_y = (max_y - min_y) / 2 + min_y
+    dx = 2
+    dy = 2
+
+    while True:
+        ball_x += dx
+        ball_y += dy
+
+        if x_transitions[0] <= ball_x <= x_transitions[1]:
+            y_limit = np.interp(ball_x, [x_transitions[0], x_transitions[1]], [min_y, max_y])
+            if ball_y > y_limit:
+                ball_laser = (ball_laser + num_lasers - 1) % num_lasers
+                ball_x = np.interp(ball_y, [min_y, max_y], [x_transitions[3], x_transitions[2]])
+        elif x_transitions[2] <= ball_x <= x_transitions[3]:
+            y_limit = np.interp(ball_x, [x_transitions[2], x_transitions[3]], [max_y, min_y])
+            if ball_y > y_limit:
+                ball_laser = (ball_laser + 1) % num_lasers
+                ball_x = np.interp(ball_y, [min_y, max_y], [x_transitions[0], x_transitions[1]])
+
+        if ball_y + ball_radius > max_y or ball_y - ball_radius < min_y:
+            dy *= -1
+
+        for d in range(0, 360, 30):
+            x = int(ball_radius * np.sin(d * np.pi / 180) + ball_x)
+            y = int(ball_radius * np.cos(d * np.pi / 180) + ball_y)
+            data = [LaserPoint(i) for i in range(num_lasers)]
+            data[ball_laser] = LaserPoint(ball_laser, x, y, 255, 0, 0)
+            yield verify_points(data)
+    
