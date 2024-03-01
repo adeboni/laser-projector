@@ -4,18 +4,19 @@ import decorators
 from laser_server import LaserServer
 from song_handler import SongHandler
 from sacn_handler import SACNHandler
+from wand import Wand
   
 class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
         self.font = pygame.font.SysFont('Arial', 32)
-        self.joysticks = {}
+        self.wands = {}
         self.labels = {'Mode': '0 - Invalid Mode',
                        'Song Input': 'A0',
                        'Playing': 'None',
                        'Song Queue': 'Empty',
-                       'Joysticks': '0'}
+                       'Wands': '0'}
 
         self.songs = SongHandler()
         self.current_letter = ord('A')
@@ -25,8 +26,8 @@ class MainApp:
         self.mode_names = {1: 'Jukebox', 
                            2: 'Wand', 
                            3: 'Pong', 
-                           4: 'Mode 4', 
-                           5: 'Mode 5', 
+                           4: 'Drums', 
+                           5: 'Spirograph', 
                            6: 'Mode 6', 
                            7: 'Mode 7', 
                            8: 'Mode 8'}
@@ -55,6 +56,7 @@ class MainApp:
         pygame.display.set_caption('Laser Control Station')
         update_songs = pygame.USEREVENT
         pygame.time.set_timer(update_songs, 100)
+        clock = pygame.time.Clock()
 
         while True:
             for event in pygame.event.get():
@@ -88,15 +90,19 @@ class MainApp:
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     if joystick.get_numaxes() >= 8:
-                        self.joysticks[joystick.get_instance_id()] = joystick
-                        self.labels['Joysticks'] = f'{len(self.joysticks)}'
+                        self.wands[joystick.get_instance_id()] = Wand(joystick)
+                        self.labels['Wands'] = f'{len(self.wands)}'
                     else:
                         joystick.quit()
                 elif event.type == pygame.JOYDEVICEREMOVED:
-                    if event.instance_id in self.joysticks:
-                        self.joysticks[event.instance_id].quit()
-                        del self.joysticks[event.instance_id]
-                        self.labels['Joysticks'] = f'{len(self.joysticks)}'
+                    if event.instance_id in self.wands:
+                        self.wands[event.instance_id].quit()
+                        del self.wands[event.instance_id]
+                        self.labels['Wands'] = f'{len(self.wands)}'
+            
+            for wand in self.wands:
+                wand.update_position()
+            clock.tick(50)
                 
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
