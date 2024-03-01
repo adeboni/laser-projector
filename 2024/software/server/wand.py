@@ -25,7 +25,8 @@ class Wand:
         self.joystick.quit()
 
     def get_wand_color(self) -> list[int]:
-        pass # todo: get color from wand rotation
+        # todo: get color from wand rotation
+        return [255, 0, 0]
 
     def get_laser_point(self) -> LaserPoint:
         if not self.calibration:
