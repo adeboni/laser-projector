@@ -1,5 +1,6 @@
 """Defines the Wand Class"""
 
+import colorsys
 import pygame
 from pyquaternion import Quaternion
 import sierpinski
@@ -25,8 +26,9 @@ class Wand:
         self.joystick.quit()
 
     def get_wand_color(self) -> list[int]:
-        # todo: get color from wand rotation
-        return [255, 0, 0]
+        angle = 0 # todo: get angle from wand rotation
+        r, g, b = colorsys.hsv_to_rgb(angle / 360, 1, 1)
+        return [int(r * 255), int(g * 255), int(b * 255)]
 
     def get_laser_point(self) -> LaserPoint:
         if not self.calibration:
