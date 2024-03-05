@@ -9,6 +9,7 @@ from laser_generators import *
 class LaserServer:
     """This class generates data for the lasers"""
     def __init__(self, num_lasers: int, host_ip: str) -> None:
+        self.client_buffer_size = 1500
         self.max_queue_size = 4096
         self.host_ip = host_ip
         self.mode = 0
@@ -59,8 +60,9 @@ class LaserServer:
         while True:
             if self.mode not in self.mode_list or all(q.full() for q in self.queues):
                 continue
+            any_full = any(q.full() for q in self.queues)
             min_size = min(q.qsize() for q in self.queues)
-            if not any(q.full() for q in self.queues) or min_size < self.max_queue_size / 2:
+            if not any_full or min_size < self.client_buffer_size:
                 for p in next(self.mode_list[self.mode]):
                     if not self.queues[p.id].full():
                         self.queues[p.id].put(p)
