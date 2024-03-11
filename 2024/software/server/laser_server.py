@@ -28,7 +28,7 @@ class LaserServer:
         }
 
     def _server(self):
-        PACKET_DELAY = 0.026
+        PACKET_DELAY = 0.0258
         last_sent = 0
         seq = 0
         packet = None

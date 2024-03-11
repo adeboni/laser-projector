@@ -139,7 +139,7 @@ void core1_entry() {
     int sockfd = 0;
     uint8_t dest_ip[4];
     uint16_t dest_port;
-    uint8_t recv_buf[DATA_BUF_SIZE];
+    uint8_t recv_buf[1024];
     uint8_t curr_seq = 0;
     uint8_t board_id = get_board_id();
     w5500_init(board_id);
@@ -154,7 +154,7 @@ void core1_entry() {
         if (sock_status != SOCK_UDP) continue;
         int32_t size = getSn_RX_RSR(sockfd);
         if (size == 0) continue;
-        if (size > DATA_BUF_SIZE) size = DATA_BUF_SIZE;
+        if (size > 1024) size = 1024;
         size = recvfrom(sockfd, recv_buf, size, dest_ip, (uint16_t*)&dest_port);
         if (size <= 0) continue;
 
@@ -168,8 +168,7 @@ void core1_entry() {
         for (uint16_t i = 1; i < size; i += 6) {
             laser_point_t new_point;
             bytes_to_point(recv_buf, i, &new_point);
-            if (!queue_try_add(&data_buf, &new_point))
-                gpio_put(PICO_DEFAULT_LED_PIN, 1);
+            queue_try_add(&data_buf, &new_point);
         }
     }
 }
@@ -206,6 +205,8 @@ int main() {
             last_update = to_ms_since_boot(get_absolute_time());
             set_laser(new_point.r, new_point.g, new_point.b);
             mcp4922_write(new_point.x, new_point.y);
+        } else {
+            set_laser(0, 0, 0);
         }
 
         if (to_ms_since_boot(get_absolute_time()) - last_update > LASER_TIMEOUT)
