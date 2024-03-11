@@ -17,7 +17,6 @@ class LaserServer:
         self.server = Thread(target=self._server, daemon=True)
         self.packet_gen = Thread(target=self._packet_gen, daemon=True)
         self.server_running = False
-        self.packet_delay = 0.020
         self.packet = None
         self.packet_ready = False
         self.mode = 0
@@ -44,10 +43,11 @@ class LaserServer:
                 seq = (seq + 1) % 255
 
     def _server(self):
+        PACKET_DELAY = 0.020
         last_sent = 0
         while self.server_running:
             new_time = time.time()
-            if self.packet_ready and new_time - last_sent > self.packet_delay:
+            if self.packet_ready and new_time - last_sent > PACKET_DELAY:
                 for i in range(self.num_lasers):
                     self.sock.sendto(bytearray(self.packet[i]), self.targets[i])
                 last_sent = new_time
@@ -74,7 +74,10 @@ if __name__ == '__main__':
     else:
         server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
     server.start_server()
-    while True:
-        for i in server.mode_list:
-            server.mode = i
-            time.sleep(5)
+    try:
+        while True:
+            for i in server.mode_list:
+                server.mode = i
+                time.sleep(5)
+    except KeyboardInterrupt:
+        server.stop_server()

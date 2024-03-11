@@ -136,7 +136,7 @@ void bytes_to_point(uint8_t *buf, uint16_t i, laser_point_t *target) {
 }
 
 void core1_entry() {
-    int sockfd;
+    int sockfd = 0;
     uint8_t dest_ip[4];
     uint16_t dest_port;
     uint8_t recv_buf[DATA_BUF_SIZE];
@@ -145,7 +145,7 @@ void core1_entry() {
     w5500_init(board_id);
 
     while (1) {
-        int32_t sock_status = getSn_SR(0);
+        int32_t sock_status = getSn_SR(sockfd);
         if (sock_status == SOCK_CLOSED) {
             sockfd = socket(0, Sn_MR_UDP, 8090, SF_IO_NONBLOCK);
             continue;
@@ -168,7 +168,7 @@ void core1_entry() {
         for (uint16_t i = 1; i < size; i += 6) {
             laser_point_t new_point;
             bytes_to_point(recv_buf, i, &new_point);
-            queue_add_blocking(&data_buf, &new_point);
+            queue_try_add(&data_buf, &new_point);
         }
     }
 }
@@ -196,9 +196,10 @@ int main() {
 
     queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_SIZE);
     multicore_launch_core1(core1_entry);
+    while (queue_get_level(&data_buf) < 500) ; //prime the queue
+    
     laser_point_t new_point;
     uint32_t last_update = to_ms_since_boot(get_absolute_time());
-
 	while (1) {
         if (queue_try_remove(&data_buf, &new_point) && valid_point(&new_point)) {
             last_update = to_ms_since_boot(get_absolute_time());
