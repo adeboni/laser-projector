@@ -15,10 +15,7 @@ class LaserServer:
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server = Thread(target=self._server, daemon=True)
-        self.packet_gen = Thread(target=self._packet_gen, daemon=True)
         self.server_running = False
-        self.packet = None
-        self.packet_ready = False
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {
@@ -30,40 +27,40 @@ class LaserServer:
             # 6: bouncing_ball(num_lasers)
         }
 
-    def _packet_gen(self):
+    def _server(self):
+        PACKET_DELAY = 0.026
+        last_sent = 0
         seq = 0
+        packet = None
         while self.server_running:
-            if not self.packet_ready and self.mode in self.mode_list:
-                self.packet = [[seq] for _ in range(self.num_lasers)]
+            if not self.mode in self.mode_list:
+                continue
+
+            if not packet:
+                packet = [[seq] for _ in range(self.num_lasers)]
                 for _ in range(170):
                     p = next(self.mode_list[self.mode])
                     for i in range(self.num_lasers):
-                        self.packet[i].extend(p[i].get_bytes())
-                self.packet_ready = True
+                        packet[i].extend(p[i].get_bytes())
                 seq = (seq + 1) % 255
 
-    def _server(self):
-        PACKET_DELAY = 0.020
-        last_sent = 0
-        while self.server_running:
             new_time = time.time()
-            if self.packet_ready and new_time - last_sent > PACKET_DELAY:
+            if new_time - last_sent > PACKET_DELAY:
                 for i in range(self.num_lasers):
-                    self.sock.sendto(bytearray(self.packet[i]), self.targets[i])
+                    self.sock.sendto(bytearray(packet[i]), self.targets[i])
                 last_sent = new_time
-                self.packet_ready = False
+                packet = None
     
     def start_server(self) -> None:
         if not self.server.is_alive():
             print(f'Starting server targeting {self.targets}')
             self.server_running = True
             self.server.start()
-            self.packet_gen.start()
             
     def stop_server(self) -> None:
         print('Stopping server')
         self.server_running = False
-        while self.server.is_alive() or self.packet_gen.is_alive():
+        while self.server.is_alive():
             pass
 
 if __name__ == '__main__':

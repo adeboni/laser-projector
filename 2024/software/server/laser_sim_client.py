@@ -1,7 +1,6 @@
 """This module simulates laser outputs"""
 import socket
 from threading import Thread
-import time
 import traceback
 from matplotlib import pyplot as plt
 from matplotlib import collections as mc
@@ -10,8 +9,7 @@ from laser_point import *
 import sierpinski
 
 NUM_LASERS = 3
-LASER_DELAY_US = 150
-MAX_POINTS = 30 * 1000 / LASER_DELAY_US
+MAX_POINTS = 200
 
 segments = [[LaserSegment(i)] for i in range(NUM_LASERS)]
 
@@ -19,10 +17,15 @@ def _laser_thread(laser_index):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('127.0.0.1', 8090 + laser_index))
+        curr_seq = 0
         while True:
-            data, addr = sock.recvfrom(1024)
+            data, _ = sock.recvfrom(1024)
             raw_bytes = list(data)
             seq = raw_bytes.pop(0)
+            if seq != (curr_seq + 1) % 255:
+                curr_seq = seq
+                continue
+            curr_seq = seq
 
             for i in range(0, len(raw_bytes), 6):
                 chunk = raw_bytes[i:i + 6]
@@ -33,8 +36,6 @@ def _laser_thread(laser_index):
                                                         [new_point.r / 255, new_point.g / 255, new_point.b / 255]))
                 while len(segments[laser_index]) > MAX_POINTS:
                     segments[laser_index].pop(0)
-                
-            time.sleep((len(raw_bytes) // 6) * LASER_DELAY_US / 1000000)
     except:
         traceback.print_exc()
 

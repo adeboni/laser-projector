@@ -159,7 +159,7 @@ void core1_entry() {
         if (size <= 0) continue;
 
         uint8_t new_seq = recv_buf[0];
-        if (new_seq < curr_seq && new_seq != 0) {
+        if (new_seq != curr_seq + 1) {
             curr_seq = new_seq;
             continue;
         }

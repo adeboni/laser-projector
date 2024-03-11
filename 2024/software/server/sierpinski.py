@@ -1,6 +1,5 @@
 """This module simulates the sierpinski pyramid"""
 from threading import Thread
-import time
 import socket
 import numpy as np
 from pyquaternion import Quaternion
@@ -8,7 +7,6 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
 
-LASER_DELAY_US = 150
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 45 * np.pi / 180
@@ -129,10 +127,15 @@ def _laser_thread(laser_index):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('127.0.0.1', 8090 + laser_index))
+        curr_seq = 0
         while True:
-            data, addr = sock.recvfrom(1024)
+            data, _ = sock.recvfrom(1024)
             raw_bytes = list(data)
             seq = raw_bytes.pop(0)
+            if seq != (curr_seq + 1) % 255:
+                curr_seq = seq
+                continue
+            curr_seq = seq
 
             segments = []
             for i in range(0, len(raw_bytes), 6):
@@ -143,7 +146,6 @@ def _laser_thread(laser_index):
                 segments.append([*laser_to_sierpinksi_coords(laser_index, new_point.x, new_point.y), 
                                  new_point.r, new_point.g, new_point.b])
             laser_lines[laser_index] = segments
-            time.sleep((len(raw_bytes) // 6) * LASER_DELAY_US / 1000000)
     except:
         pass
 
