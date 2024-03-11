@@ -135,15 +135,10 @@ void bytes_to_point(uint8_t *buf, uint16_t i, laser_point_t *target) {
     target->b = buf[i + 5];
 }
 
-void print_packet_info(uint8_t *buf, uint16_t len, uint8_t packet_num) {
-    printf("Packet %d: Length = %d\n----------------------\n", packet_num, len);
-    for (uint16_t i = 0; i < len; i++) printf("%c", buf[i]);
-    printf("\n-----------------------\n");
-}
-
 void core1_entry() {
-    uint8_t ip_address[4]  = {10, 0, 0, 2};
-    uint16_t destport;
+    int sockfd;
+    uint8_t dest_ip[4];
+    uint16_t dest_port;
     uint8_t recv_buf[DATA_BUF_SIZE];
     uint8_t curr_seq = 0;
     uint8_t board_id = get_board_id();
@@ -152,15 +147,15 @@ void core1_entry() {
     while (1) {
         int32_t sock_status = getSn_SR(0);
         if (sock_status == SOCK_CLOSED) {
-            socket(0, Sn_MR_UDP, 8090, 0);
+            sockfd = socket(0, Sn_MR_UDP, 8090, SF_IO_NONBLOCK);
             continue;
         }
 
         if (sock_status != SOCK_UDP) continue;
-        int32_t size = getSn_RX_RSR(0);
+        int32_t size = getSn_RX_RSR(sockfd);
         if (size == 0) continue;
         if (size > DATA_BUF_SIZE) size = DATA_BUF_SIZE;
-        size = recvfrom(0, recv_buf, size, ip_address, (uint16_t*)&destport);
+        size = recvfrom(sockfd, recv_buf, size, dest_ip, (uint16_t*)&dest_port);
         if (size <= 0) continue;
 
         uint8_t new_seq = recv_buf[0];
