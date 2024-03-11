@@ -25,7 +25,7 @@
 
 #define LASER_TIMEOUT     3000
 #define LASER_WAIT_US     150
-#define POINT_BUFFER_SIZE 1500
+#define POINT_BUFFER_SIZE 1000
 
 typedef struct {
     uint16_t x;
@@ -168,7 +168,8 @@ void core1_entry() {
         for (uint16_t i = 1; i < size; i += 6) {
             laser_point_t new_point;
             bytes_to_point(recv_buf, i, &new_point);
-            queue_try_add(&data_buf, &new_point);
+            if (!queue_try_add(&data_buf, &new_point))
+                gpio_put(PICO_DEFAULT_LED_PIN, 1);
         }
     }
 }
