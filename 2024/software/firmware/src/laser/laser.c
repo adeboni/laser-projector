@@ -10,6 +10,7 @@
 #include "hardware/clocks.h"
 #include "wizchip_conf.h"
 #include "w5x00_spi.h"
+#include "socket.h"
 
 #define DAC_PIN_SCK  10
 #define DAC_PIN_MOSI 11
