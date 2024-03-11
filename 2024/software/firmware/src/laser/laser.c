@@ -10,7 +10,6 @@
 #include "hardware/clocks.h"
 #include "wizchip_conf.h"
 #include "w5x00_spi.h"
-#include "httpClient.h"
 
 #define DAC_PIN_SCK  10
 #define DAC_PIN_MOSI 11
@@ -23,10 +22,9 @@
 #define GRN_PIN 3
 #define BLU_PIN 4
 
-#define LASER_TIMEOUT   3000
-#define LASER_WAIT_US   150
-#define POINT_REQ_LEN   1500
-#define POINT_REQ_BYTES 9000 //POINT_REQ_LEN * 6
+#define LASER_TIMEOUT     3000
+#define LASER_WAIT_US     150
+#define POINT_BUFFER_SIZE 1500
 
 typedef struct {
     uint16_t x;
@@ -144,57 +142,37 @@ void print_packet_info(uint8_t *buf, uint16_t len, uint8_t packet_num) {
 
 void core1_entry() {
     uint8_t ip_address[4]  = {10, 0, 0, 2};
-    uint8_t domain_name[] = "10.0.0.2";
-    uint8_t uri[40];
-    uint8_t g_recv_buf[DATA_BUF_SIZE];
-    uint8_t point_buf[POINT_REQ_LEN * 6];
-    uint8_t sent_request = 0;
-    uint8_t packet_num = 0;
-    uint16_t total_len = 0;
-
+    uint16_t destport;
+    uint8_t recv_buf[DATA_BUF_SIZE];
+    uint8_t curr_seq = 0;
     uint8_t board_id = get_board_id();
     w5500_init(board_id);
-    httpc_init(0, ip_address, 8080);
-    sprintf(uri, "/laser_data/%d/%d/", board_id, POINT_REQ_LEN);
 
     while (1) {
-        httpc_connection_handler();
-        if (httpc_isSockOpen)
-            httpc_connect();
-
-        if (!httpc_isConnected)
+        int32_t sock_status = getSn_SR(0);
+        if (sock_status == SOCK_CLOSED) {
+            socket(0, Sn_MR_UDP, 8090, 0);
             continue;
-            
-        if (sent_request == 0) {
-            request.uri = (uint8_t *)uri;
-            request.host = (uint8_t *)domain_name;
-            httpc_send(&request, g_recv_buf, 0);
-            sent_request = 1;
         }
 
-        if (httpc_isReceived > 0) {
-            uint16_t len = httpc_recv(g_recv_buf, httpc_isReceived);
-            packet_num++;
-            //print_packet_info(g_recv_buf, len, packet_num);
+        if (sock_status != SOCK_UDP) continue;
+        int32_t size = getSn_RX_RSR(0);
+        if (size == 0) continue;
+        if (size > DATA_BUF_SIZE) size = DATA_BUF_SIZE;
+        size = recvfrom(0, recv_buf, size, ip_address, (uint16_t*)&destport);
+        if (size <= 0) continue;
 
-            if (packet_num > 1) {
-                len = MIN(len, POINT_REQ_BYTES - total_len);
-                memcpy(&point_buf[total_len], &g_recv_buf[0], len);
-                total_len += len;
+        uint8_t new_seq = recv_buf[0];
+        if (new_seq < curr_seq && new_seq != 0) {
+            curr_seq = new_seq;
+            continue;
+        }
+        curr_seq = new_seq;
 
-                if (total_len >= POINT_REQ_BYTES) {
-                    total_len = 0;
-                    packet_num = 0;
-                    sent_request = 0;
-                    httpc_disconnect();
-
-                    for (uint16_t i = 0; i < POINT_REQ_BYTES; i += 6) {
-                        laser_point_t new_point;
-                        bytes_to_point(point_buf, i, &new_point);
-                        queue_add_blocking(&data_buf, &new_point);
-                    }                  
-                }
-            }
+        for (uint16_t i = 1; i < size; i += 6) {
+            laser_point_t new_point;
+            bytes_to_point(recv_buf, i, &new_point);
+            queue_add_blocking(&data_buf, &new_point);
         }
     }
 }
@@ -220,7 +198,7 @@ int main() {
     init_pin(GRN_PIN);
     init_pin(BLU_PIN);
 
-    queue_init(&data_buf, sizeof(laser_point_t), POINT_REQ_LEN * 2);
+    queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_SIZE);
     multicore_launch_core1(core1_entry);
     laser_point_t new_point;
     uint32_t last_update = to_ms_since_boot(get_absolute_time());

@@ -33,7 +33,6 @@ class MainApp:
                            8: 'Mode 8'}
 
         self.laser_server = LaserServer(num_lasers, host_ip)
-        self.laser_server.start_generator()
         self.sacn = SACNHandler(target_ip)
 
     @decorators.threaded_time_delay(5)

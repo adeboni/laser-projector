@@ -1,17 +1,25 @@
 """This module generates data for the lasers"""
 from threading import Thread
-from queue import Queue
-from waitress import serve
-from flask import Flask, Response
+import socket
+import time
 from laser_point import *
 from laser_generators import *
 
 class LaserServer:
     """This class generates data for the lasers"""
     def __init__(self, num_lasers: int, host_ip: str) -> None:
-        self.client_buffer_size = 1500
-        self.max_queue_size = 4096
-        self.host_ip = host_ip
+        if host_ip == '127.0.0.1':
+            self.targets = [(host_ip, 8090 + i) for i in range(num_lasers)]
+        else:
+            self.targets = [(f'10.0.0.{10 + i}', 8090) for i in range(num_lasers)]
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.server = Thread(target=self._server, daemon=True)
+        self.packet_gen = Thread(target=self._packet_gen, daemon=True)
+        self.server_running = False
+        self.packet_delay = 0.020
+        self.packet = None
+        self.packet_ready = False
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {
@@ -23,49 +31,40 @@ class LaserServer:
             # 6: bouncing_ball(num_lasers)
         }
 
-        self.flask_app = Flask(__name__)
-        self.queues = [Queue(self.max_queue_size) for _ in range(self.num_lasers)]
-        self.server = Thread(target=lambda: serve(self.flask_app, host=host_ip, port=8080), daemon=True)
-        self.gen = Thread(target=self.producer, daemon=True)
-        
-        @self.flask_app.route('/laser_data/<int:laser_id>/<int:num_points>/', methods = ['GET'])
-        def get_laser_data(laser_id: int, num_points: int) -> Response:
-            """Returns the next set of laser data"""
-            if laser_id > len(self.queues):
-                return Response(b'', mimetype='application/octet-stream')
-            
-            return_buf = []
-            while len(return_buf) < num_points * 6:
-                try:
-                    point = self.queues[laser_id].get_nowait()
-                    return_buf.extend(point.get_bytes())
-                except:
-                    return_buf.extend([0, 0, 0, 0, 0, 0])
-            return Response(bytes(return_buf), mimetype='application/octet-stream')
-            
-        @self.flask_app.route('/')
-        def index():
-            return 'Laser server is running!'
+    def _packet_gen(self):
+        seq = 0
+        while self.server_running:
+            if not self.packet_ready and self.mode in self.mode_list:
+                self.packet = [[seq] for _ in range(self.num_lasers)]
+                for _ in range(170):
+                    p = next(self.mode_list[self.mode])
+                    for i in range(self.num_lasers):
+                        self.packet[i].extend(p[i].get_bytes())
+                self.packet_ready = True
+                seq = (seq + 1) % 255
+
+    def _server(self):
+        last_sent = 0
+        while self.server_running:
+            new_time = time.time()
+            if self.packet_ready and new_time - last_sent > self.packet_delay:
+                for i in range(self.num_lasers):
+                    self.sock.sendto(bytearray(self.packet[i]), self.targets[i])
+                last_sent = new_time
+                self.packet_ready = False
     
     def start_server(self) -> None:
         if not self.server.is_alive():
-            print(f'Starting server at {self.host_ip}')
+            print(f'Starting server targeting {self.targets}')
+            self.server_running = True
             self.server.start()
-
-    def start_generator(self) -> None:
-        if not self.gen.is_alive():
-            self.gen.start()
-
-    def producer(self) -> None:
-        while True:
-            if self.mode not in self.mode_list or all(q.full() for q in self.queues):
-                continue
-            any_full = any(q.full() for q in self.queues)
-            min_size = min(q.qsize() for q in self.queues)
-            if not any_full or min_size < self.client_buffer_size:
-                for p in next(self.mode_list[self.mode]):
-                    if not self.queues[p.id].full():
-                        self.queues[p.id].put(p)
+            self.packet_gen.start()
+            
+    def stop_server(self) -> None:
+        print('Stopping server')
+        self.server_running = False
+        while self.server.is_alive() or self.packet_gen.is_alive():
+            pass
 
 if __name__ == '__main__':
     import time
@@ -74,7 +73,6 @@ if __name__ == '__main__':
         server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
     else:
         server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
-    server.start_generator()
     server.start_server()
     while True:
         for i in server.mode_list:
