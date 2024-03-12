@@ -24,13 +24,13 @@ class MainApp:
         self.current_mode = 0
 
         self.mode_names = {1: 'Jukebox', 
-                           2: 'Wand', 
-                           3: 'Pong', 
-                           4: 'Drums', 
-                           5: 'Spirograph', 
-                           6: 'Mode 6', 
-                           7: 'Mode 7', 
-                           8: 'Mode 8'}
+                           2: 'Audio Visualization', 
+                           3: 'Wand Drawing', 
+                           4: 'Wand Synth', 
+                           5: 'Drums', 
+                           6: 'Pong', 
+                           7: 'Spirograph', 
+                           8: 'None'}
 
         self.laser_server = LaserServer(num_lasers, host_ip)
         self.sacn = SACNHandler(target_ip)
