@@ -68,7 +68,7 @@ class Song:
 
 class SongHandler:
     """Class implementing a song handler"""
-    def __init__(self, laser_server: laser_server.LaserServer):
+    def __init__(self, laser_server: laser_server.LaserServer=None):
         pygame.mixer.init()
         if not os.path.exists('songs'):
             os.mkdir('songs')
@@ -85,10 +85,12 @@ class SongHandler:
         if any(self.song_queue):
             self.current_song = self.song_queue.pop(0)
             self.current_song.play()
-            self.laser_server.set_audio_callback(self.current_song.get_data)
+            if self.laser_server:
+                self.laser_server.set_audio_callback(self.current_song.get_data)
         else:
             self.current_song = None
-            self.laser_server.set_audio_callback(None)
+            if self.laser_server:
+                self.laser_server.set_audio_callback(None)
 
     def add_to_queue(self, song_letter: str, song_number: int) -> None:
         """Adds a song to the queue"""
