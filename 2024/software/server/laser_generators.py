@@ -1,6 +1,5 @@
 """This module defines laser graphics generators"""
 import numpy as np
-import time
 from laser_point import *
 from laser_objects import *
 from typing import Generator
@@ -161,10 +160,9 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     ys = [base_y for _ in range(audio_blocksize)]
     rgb = [255, 0, 0]
     index = 0
-    next_update = 0
 
     while True:
-        if time.time() > next_update:
+        if index == 0:
             audio_data = None
             if audio_callback:
                 audio_data = audio_callback(audio_blocksize)
@@ -174,7 +172,6 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
                     ys.append(base_y)
             else:
                 ys = [base_y for _ in range(audio_blocksize)]
-            next_update = time.time() + 0.05
         
         yield verify_points([LaserPoint(i, int(xs[index]), int(ys[index]), *rgb) for i in range(num_lasers)])
         index = (index + 1) % audio_blocksize
