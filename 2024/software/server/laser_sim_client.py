@@ -1,6 +1,6 @@
 """This module simulates laser outputs"""
 import socket
-from threading import Thread
+import threading
 import traceback
 from matplotlib import pyplot as plt
 from matplotlib import collections as mc
@@ -59,7 +59,7 @@ for i, ax in enumerate(axs):
                 c='k', alpha=0.3)
 
 for i in range(NUM_LASERS):
-    Thread(target=_laser_thread, args=(i,), daemon=True).start()
+    threading.Thread(target=_laser_thread, args=(i,), daemon=True).start()
 
 def animate(_):
     for i in range(NUM_LASERS):

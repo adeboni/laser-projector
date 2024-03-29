@@ -1,6 +1,6 @@
 """This module handles all the sACN ouputs"""
 import time
-from threading import Thread
+import threading
 import pygame
 import sacn
 import robbie_generators
@@ -31,7 +31,7 @@ class SACNHandler:
             (self.set_motors, robbie_generators.motors_spin()),
             (self.set_lamp, robbie_generators.lamp_morse_code())
         ]
-        self.animation_thread = Thread(target=self._animation_thread, daemon=True)
+        self.animation_thread = threading.Thread(target=self._animation_thread, daemon=True)
         self.animation_running = False
 
         self.button_key_map = {
@@ -53,7 +53,7 @@ class SACNHandler:
 
     def key_down(self, key: int) -> None:
         if key in self.button_key_map:
-            key_thread = Thread(target=self._key_thread, args=(self.button_key_map[key],), daemon=True)
+            key_thread = threading.Thread(target=self._key_thread, args=(self.button_key_map[key],), daemon=True)
             key_thread.start()            
 
     def set_mouth(self, values: list[int] | None) -> None:

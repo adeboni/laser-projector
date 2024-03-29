@@ -2,11 +2,11 @@
 
 import colorsys
 import pygame
-from pyquaternion import Quaternion
+import pyquaternion
 import sierpinski
-from laser_point import LaserPoint
+import laser_point
 
-BASE_QUATERNION = Quaternion(1, 0, 0, -1)
+BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
 BASE_VECTOR_START = [-1, 0, 0]
 BASE_VECTOR_END = [1, 0, 0]
 QUEUE_LIMIT = 5
@@ -30,7 +30,7 @@ class Wand:
         r, g, b = colorsys.hsv_to_rgb(angle / 360, 1, 1)
         return [int(r * 255), int(g * 255), int(b * 255)]
 
-    def get_laser_point(self) -> LaserPoint:
+    def get_laser_point(self) -> laser_point.LaserPoint:
         if not self.calibration:
             return None
         
@@ -43,12 +43,15 @@ class Wand:
         if wand_projection:
             laser_index, wand_point = wand_projection
             laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
-            return LaserPoint(laser_index, laser_x, laser_y, *self.get_wand_color())
+            return laser_point.LaserPoint(laser_index, laser_x, laser_y, *self.get_wand_color())
         else:
             return None
 
     def update_position(self) -> None:
-        q = Quaternion(w=self.joystick.get_axis(5), x=self.joystick.get_axis(0), y=self.joystick.get_axis(1), z=self.joystick.get_axis(2))
+        q = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
+                                    x=self.joystick.get_axis(0), 
+                                    y=self.joystick.get_axis(1), 
+                                    z=self.joystick.get_axis(2))
         self.position = BASE_QUATERNION.rotate(q)
         tip_pos = self.position.rotate(BASE_VECTOR_END)[2]
         if len(self.pos_queue) > QUEUE_LIMIT:

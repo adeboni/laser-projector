@@ -1,8 +1,8 @@
 """This module simulates the sierpinski pyramid"""
-from threading import Thread
+import threading
 import socket
 import numpy as np
-from pyquaternion import Quaternion
+import pyquaternion
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
@@ -112,7 +112,7 @@ def find_quat(start, end):
     cross = np.cross(start, end)
     axis = cross / np.linalg.norm(cross)
     theta = np.arctan(np.linalg.norm(cross) / np.dot(start, end))
-    return Quaternion(axis=axis, angle=theta)
+    return pyquaternion.Quaternion(axis=axis, angle=theta)
 
 def get_wand_projection(start, end):
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
@@ -153,10 +153,10 @@ def joystick_quaternion():
     import pygame
     pygame.init()
     controller = pygame.joystick.Joystick(0)
-    wand_offset = Quaternion(1, 0, 0, -1)
+    wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
     while True:
         pygame.event.pump()
-        q = Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
+        q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
         yield wand_offset.rotate(q)
 
 def mouse_quaternion():
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     endpoints =  np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
 
     for i in range(3):
-        Thread(target=_laser_thread, args=(i,), daemon=True).start()
+        threading.Thread(target=_laser_thread, args=(i,), daemon=True).start()
 
     def animate(_):
         q = next(quaternion_generator)

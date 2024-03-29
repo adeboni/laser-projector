@@ -1,7 +1,7 @@
 """This module generates data for the lasers"""
-from threading import Thread
 import socket
 import time
+import threading
 import laser_generators
 
 class LaserServer:
@@ -13,7 +13,7 @@ class LaserServer:
             self.targets = [(f'10.0.0.{10 + i}', 8090) for i in range(num_lasers)]
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.server = Thread(target=self._server, daemon=True)
+        self.server = threading.Thread(target=self._server, daemon=True)
         self.server_running = False
         self.mode = 0
         self.num_lasers = num_lasers

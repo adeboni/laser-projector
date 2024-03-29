@@ -1,17 +1,17 @@
 """Main entry point"""
 import pygame 
 import decorators
-from laser_server import LaserServer
-from song_handler import SongHandler
-from sacn_handler import SACNHandler
-from wand import Wand
+import laser_server
+import song_handler
+import sacn_handler
+import wand
   
 class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
-        self.laser_server = LaserServer(num_lasers, host_ip)
-        self.sacn = SACNHandler(target_ip)
+        self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
+        self.sacn = sacn_handler.SACNHandler(target_ip)
 
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = {}
@@ -21,7 +21,7 @@ class MainApp:
                        'Song Queue': 'Empty',
                        'Wands': '0'}
 
-        self.songs = SongHandler(self.laser_server)
+        self.songs = song_handler.SongHandler(self.laser_server)
         self.current_letter = ord('A')
         self.current_number = 0
         self.current_mode = 0
@@ -90,7 +90,7 @@ class MainApp:
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     if joystick.get_numaxes() >= 8:
-                        self.wands[joystick.get_instance_id()] = Wand(joystick)
+                        self.wands[joystick.get_instance_id()] = wand.Wand(joystick)
                         self.labels['Wands'] = f'{len(self.wands)}'
                     else:
                         joystick.quit()
@@ -100,8 +100,8 @@ class MainApp:
                         del self.wands[event.instance_id]
                         self.labels['Wands'] = f'{len(self.wands)}'
             
-            for wand in self.wands:
-                wand.update_position()
+            for w in self.wands:
+                w.update_position()
             clock.tick(50)
                 
     def _update_selection(self, key: int) -> None:

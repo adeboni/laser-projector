@@ -1,8 +1,8 @@
 """Module providing song handling functionality"""
 import os
 import soundfile
-from pygame import mixer
-from laser_server import LaserServer
+import laser_server
+import pygame
 
 class Song:
     """Class implementing a song"""
@@ -46,21 +46,21 @@ class Song:
         """Plays the song"""
         self.data, self.sr = soundfile.read(self.path)
         self.length_s = int(len(self.data) / self.sr)
-        mixer.music.load(self.path)
-        mixer.music.play()
+        pygame.mixer.music.load(self.path)
+        pygame.mixer.music.play()
 
     def stop(self) -> None:
         """Stops the current song"""
-        mixer.music.stop()
+        pygame.mixer.music.stop()
 
     def update_time(self) -> None:
         """Updates the played time variable"""
-        self.played_length_s = mixer.music.get_pos() // 1000
+        self.played_length_s = pygame.mixer.music.get_pos() // 1000
 
     def get_data(self, blocksize: int) -> list[float]:
         """Returns a block of data from the current audio"""
         if self.data is not None:
-            start_index = int(mixer.music.get_pos() / 1000 * self.sr)
+            start_index = int(pygame.mixer.music.get_pos() / 1000 * self.sr)
             return [x[0] for x in self.data[start_index:start_index + blocksize]]
         else:
             return None
@@ -68,8 +68,8 @@ class Song:
 
 class SongHandler:
     """Class implementing a song handler"""
-    def __init__(self, laser_server: LaserServer):
-        mixer.init()
+    def __init__(self, laser_server: laser_server.LaserServer):
+        pygame.mixer.init()
         if not os.path.exists('songs'):
             os.mkdir('songs')
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
