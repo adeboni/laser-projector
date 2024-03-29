@@ -1,7 +1,8 @@
 """Module providing song handling functionality"""
 import os
+import soundfile
 from pygame import mixer
-from mutagen.mp3 import MP3
+from laser_server import LaserServer
 
 class Song:
     """Class implementing a song"""
@@ -10,6 +11,8 @@ class Song:
         self.index = index
         self.played_length_s = 0
         self.length_s = 0
+        self.data = None
+        self.sr = None
         self.author, self.title, self.year = os.path.splitext(os.path.basename(path))[0].split(' - ')
 
     @property
@@ -41,7 +44,8 @@ class Song:
 
     def play(self) -> None:
         """Plays the song"""
-        self.length_s = int(MP3(self.path).info.length)
+        self.data, self.sr = soundfile.read(self.path)
+        self.length_s = int(len(self.data) / self.sr)
         mixer.music.load(self.path)
         mixer.music.play()
 
@@ -53,16 +57,25 @@ class Song:
         """Updates the played time variable"""
         self.played_length_s = mixer.music.get_pos() // 1000
 
+    def get_data(self, blocksize: int) -> list[float]:
+        """Returns a block of data from the current audio"""
+        if self.data is not None:
+            start_index = int(mixer.music.get_pos() / 1000 * self.sr)
+            return [x[0] for x in self.data[start_index:start_index + blocksize]]
+        else:
+            return None
+
 
 class SongHandler:
     """Class implementing a song handler"""
-    def __init__(self):
+    def __init__(self, laser_server: LaserServer):
         mixer.init()
         if not os.path.exists('songs'):
             os.mkdir('songs')
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
         self.song_queue = []
         self.current_song = None
+        self.laser_server = laser_server
 
     def play_next_song(self) -> None:
         """Plays the next song in the queue"""
@@ -72,8 +85,10 @@ class SongHandler:
         if any(self.song_queue):
             self.current_song = self.song_queue.pop(0)
             self.current_song.play()
+            self.laser_server.set_audio_callback(self.current_song.get_data)
         else:
             self.current_song = None
+            self.laser_server.set_audio_callback(None)
 
     def add_to_queue(self, song_letter: str, song_number: int) -> None:
         """Adds a song to the queue"""

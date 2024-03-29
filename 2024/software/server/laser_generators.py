@@ -1,5 +1,6 @@
 """This module defines laser graphics generators"""
 import numpy as np
+import time
 from laser_point import *
 from laser_objects import *
 from typing import Generator
@@ -145,4 +146,35 @@ def bouncing_ball(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             data = [LaserPoint(i) for i in range(num_lasers)]
             data[ball_laser] = LaserPoint(ball_laser, x, y, 255, 0, 0)
             yield verify_points(data)
-    
+
+audio_callback = None
+
+def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    """Generates an audio visualization"""
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_y = min(b[1] for b in bounds)
+    max_y = max(b[1] for b in bounds)
+    base_y = (max_y + min_y) / 2
+    audio_blocksize = 512
+    xs = np.linspace(_xs[1], _xs[2], num=audio_blocksize)
+    ys = [base_y for _ in range(audio_blocksize)]
+    rgb = [255, 0, 0]
+    index = 0
+    next_update = 0
+
+    while True:
+        if time.time() > next_update:
+            audio_data = None
+            if audio_callback:
+                audio_data = audio_callback(audio_blocksize)
+            if audio_data:
+                ys = [base_y + v * 600 for v in audio_data]
+                while len(ys) < audio_blocksize:
+                    ys.append(base_y)
+            else:
+                ys = [base_y for _ in range(audio_blocksize)]
+            next_update = time.time() + 0.05
+        
+        yield verify_points([LaserPoint(i, int(xs[index]), int(ys[index]), *rgb) for i in range(num_lasers)])
+        index = (index + 1) % audio_blocksize

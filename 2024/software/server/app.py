@@ -10,6 +10,9 @@ class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
+        self.laser_server = LaserServer(num_lasers, host_ip)
+        self.sacn = SACNHandler(target_ip)
+
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = {}
         self.labels = {'Mode': '0 - Invalid Mode',
@@ -18,22 +21,19 @@ class MainApp:
                        'Song Queue': 'Empty',
                        'Wands': '0'}
 
-        self.songs = SongHandler()
+        self.songs = SongHandler(self.laser_server)
         self.current_letter = ord('A')
         self.current_number = 0
         self.current_mode = 0
 
         self.mode_names = {1: 'Jukebox', 
                            2: 'Audio Visualization', 
-                           3: 'Wand Drawing', 
-                           4: 'Wand Synth', 
-                           5: 'Drums', 
-                           6: 'Pong', 
-                           7: 'Spirograph', 
-                           8: 'None'}
-
-        self.laser_server = LaserServer(num_lasers, host_ip)
-        self.sacn = SACNHandler(target_ip)
+                           3: 'Equations', 
+                           4: 'Spirograph', 
+                           5: 'Pong', 
+                           6: 'Wand Drawing', 
+                           7: 'Wand Music', 
+                           8: 'Drums'}
 
     @decorators.threaded_time_delay(5)
     def start_sacn(self):
@@ -61,6 +61,7 @@ class MainApp:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.sacn.stop()
+                    self.laser_server.stop()
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
@@ -129,6 +130,6 @@ if __name__ == '__main__':
         app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
     else:
         app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
-    app.laser_server.start_server()
+    app.laser_server.start()
     app.start_sacn()
     app.show_screen()

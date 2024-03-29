@@ -2,8 +2,7 @@
 from threading import Thread
 import socket
 import time
-from laser_point import *
-from laser_generators import *
+import laser_generators
 
 class LaserServer:
     """This class generates data for the lasers"""
@@ -19,12 +18,12 @@ class LaserServer:
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {
-            1: circle(num_lasers), 
-            2: rainbow_circle(num_lasers),
-            3: letters(num_lasers),
-            4: images(num_lasers),
-            5: spirograph(num_lasers),
-            # 6: bouncing_ball(num_lasers)
+            1: laser_generators.circle(num_lasers), 
+            2: laser_generators.rainbow_circle(num_lasers),
+            3: laser_generators.letters(num_lasers),
+            4: laser_generators.images(num_lasers),
+            5: laser_generators.spirograph(num_lasers),
+            6: laser_generators.audio_visualization(num_lasers)
         }
 
     def _server(self):
@@ -51,17 +50,20 @@ class LaserServer:
                 last_sent = new_time
                 packet = None
     
-    def start_server(self) -> None:
+    def start(self) -> None:
         if not self.server.is_alive():
-            print(f'Starting server targeting {self.targets}')
+            print(f'Starting laser server targeting {self.targets}')
             self.server_running = True
             self.server.start()
             
-    def stop_server(self) -> None:
-        print('Stopping server')
+    def stop(self) -> None:
+        print('Stopping laser server')
         self.server_running = False
         while self.server.is_alive():
             pass
+
+    def set_audio_callback(self, callback) -> None:
+        laser_generators.audio_callback = callback
 
 if __name__ == '__main__':
     import time
@@ -70,11 +72,11 @@ if __name__ == '__main__':
         server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
     else:
         server = LaserServer(num_lasers=3, host_ip='127.0.0.1')
-    server.start_server()
+    server.start()
     try:
         while True:
             for i in server.mode_list:
                 server.mode = i
                 time.sleep(5)
     except KeyboardInterrupt:
-        server.stop_server()
+        server.stop()
