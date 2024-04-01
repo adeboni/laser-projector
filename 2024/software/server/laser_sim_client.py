@@ -1,4 +1,5 @@
 """This module simulates laser outputs"""
+
 import socket
 import threading
 import traceback

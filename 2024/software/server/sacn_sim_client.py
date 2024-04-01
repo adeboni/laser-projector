@@ -1,4 +1,5 @@
 """Simulates a UI board"""
+
 import tkinter as tk
 import sacn
 

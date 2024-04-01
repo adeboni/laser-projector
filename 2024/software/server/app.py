@@ -1,4 +1,5 @@
 """Main entry point"""
+
 import pygame 
 import decorators
 import laser_server
@@ -100,7 +101,7 @@ class MainApp:
                         del self.wands[event.instance_id]
                         self.labels['Wands'] = f'{len(self.wands)}'
             
-            for w in self.wands:
+            for w in self.wands.values():
                 w.update_position()
             clock.tick(50)
                 

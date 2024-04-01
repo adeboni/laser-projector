@@ -1,4 +1,5 @@
 """This module simulates the sierpinski pyramid"""
+
 import threading
 import socket
 import numpy as np
@@ -154,23 +155,44 @@ def joystick_quaternion():
     pygame.init()
     controller = pygame.joystick.Joystick(0)
     wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
+    q_init = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
+    q_init = wand_offset.rotate(q_init)
+    start = np.array([1, 0, 0])
+    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+    q_target = find_quat(start, target_vector)
+    q_div = q_target / q_init
     while True:
         pygame.event.pump()
         q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
+        #yield q_div * wand_offset.rotate(q)
         yield wand_offset.rotate(q)
+        
+def joystick_sim():
+    wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
+    q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
+
+    start = np.array([1, 0, 0])
+    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+    q_target = find_quat(start, target_vector)
+    q_div = q_target / q_init
+    
+    while True:
+        q = q_init
+        yield q_div * q
 
 def mouse_quaternion():
     import pyautogui
+    screen_width, screen_height = pyautogui.size()
     start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     mouse_offset = find_quat(start, target_vector)
     while True:
         mouse = pyautogui.position()
-        end = np.array([1, np.interp(mouse.x, [0, 1920], [1, -1]), np.interp(mouse.y, [0, 1080], [-1, 1])])
+        end = np.array([1, np.interp(mouse.x, [0, screen_width], [1, -1]), np.interp(mouse.y, [0, screen_height], [-1, 1])])
         yield mouse_offset * find_quat(start, end)
 
 if __name__ == '__main__':
-    quaternion_generator = mouse_quaternion()
+    quaternion_generator = joystick_quaternion()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -194,7 +216,7 @@ if __name__ == '__main__':
 
     lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
     projection = ax.plot([], [], [], c='r', linestyle='', marker='o')
-    ax.plot([center_point[0]], [center_point[1]], [center_point[2]], c='b', linestyle='', marker='o')
+    #ax.plot([center_point[0]], [center_point[1]], [center_point[2]], c='b', linestyle='', marker='o')
     laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
     startpoints = np.array([[-2, 0, 0], [0, -2, 0], [0, 0, -2]])
     endpoints =  np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])

@@ -5,6 +5,7 @@ import pygame
 import pyquaternion
 import sierpinski
 import laser_point
+import numpy as np
 
 BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
 BASE_VECTOR_START = [-1, 0, 0]
@@ -15,7 +16,7 @@ HUMAN_HEIGHT = 5
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick) -> None:
-        self.joystick= joystick
+        self.joystick = joystick
         self.calibration = None
         self.position = None
         self.callback = None
@@ -24,17 +25,23 @@ class Wand:
 
     def quit(self) -> None:
         self.joystick.quit()
+        
+    # todo: make this get the angle around the [1, 0, 0] axis
+    def get_rotation_angle(self) -> int:
+        x, y, z = self.position.rotate([0, 1, 0])
+        x, y, z = x / np.sqrt(x**2 + y**2 + z**2), y / np.sqrt(x**2 + y**2 + z**2), z / np.sqrt(x**2 + y**2 + z**2)
+        phi = np.arctan2(y, x)
+        return int(np.degrees(phi)) % 360
 
     def get_wand_color(self) -> list[int]:
-        angle = 0 # todo: get angle from wand rotation
-        r, g, b = colorsys.hsv_to_rgb(angle / 360, 1, 1)
+        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
         return [int(r * 255), int(g * 255), int(b * 255)]
 
     def get_laser_point(self) -> laser_point.LaserPoint:
-        if not self.calibration:
-            return None
-        
         # todo: add calibration adjustment
+        #if not self.calibration:
+        #    return None
+        
         start = self.position.rotate(BASE_VECTOR_START)
         end = self.position.rotate(BASE_VECTOR_END)
         start[2] += HUMAN_HEIGHT

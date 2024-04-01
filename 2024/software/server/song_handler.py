@@ -1,4 +1,5 @@
 """Module providing song handling functionality"""
+
 import os
 import soundfile
 import laser_server
@@ -57,13 +58,21 @@ class Song:
         """Updates the played time variable"""
         self.played_length_s = pygame.mixer.music.get_pos() // 1000
 
-    def get_data(self, blocksize: int) -> list[float]:
+    def get_data(self, blocksize: int, interval: int) -> list[float]:
         """Returns a block of data from the current audio"""
         if self.data is not None:
             start_index = int(pygame.mixer.music.get_pos() / 1000 * self.sr)
-            return [x[0] for x in self.data[start_index:start_index + blocksize]]
+            return [x[0] for x in self.data[start_index:start_index + blocksize]][::interval]
         else:
             return None
+            
+    def get_amplitude(self, blocksize: int, interval: int) -> float:
+        """Returns the average amplitude of a block of data"""
+        raw_data = self.get_data(blocksize, interval)
+        if raw_data is not None:
+            return sum([abs(x) for x in raw_data]) / len(raw_data)
+        else:
+            return 0
 
 
 class SongHandler:
@@ -85,12 +94,11 @@ class SongHandler:
         if any(self.song_queue):
             self.current_song = self.song_queue.pop(0)
             self.current_song.play()
-            if self.laser_server:
-                self.laser_server.set_audio_callback(self.current_song.get_data)
         else:
             self.current_song = None
-            if self.laser_server:
-                self.laser_server.set_audio_callback(None)
+            
+        if self.laser_server:
+            self.laser_server.set_song(self.current_song)
 
     def add_to_queue(self, song_letter: str, song_number: int) -> None:
         """Adds a song to the queue"""

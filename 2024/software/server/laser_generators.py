@@ -1,9 +1,12 @@
 """This module defines laser graphics generators"""
+
 import numpy as np
 from laser_point import *
 from laser_objects import *
 from typing import Generator
 import sierpinski
+
+current_song = None
 
 def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
     """Constrains point values to valid ranges"""
@@ -39,9 +42,16 @@ def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 def circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an rgb circle"""
     d = 0
+    radius = 200
     while True:
-        x = int(200 * np.sin(d * np.pi / 180) + 2048)
-        y = int(200 * np.cos(d * np.pi / 180) + 2048)
+        if d == 0:
+            amplitude = None
+            if current_song:
+                amplitude = current_song.get_amplitude(256, 8)
+            radius = 50 + 800 * amplitude if amplitude is not None else 200
+                
+        x = int(radius * np.sin(d * np.pi / 180) + 2048)
+        y = int(radius * np.cos(d * np.pi / 180) + 2048)
         rgb = [255 if d < 120 else 0, 255 if 120 <= d <= 240 else 0, 255 if d > 240 else 0]
         yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
         d = (d + 8) % 360
@@ -146,8 +156,6 @@ def bouncing_ball(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             data[ball_laser] = LaserPoint(ball_laser, x, y, 255, 0, 0)
             yield verify_points(data)
 
-audio_callback = None
-
 def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an audio visualization"""
     bounds = sierpinski.get_laser_coordinate_bounds()
@@ -155,23 +163,40 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     min_y = min(b[1] for b in bounds)
     max_y = max(b[1] for b in bounds)
     base_y = (max_y + min_y) / 2
-    audio_blocksize = 512
-    xs = np.linspace(_xs[1], _xs[2], num=audio_blocksize)
-    ys = [base_y for _ in range(audio_blocksize)]
+    sample_blocksize = 256
+    sample_interval = 8
+    xs = np.linspace(_xs[1], _xs[2], num=sample_blocksize)
+    ys = [base_y for _ in range(sample_blocksize)]
     rgb = [255, 0, 0]
     index = 0
 
     while True:
         if index == 0:
             audio_data = None
-            if audio_callback:
-                audio_data = audio_callback(audio_blocksize)
+            if current_song:
+                audio_data = current_song.get_data(sample_blocksize * sample_interval, sample_interval)
             if audio_data:
                 ys = [base_y + v * 600 for v in audio_data]
-                while len(ys) < audio_blocksize:
+                while len(ys) < sample_blocksize:
                     ys.append(base_y)
             else:
-                ys = [base_y for _ in range(audio_blocksize)]
+                ys = [base_y for _ in range(sample_blocksize)]
         
         yield verify_points([LaserPoint(i, int(xs[index]), int(ys[index]), *rgb) for i in range(num_lasers)])
-        index = (index + 1) % audio_blocksize
+        index = (index + 1) % sample_blocksize
+
+def mouse(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    import pyautogui
+    rgb = [0, 0, 255]
+    screen_width, screen_height = pyautogui.size()
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_y = min(b[1] for b in bounds)
+    max_y = max(b[1] for b in bounds)
+    while True:
+        m = pyautogui.position()
+        x = np.interp(m.x, [0, screen_width], [_xs[1], _xs[2]])
+        y = np.interp(m.y, [0, screen_height], [max_y, min_y])
+        yield verify_points([LaserPoint(i, int(x), int(y), *rgb) for i in range(num_lasers)])
+
+

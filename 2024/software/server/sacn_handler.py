@@ -1,4 +1,5 @@
 """This module handles all the sACN ouputs"""
+
 import time
 import threading
 import pygame

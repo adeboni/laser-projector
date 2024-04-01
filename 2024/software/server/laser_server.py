@@ -1,4 +1,5 @@
 """This module generates data for the lasers"""
+
 import socket
 import time
 import threading
@@ -23,7 +24,8 @@ class LaserServer:
             3: laser_generators.letters(num_lasers),
             4: laser_generators.images(num_lasers),
             5: laser_generators.spirograph(num_lasers),
-            6: laser_generators.audio_visualization(num_lasers)
+            6: laser_generators.audio_visualization(num_lasers),
+            7: laser_generators.mouse(num_lasers)
         }
 
     def _server(self):
@@ -62,8 +64,8 @@ class LaserServer:
         while self.server.is_alive():
             pass
 
-    def set_audio_callback(self, callback) -> None:
-        laser_generators.audio_callback = callback
+    def set_song(self, song) -> None:
+        laser_generators.current_song = song
 
 if __name__ == '__main__':
     import time
