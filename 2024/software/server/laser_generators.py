@@ -174,7 +174,7 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
         if index == 0:
             audio_data = None
             if current_song:
-                audio_data = current_song.get_data(sample_blocksize * sample_interval, sample_interval)
+                audio_data = current_song.get_envelope(sample_blocksize * sample_interval, sample_interval, 0.05)
             if audio_data:
                 ys = [base_y + v * 600 for v in audio_data]
                 while len(ys) < sample_blocksize:

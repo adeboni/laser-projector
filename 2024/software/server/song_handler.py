@@ -73,6 +73,18 @@ class Song:
             return sum([abs(x) for x in raw_data]) / len(raw_data)
         else:
             return 0
+        
+    def get_envelope(self, blocksize: int, interval: int, decay: float) -> list[float]:
+        """Returns an envelope-followed representation of the data block"""
+        raw_data = self.get_data(blocksize, interval)
+        if raw_data is not None:
+            result = []
+            curr_value = 0
+            for x in raw_data:
+                result.append(curr_value := x if x > curr_value else max(x, curr_value - decay))
+            return result
+        else:
+            return None
 
 
 class SongHandler:
