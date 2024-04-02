@@ -168,17 +168,20 @@ def joystick_quaternion():
         yield wand_offset.rotate(q)
         
 def joystick_sim():
-    wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
     q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
 
     start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_target = find_quat(start, target_vector)
-    q_div = q_target / q_init
+    
+    v1 = q_target.rotate(start)
+    x = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2) 
+    
+    print(v1, v2)
     
     while True:
         q = q_init
-        yield q_div * q
+        yield (q_target / q_init) * q
 
 def mouse_quaternion():
     import pyautogui
@@ -192,7 +195,7 @@ def mouse_quaternion():
         yield mouse_offset * find_quat(start, end)
 
 if __name__ == '__main__':
-    quaternion_generator = joystick_quaternion()
+    quaternion_generator = joystick_sim()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

@@ -167,7 +167,7 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     sample_interval = 8
     xs = np.linspace(_xs[1], _xs[2], num=sample_blocksize)
     ys = [base_y for _ in range(sample_blocksize)]
-    rgb = [255, 0, 0]
+    rgb = [0, 255, 0]
     index = 0
 
     while True:
