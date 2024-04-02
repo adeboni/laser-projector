@@ -4,6 +4,7 @@ import socket
 import time
 import threading
 import laser_generators
+import utilities
 
 class LaserServer:
     """This class generates data for the lasers"""
@@ -55,6 +56,8 @@ class LaserServer:
     def start(self) -> None:
         if not self.server.is_alive():
             print(f'Starting laser server targeting {self.targets}')
+            for target_ip, _ in self.targets:
+                utilities.ping(target_ip)
             self.server_running = True
             self.server.start()
             
