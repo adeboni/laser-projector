@@ -74,9 +74,9 @@ def letters(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
 def images(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates bike, plane, island on three lasers"""
-    imgs = [interpolate_objects(convert_to_xy(IMG_BIKE, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(IMG_PLANE, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(IMG_ISLAND, 2048, 2048))]
+    imgs = [interpolate_objects(convert_to_xy(IMG_CATBODY, 2048, 2048)), 
+             interpolate_objects(convert_to_xy(EQN_05, 2048, 2048)), 
+             interpolate_objects(convert_to_xy(IMG_TOASTER, 2048, 2048))]
     idxs = [0, 0, 0]
     while True:
         output = []
