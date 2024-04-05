@@ -174,11 +174,6 @@ def joystick_sim():
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_target = find_quat(start, target_vector)
     
-    v1 = q_target.rotate(start)
-    x = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2) 
-    
-    print(v1, v2)
-    
     while True:
         q = q_init
         yield (q_target / q_init) * q
