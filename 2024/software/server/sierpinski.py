@@ -154,18 +154,21 @@ def joystick_quaternion():
     import pygame
     pygame.init()
     controller = pygame.joystick.Joystick(0)
+
     wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
     q_init = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
     q_init = wand_offset.rotate(q_init)
+
     start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_target = find_quat(start, target_vector)
     q_div = q_target / q_init
+    
     while True:
         pygame.event.pump()
         q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
-        #yield q_div * wand_offset.rotate(q)
-        yield wand_offset.rotate(q)
+        q = wand_offset.rotate(q)
+        yield q_div * q
         
 def joystick_sim():
     q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
@@ -173,10 +176,11 @@ def joystick_sim():
     start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_target = find_quat(start, target_vector)
+    q_div = q_target / q_init
     
     while True:
         q = q_init
-        yield (q_target / q_init) * q
+        yield q_div * q
 
 def mouse_quaternion():
     import pyautogui
