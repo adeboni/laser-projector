@@ -194,7 +194,7 @@ def mouse_quaternion():
         yield mouse_offset * find_quat(start, end)
 
 if __name__ == '__main__':
-    quaternion_generator = joystick_sim()
+    quaternion_generator = joystick_quaternion()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
