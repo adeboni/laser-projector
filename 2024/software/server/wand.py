@@ -30,11 +30,13 @@ class Wand:
         v0 = self.position.rotate([0, 1, 0])
         v1 = self.position.rotate([1, 0, 0])
         v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
-        phi = np.arccos(np.dot(v0, v2))
-        return int(np.degrees(phi) + 180) % 180
+        v3 = np.cross(v1, v2)
+        phi1 = int(np.degrees(np.arccos(np.dot(v0, v2))))
+        phi2 = int(np.degrees(np.arccos(np.dot(v0, v3))))
+        return phi1 if phi2 < 90 else 360 - phi1
 
     def get_wand_color(self) -> list[int]:
-        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 180, 1, 1)
+        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
         return [int(r * 255), int(g * 255), int(b * 255)]
 
     def get_laser_point(self) -> laser_point.LaserPoint:
