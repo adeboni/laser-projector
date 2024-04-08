@@ -56,6 +56,8 @@ plane_points = np.array([surface[0] for surface in surfaces])
 
 center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
 center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
+target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+target_vector = target_vector / np.linalg.norm(target_vector)
 
 tp_offsets = [
     [[1, 0], [0, 1], [-1, 0], [0, -1]],
@@ -158,8 +160,6 @@ def joystick_quaternion():
     q_init = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
     q_init = wand_offset.rotate(q_init)
     init_vector = q_init.rotate([1, 0, 0])
-
-    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_offset = find_quat(init_vector, target_vector)
     
     while True:
@@ -171,8 +171,6 @@ def joystick_quaternion():
 def joystick_sim():
     q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
     init_vector = q_init.rotate([1, 0, 0])
-    
-    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     q_offset = find_quat(init_vector, target_vector)
 
     while True:
@@ -185,13 +183,14 @@ def mouse_quaternion():
     start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
     mouse_offset = find_quat(start, target_vector)
+
     while True:
         mouse = pyautogui.position()
         end = np.array([1, np.interp(mouse.x, [0, screen_width], [1, -1]), np.interp(mouse.y, [0, screen_height], [-1, 1])])
         yield mouse_offset * find_quat(start, end)
 
 if __name__ == '__main__':
-    quaternion_generator = joystick_quaternion()
+    quaternion_generator = joystick_sim()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
