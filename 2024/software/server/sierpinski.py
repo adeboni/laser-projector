@@ -179,18 +179,6 @@ def joystick_sim():
         q = q_init
         yield q_offset * q
 
-def mouse_quaternion():
-    import pyautogui
-    screen_width, screen_height = pyautogui.size()
-    start = np.array([1, 0, 0])
-    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
-    mouse_offset = find_quat(start, target_vector)
-
-    while True:
-        mouse = pyautogui.position()
-        end = np.array([1, np.interp(mouse.x, [0, screen_width], [1, -1]), np.interp(mouse.y, [0, screen_height], [-1, 1])])
-        yield mouse_offset * find_quat(start, end)
-
 if __name__ == '__main__':
     quaternion_generator = joystick_quaternion()
 
