@@ -109,6 +109,7 @@ def point_in_triangle(a, b, c, p):
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
+# todo: remove or optimize
 def find_quat(start, end):
     cross = np.cross(start, end)
     axis = cross / np.linalg.norm(cross)
@@ -158,29 +159,27 @@ def joystick_quaternion():
     wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
     q_init = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
     q_init = wand_offset.rotate(q_init)
+    init_vector = q_init.rotate([1, 0, 0])
 
-    start = np.array([1, 0, 0])
     target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
-    q_target = find_quat(start, target_vector)
-    q_div = q_target / q_init
+    q_offset = find_quat(init_vector, target_vector)
     
     while True:
         pygame.event.pump()
         q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
         q = wand_offset.rotate(q)
-        yield q_div * q
+        yield q_offset * q
         
 def joystick_sim():
     q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
-
-    start = np.array([1, 0, 0])
-    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
-    q_target = find_quat(start, target_vector)
-    q_div = q_target / q_init
+    init_vector = q_init.rotate([1, 0, 0])
     
+    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+    q_offset = find_quat(init_vector, target_vector)
+
     while True:
         q = q_init
-        yield q_div * q
+        yield q_offset * q
 
 def mouse_quaternion():
     import pyautogui
