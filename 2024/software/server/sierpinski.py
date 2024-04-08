@@ -109,11 +109,9 @@ def point_in_triangle(a, b, c, p):
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
-# todo: remove or optimize
 def find_quat(start, end):
-    cross = np.cross(start, end)
-    axis = cross / np.linalg.norm(cross)
-    theta = np.arctan(np.linalg.norm(cross) / np.dot(start, end))
+    axis = np.cross(start, end)
+    theta = np.arctan(np.linalg.norm(axis) / np.dot(start, end))
     return pyquaternion.Quaternion(axis=axis, angle=theta)
 
 def get_wand_projection(start, end):
