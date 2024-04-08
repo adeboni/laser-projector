@@ -26,7 +26,7 @@ class LaserServer:
             4: laser_generators.images(num_lasers),
             5: laser_generators.spirograph(num_lasers),
             6: laser_generators.audio_visualization(num_lasers),
-            7: laser_generators.mouse(num_lasers)
+            7: laser_generators.wand_drawing(num_lasers)
         }
 
     def _server(self):
@@ -69,6 +69,9 @@ class LaserServer:
 
     def set_song(self, song) -> None:
         laser_generators.current_song = song
+        
+    def set_wands(self, wands) -> None:
+        laser_generators.current_wands = wands
 
 if __name__ == '__main__':
     import time

@@ -7,6 +7,7 @@ from typing import Generator
 import sierpinski
 
 current_song = None
+current_wands = None
 
 def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
     """Constrains point values to valid ranges"""
@@ -185,7 +186,7 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
         yield verify_points([LaserPoint(i, int(xs[index]), int(ys[index]), *rgb) for i in range(num_lasers)])
         index = (index + 1) % sample_blocksize
 
-def mouse(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+def mouse_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     import pyautogui
     rgb = [0, 0, 255]
     screen_width, screen_height = pyautogui.size()
@@ -199,4 +200,13 @@ def mouse(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         y = np.interp(m.y, [0, screen_height], [max_y, min_y])
         yield verify_points([LaserPoint(i, int(x), int(y), *rgb) for i in range(num_lasers)])
 
-
+def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    while True:
+        data = [LaserPoint(i) for i in range(num_lasers)]
+        if current_wands is not None:
+            for wand in current_wands.values():
+                lp = wand.get_laser_point()
+                if lp is not None:
+                    print(lp)
+                    data[lp.id] = lp
+        yield verify_points(data)

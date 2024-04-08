@@ -8,8 +8,8 @@ import laser_point
 import numpy as np
 
 BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
-BASE_VECTOR_START = [-1, 0, 0]
-BASE_VECTOR_END = [1, 0, 0]
+BASE_VECTOR_START = np.array([-1, 0, 0])
+BASE_VECTOR_END = np.array([1, 0, 0])
 POS_QUEUE_LIMIT = 5
 SPEED_THRESHOLD = 0.4
 
@@ -47,7 +47,7 @@ class Wand:
         if wand_projection:
             laser_index, wand_point = wand_projection
             laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
-            return laser_point.LaserPoint(laser_index, laser_x, laser_y, *self.get_wand_color())
+            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
         else:
             return None
 
@@ -58,7 +58,7 @@ class Wand:
                                     z=self.joystick.get_axis(2))
         if not self.cal_offset:
             init_vector = BASE_QUATERNION.rotate(q).rotate([1, 0, 0])
-            self.cal_offset = find_quat(init_vector, sierpinski.target_vector)
+            self.cal_offset = sierpinski.find_quat(init_vector, sierpinski.target_vector)
         self.position = self.cal_offset * BASE_QUATERNION.rotate(q)
         tip_pos = self.position.rotate(BASE_VECTOR_END)[2]
         if len(self.pos_queue) > POS_QUEUE_LIMIT:

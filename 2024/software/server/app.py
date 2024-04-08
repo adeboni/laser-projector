@@ -16,6 +16,7 @@ class MainApp:
 
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = {}
+        self.laser_server.set_wands(self.wands)
         self.labels = {'Mode': '0 - Invalid Mode',
                        'Song Input': 'A0',
                        'Playing': 'None',
