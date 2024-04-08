@@ -118,9 +118,11 @@ def find_quat(start, end):
 
 def get_wand_projection(start, end):
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
-        v = start - end
+        v = end - start
+        if v[2] < 0:
+            v = -v
         point = end + (np.dot(pp - end, pn / np.dot(v, pn)) * v)
-        if v[2] > 0 and point_in_surface(s, point):
+        if point_in_surface(s, point):
             return (i, point)
     return None
 
@@ -190,7 +192,7 @@ def mouse_quaternion():
         yield mouse_offset * find_quat(start, end)
 
 if __name__ == '__main__':
-    quaternion_generator = joystick_sim()
+    quaternion_generator = joystick_quaternion()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -203,10 +205,7 @@ if __name__ == '__main__':
         ax.plot([e1[0], e2[0]], [e1[1], e2[1]], [e1[2], e2[2]], color='k')
 
     for surface in surfaces:
-        x = [s[0] for s in surface]
-        y = [s[1] for s in surface]
-        z = [s[2] for s in surface]
-        ax.plot_trisurf(x, y, z, color='y', alpha=0.2)
+        ax.plot_trisurf(*[[s[i] for s in surface] for i in range(3)], color='y', alpha=0.2)
 
     for laser, laser_center in zip(lasers, laser_centers):
         ax.plot([laser[0]], [laser[1]], [laser[2]], c='k', linestyle='', marker='o', alpha=0.2)
