@@ -169,19 +169,8 @@ def joystick_quaternion():
         q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
         q = wand_offset.rotate(q)
         yield q_offset * q
-        
-def joystick_sim():
-    q_init = pyquaternion.Quaternion(w=0.280, x=0.284, y=0.882, z=0.252)
-    init_vector = q_init.rotate([1, 0, 0])
-    q_offset = find_quat(init_vector, target_vector)
-
-    while True:
-        q = q_init
-        yield q_offset * q
 
 if __name__ == '__main__':
-    quaternion_generator = joystick_quaternion()
-
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim((-25, 25))
@@ -201,17 +190,21 @@ if __name__ == '__main__':
 
     lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
     projection = ax.plot([], [], [], c='r', linestyle='', marker='o')
-    #ax.plot([center_point[0]], [center_point[1]], [center_point[2]], c='b', linestyle='', marker='o')
     laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
     startpoints = np.array([[-2, 0, 0], [0, -2, 0], [0, 0, -2]])
     endpoints =  np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
+
+    try:
+        quaternion_generator = joystick_quaternion()
+        next(quaternion_generator)
+        ax.plot([center_point[0]], [center_point[1]], [center_point[2]], c='b', linestyle='', marker='o')
+    except:
+        quaternion_generator = None
 
     for i in range(3):
         threading.Thread(target=_laser_thread, args=(i,), daemon=True).start()
 
     def animate(_):
-        q = next(quaternion_generator)
-
         for i in range(3):
             if laser_lines[i]:
                 xs = []
@@ -224,24 +217,26 @@ if __name__ == '__main__':
                 laser_plots[i][0].set_data(xs, ys)
                 laser_plots[i][0].set_3d_properties(zs)
 
-        for axis, (line, start, end) in enumerate(zip(lines, startpoints, endpoints)):
-            start = q.rotate(start)
-            end = q.rotate(end)
-            start[2] += HUMAN_HEIGHT
-            end[2] += HUMAN_HEIGHT
-            line.set_data([start[0], end[0]], [start[1], end[1]])
-            line.set_3d_properties([start[2], end[2]])
-            if axis == 0:
-                projection[0].set_data([], [])
-                projection[0].set_3d_properties([])
-                wand_projection = get_wand_projection(start, end)
-                if wand_projection:
-                    laser_index, wand_point = wand_projection
-                    # wand_point is in 3D here, but we're transforming it to 2D laser coordinates and then back to 3D
-                    laser_x, laser_y = sierpinski_to_laser_coords(laser_index, *wand_point)
-                    wand_point = laser_to_sierpinksi_coords(laser_index, laser_x, laser_y)
-                    projection[0].set_data([wand_point[0]], [wand_point[1]])
-                    projection[0].set_3d_properties([wand_point[2]])
+        if quaternion_generator:
+            q = next(quaternion_generator)
+            for axis, (line, start, end) in enumerate(zip(lines, startpoints, endpoints)):
+                start = q.rotate(start)
+                end = q.rotate(end)
+                start[2] += HUMAN_HEIGHT
+                end[2] += HUMAN_HEIGHT
+                line.set_data([start[0], end[0]], [start[1], end[1]])
+                line.set_3d_properties([start[2], end[2]])
+                if axis == 0:
+                    projection[0].set_data([], [])
+                    projection[0].set_3d_properties([])
+                    wand_projection = get_wand_projection(start, end)
+                    if wand_projection:
+                        laser_index, wand_point = wand_projection
+                        # wand_point is in 3D here, but we're transforming it to 2D laser coordinates and then back to 3D
+                        laser_x, laser_y = sierpinski_to_laser_coords(laser_index, *wand_point)
+                        wand_point = laser_to_sierpinksi_coords(laser_index, laser_x, laser_y)
+                        projection[0].set_data([wand_point[0]], [wand_point[1]])
+                        projection[0].set_3d_properties([wand_point[2]])
 
     ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
     plt.show()
