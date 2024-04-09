@@ -1,5 +1,6 @@
 """This module defines laser graphics generators"""
 
+import time
 import numpy as np
 from laser_point import *
 from laser_objects import *
@@ -194,19 +195,56 @@ def mouse_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     _xs = sorted([b[0] for b in bounds])
     min_y = min(b[1] for b in bounds)
     max_y = max(b[1] for b in bounds)
+
+    PATH_TIME = 3
+    DELTA_TIME = 0.1
+    path = []
+    path_index = 0
+    next_update = 0
+
     while True:
-        m = pyautogui.position()
-        x = np.interp(m.x, [0, screen_width], [_xs[1], _xs[2]])
-        y = np.interp(m.y, [0, screen_height], [max_y, min_y])
-        yield verify_points([LaserPoint(i, int(x), int(y), *rgb) for i in range(num_lasers)])
+        if time.time() > next_update:
+            m = pyautogui.position()
+            if m.x < screen_width / 3:
+                x = np.interp(m.x, [0, screen_width / 3], [_xs[1], _xs[2]])
+                laser_id = 0
+            elif m.x < screen_width * 2 / 3:
+                x = np.interp(m.x, [screen_width / 3, screen_width * 2 / 3], [_xs[1], _xs[2]])
+                laser_id = 1
+            else:
+                x = np.interp(m.x, [screen_width * 2 / 3, screen_width], [_xs[1], _xs[2]])
+                laser_id = 2
+            y = np.interp(m.y, [0, screen_height], [max_y, min_y])
+            data = [LaserPoint(i, 0, 0, *rgb) for i in range(num_lasers)]
+            data[laser_id] = LaserPoint(laser_id, int(x), int(y), *rgb)
+            path.append(verify_points(data))
+            while len(path) > PATH_TIME / DELTA_TIME:
+                path.pop(0)
+            next_update = time.time() + DELTA_TIME
+
+        yield path[path_index]
+        path_index = (path_index + 1) % len(path)
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    PATH_TIME = 3
+    DELTA_TIME = 0.1
+    path = []
+    path_index = 0
+    next_update = 0
+    
     while True:
-        data = [LaserPoint(i) for i in range(num_lasers)]
-        if current_wands is not None:
-            for wand in current_wands.values():
-                lp = wand.get_laser_point()
-                if lp is not None:
-                    print(lp)
-                    data[lp.id] = lp
-        yield verify_points(data)
+        if time.time() > next_update:
+            data = [LaserPoint(i) for i in range(num_lasers)]
+            if current_wands is not None:
+                for wand in current_wands.values():
+                    lp = wand.get_laser_point()
+                    if lp is not None:
+                        print(lp)
+                        data[lp.id] = lp
+            path.append(verify_points(data))
+            while len(path) > PATH_TIME / DELTA_TIME:
+                path.pop(0)
+            next_update = time.time() + DELTA_TIME
+            
+        yield path[path_index]
+        path_index = (path_index + 1) % len(path)
