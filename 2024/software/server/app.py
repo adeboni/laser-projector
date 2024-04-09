@@ -61,8 +61,10 @@ class MainApp:
         clock = pygame.time.Clock()
 
         while True:
+            clock.tick(50)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    decorators.is_closing = True
                     self.sacn.stop()
                     self.laser_server.stop()
                     pygame.quit()
@@ -109,7 +111,6 @@ class MainApp:
             
             for w in self.wands.values():
                 w.update_position()
-            clock.tick(50)
                 
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():

@@ -2,13 +2,16 @@ import functools
 import threading
 import time
 
+is_closing = False
+
 def threaded_time_delay(time_delay):
     def _threaded_time_delay(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             def delayed_func(*args, **kwargs):
                 time.sleep(time_delay)
-                func(*args, **kwargs)
+                if not is_closing:
+                    func(*args, **kwargs)
             t = threading.Thread(target=delayed_func, args=args, kwargs=kwargs)
             t.start()
         return wrapper
