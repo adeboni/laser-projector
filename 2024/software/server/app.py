@@ -28,14 +28,15 @@ class MainApp:
         self.current_number = 0
         self.current_mode = 0
 
-        self.mode_names = {1: 'Jukebox', 
-                           2: 'Audio Visualization', 
-                           3: 'Equations', 
-                           4: 'Spirograph', 
-                           5: 'Pong', 
-                           6: 'Wand Drawing', 
-                           7: 'Wand Music', 
-                           8: 'Drums'}
+        # Maps mode number to name and whether the jukebox music is playing
+        self.modes = { 1: ('Jukebox', True), 
+                       2: ('Audio Visualization', True), 
+                       3: ('Equations', True), 
+                       4: ('Spirograph', True), 
+                       5: ('Pong', True), 
+                       6: ('Wand Drawing', True), 
+                       7: ('Wand Music', False), 
+                       8: ('Drums', False) }
 
     @decorators.threaded_time_delay(5)
     def start_sacn(self):
@@ -70,7 +71,11 @@ class MainApp:
                     if event.key in range(48, 58):
                         self.current_mode = event.key - 48
                         self.laser_server.mode = self.current_mode
-                        mode_name = f'{self.current_mode} - {self.mode_names[self.current_mode] if self.current_mode in self.mode_names else "Invalid Mode"}'
+                        if self.current_mode in self.modes:
+                            mode_name = f'{self.current_mode} - {self.modes[self.current_mode][0]}'
+                            self.songs.set_music_playing(self.modes[self.current_mode][1])
+                        else:
+                            mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)

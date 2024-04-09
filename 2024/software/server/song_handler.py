@@ -134,3 +134,10 @@ class SongHandler:
 
         if self.current_song is None and any(self.song_queue):
             self.play_next_song()
+
+    def set_music_playing(self, playing: bool) -> None:
+        """Pauses or unpauses music"""
+        if playing:
+            pygame.mixer.music.unpause()
+        else:
+            pygame.mixer.music.pause()

@@ -40,7 +40,7 @@ def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
         d = (d + 8) % 360
 
-def circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an rgb circle"""
     d = 0
     radius = 200
@@ -73,8 +73,8 @@ def letters(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
         yield verify_points(output)
 
-def images(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    """Generates bike, plane, island on three lasers"""
+def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    """Generates equation graphics on three lasers"""
     imgs = [interpolate_objects(convert_to_xy(IMG_CATBODY, 2048, 2048)), 
              interpolate_objects(convert_to_xy(EQN_05, 2048, 2048)), 
              interpolate_objects(convert_to_xy(IMG_TOASTER, 2048, 2048))]
@@ -118,7 +118,7 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         
         t += 0.2
 
-def bouncing_ball(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     bounds = sierpinski.get_laser_coordinate_bounds()
     x_transitions = sorted([b[0] for b in bounds])
     min_x = min(b[0] for b in bounds)

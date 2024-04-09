@@ -20,13 +20,14 @@ class LaserServer:
         self.mode = 0
         self.num_lasers = num_lasers
         self.mode_list = {
-            1: laser_generators.circle(num_lasers), 
-            2: laser_generators.rainbow_circle(num_lasers),
-            3: laser_generators.letters(num_lasers),
-            4: laser_generators.images(num_lasers),
-            5: laser_generators.spirograph(num_lasers),
-            6: laser_generators.audio_visualization(num_lasers),
-            7: laser_generators.wand_drawing(num_lasers)
+            1: None, 
+            2: laser_generators.audio_visualization(num_lasers),
+            3: laser_generators.equations(num_lasers),
+            4: laser_generators.spirograph(num_lasers),
+            5: laser_generators.pong(num_lasers),
+            6: laser_generators.wand_drawing(num_lasers),
+            7: laser_generators.wand_drawing(num_lasers),
+            8: laser_generators.drums(num_lasers)
         }
 
     def _server(self):
@@ -35,7 +36,7 @@ class LaserServer:
         seq = 0
         packet = None
         while self.server_running:
-            if not self.mode in self.mode_list:
+            if not self.mode in self.mode_list or self.mode_list[self.mode] is None:
                 continue
 
             if not packet:
