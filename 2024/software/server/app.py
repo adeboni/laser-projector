@@ -1,5 +1,6 @@
 """Main entry point"""
 
+import os
 import pygame 
 import decorators
 import laser_server
@@ -10,6 +11,7 @@ import wand
 class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
+        os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
         pygame.init()
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
         self.sacn = sacn_handler.SACNHandler(target_ip)
