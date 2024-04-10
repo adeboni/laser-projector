@@ -239,7 +239,6 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 for wand in current_wands.values():
                     lp = wand.get_laser_point()
                     if lp is not None:
-                        print(lp)
                         data[lp.id] = lp
             path.append(verify_points(data))
             while len(path) > PATH_TIME / DELTA_TIME:
