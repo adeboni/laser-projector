@@ -3,8 +3,8 @@
 def get_midpoint(obj: list[list[int]]) -> tuple[int, int]:
     min_x, max_x = min(p[0] for p in obj), max(p[0] for p in obj)
     min_y, max_y = min(p[1] for p in obj), max(p[1] for p in obj)
-    mid_x = (max_x - min_x) // 2
-    mid_y = (max_y - min_y) // 2
+    mid_x = (max_x + min_x) // 2
+    mid_y = (max_y + min_y) // 2
     return (mid_x, mid_y)
 
 def convert_to_xy(obj: list[int], x_offset: int=0, y_offset: int=0, 
