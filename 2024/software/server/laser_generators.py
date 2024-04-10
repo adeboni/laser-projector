@@ -222,7 +222,10 @@ def mouse_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 path.pop(0)
             next_update = time.time() + DELTA_TIME
 
-        yield path[path_index]
+        if path_index == 0:
+            yield [LaserPoint(l.id, l.x, l.y, 0, 0, 0) for l in path[path_index]]
+        else:
+            yield path[path_index]
         path_index = (path_index + 1) % len(path)
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
@@ -244,6 +247,9 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             while len(path) > PATH_TIME / DELTA_TIME:
                 path.pop(0)
             next_update = time.time() + DELTA_TIME
-            
-        yield path[path_index]
+
+        if path_index == 0:
+            yield [LaserPoint(l.id, l.x, l.y, 0, 0, 0) for l in path[path_index]]
+        else:
+            yield path[path_index]
         path_index = (path_index + 1) % len(path)
