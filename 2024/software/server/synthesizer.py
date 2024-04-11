@@ -17,16 +17,15 @@ def sci_fi(freq=440, x=15, amplitude=0.1):
 class SynthServer:
     """This class handles synth server operations"""
 
-    def __init__(self, synth_def) -> None:
+    def __init__(self, ) -> None:
         self.server = None
         self.synth = None
-        self.synth_def = synth_def
 
-    def start(self) -> None:
+    def start(self, synth_def) -> None:
         self.server = supriya.Server().boot()
-        self.server.add_synthdefs(self.synth_def)
+        self.server.add_synthdefs(synth_def)
         self.server.sync()
-        self.synth = self.server.add_synth(self.synth_def)
+        self.synth = self.server.add_synth(synth_def)
 
     def stop(self) -> None:
         if self.synth:
