@@ -1,7 +1,7 @@
 """This module controls SuperCollider to create sounds"""
 
 import supriya
-from supriya.ugens import *
+from supriya.ugens import SinOsc, CombC, Out
 
 @supriya.synthdef()
 def simple_sine(freq=440, amplitude=0.1):
@@ -36,7 +36,7 @@ class SynthServer:
             except TimeoutError:
                 pass
 
-    def start_synth(self, id: int, synth_def: supriya.synthdefs.synthdefs.SynthDef) -> None:
+    def start_synth(self, id: int, synth_def) -> None:
         self.synths[id] = self.server.add_synth(synth_def)
 
     def stop_synth(self, id: int) -> None:
