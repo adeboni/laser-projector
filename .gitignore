@@ -2,6 +2,7 @@
 gerbers/
 .venv
 songs/
+effects/
 __pycache__/
 obj/
 bin/

@@ -1,6 +1,7 @@
 """Module providing song handling functionality"""
 
 import os
+import random
 import soundfile
 import laser_server
 import pygame
@@ -91,11 +92,17 @@ class SongHandler:
     """Class implementing a song handler"""
     def __init__(self, laser_server: laser_server.LaserServer=None):
         pygame.mixer.init()
+
         if not os.path.exists('songs'):
             os.mkdir('songs')
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
         self.song_queue = []
         self.current_song = None
+
+        if not os.path.exists('effects'):
+            os.mkdir('effects')
+        self.effects = [pygame.mixer.Sound(os.path.join('effects', file)) for file in os.listdir('effects')]
+
         self.laser_server = laser_server
 
     def play_next_song(self) -> None:
@@ -141,3 +148,10 @@ class SongHandler:
             pygame.mixer.music.unpause()
         else:
             pygame.mixer.music.pause()
+
+    def play_effect(self, index: int=None) -> None:
+        """Plays a file from the effects folder"""
+        if index is None:
+            random.choice(self.effects).play()
+        else:
+            self.effects[index].play()

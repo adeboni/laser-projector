@@ -81,6 +81,8 @@ class MainApp:
                         else:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
+                        for w in self.wands.values():
+                            w.callback = self.songs.play_effect() if self.current_mode == 8 else None
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
                     elif event.key == pygame.K_RETURN:
