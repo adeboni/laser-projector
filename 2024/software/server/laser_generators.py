@@ -1,5 +1,6 @@
 """This module defines laser graphics generators"""
 
+import random
 import time
 import numpy as np
 from laser_point import *
@@ -105,43 +106,87 @@ def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 offsets[i][1] += dirs[i][1]
                 if offsets[i][0] + equation_sizes[eqn_idxs[i]][0] / 2 > max_x and dirs[i][0] > 0:
                     dirs[i][0] *= -1
-                if offsets[i][0] - equation_sizes[eqn_idxs[i]][0] / 2 < min_x and dirs[i][0] < 0:
+                elif offsets[i][0] - equation_sizes[eqn_idxs[i]][0] / 2 < min_x and dirs[i][0] < 0:
                     dirs[i][0] *= -1
                 if offsets[i][1] + equation_sizes[eqn_idxs[i]][1] / 2 > max_y and dirs[i][1] > 0:
                     dirs[i][1] *= -1
-                if offsets[i][1] - equation_sizes[eqn_idxs[i]][1] / 2 < min_y and dirs[i][1] < 0:
+                elif offsets[i][1] - equation_sizes[eqn_idxs[i]][1] / 2 < min_y and dirs[i][1] < 0:
                     dirs[i][1] *= -1
 
         yield verify_points(output)
 
-def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    r1 = 105
-    r2 = 75
-    scale = 4
-    x = 0.5
-    xd = 1
-    r2d = 1
-    t = 0
-    while True:
-        q1 = t
+class Spirograph:
+    def __init__(self, r1: float, r2: float, a: float, t_d: float) -> None:
+        self.params = { 'r1': r1, 'r2': r2, 'a': a }
+        self.deltas = {}
+        self.t = 0
+        self.t_d = t_d
+        self.x = 0
+        self.y = 0
+
+    def add_delta(self, param: str, delta: float, lower_limit: float, upper_limit: float) -> None:
+        self.deltas[param] = [delta, lower_limit, upper_limit]
+
+    def remove_delta(self, param: str) -> None:
+        del self.deltas[param]
+
+    def update(self, x_scale: float=1, y_scale: float=1, 
+               x_offset: float=0, y_offset: float=0) -> tuple[float, float]:
+        self.t += self.t_d
+        for delta in self.deltas:
+            self.params[delta] += self.deltas[delta][0]
+            if self.params[delta] < self.deltas[delta][1] or self.params[delta] > self.deltas[delta][2]:
+                self.deltas[delta][0] *= -1
+
+        q1 = self.t
         s1 = np.sin(q1)
         c1 = np.cos(q1)
-        q2 = q1 * r1 / r2
+        q2 = q1 * self.params['r1'] / self.params['r2']
         s2 = np.sin(q2)
         c2 = np.cos(q2)
-        xx = int((r1 * s1 + x * r2 * (-s1 + c2 * s1 - c1 * s2)) * scale) + 2048
-        yy = int((-r1 * c1 + x * r2 * (c1 - c1 * c2 - s1 * s2)) * scale) + 2048
-        yield verify_points([LaserPoint(i, xx, yy, 255, 0, 0) for i in range(num_lasers)])
+        x = self.params['r1'] * s1 + self.params['a'] * self.params['r2'] * (-s1 + c2 * s1 - c1 * s2)
+        y = -self.params['r1'] * c1 + self.params['a'] * self.params['r2'] * (c1 - c1 * c2 - s1 * s2)
+        self.x = int(x * x_scale + x_offset)
+        self.y = int(y * y_scale + y_offset)
+        return (self.x, self.y)
 
-        x += 0.00000002 * xd
-        if x > 0.9 or x < 0.3:
-            xd *= -1
+def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    """Generates random spirographs"""
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_x, max_x = _xs[1], _xs[2]
+    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+
+    spiros = [Spirograph(r1=random.uniform(100, 110),
+                         r2=random.uniform(40, 80), 
+                         a=random.uniform(0.3, 0.9),
+                         t_d=random.uniform(0.15, 0.25))
+                         for _ in range(num_lasers)] 
+    
+    for i in range(num_lasers):
+        spiros[i].add_delta('r2', 0.0000002, 40, 80)
+        spiros[i].add_delta('a', 0.00000002, 0.3, 0.9)
+
+    xs, ys = 1.5, 1.5
+    offsets = [[(min_x + max_x) // 2, (min_y + max_y) // 2] for _ in range(num_lasers)]
+    dirs = [[0.01, 0.01] for _ in range(num_lasers)]
+
+    while True:
+        yield verify_points([LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), 255, 0, 0) 
+                             for i in range(num_lasers)])
+
+        for i in range(num_lasers):
+            offsets[i][0] += dirs[i][0]
+            offsets[i][1] += dirs[i][1]
+            if spiros[i].x > max_x and dirs[i][0] > 0:
+                dirs[i][0] *= -1
+            elif spiros[i].x < min_x and dirs[i][0] < 0:
+                dirs[i][0] *= -1
+            if spiros[i].y > max_y and dirs[i][1] > 0:
+                dirs[i][1] *= -1
+            elif spiros[i].y < min_y and dirs[i][1] < 0:
+                dirs[i][1] *= -1
         
-        r2 += 0.0000002 * r2d
-        if r2 > 78 or r2 < 40:
-            r2d *= -1
-        
-        t += 0.2
 
 def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     bounds = sierpinski.get_laser_coordinate_bounds()
