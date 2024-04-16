@@ -1,11 +1,30 @@
 """Defines objects for laser graphics"""
 
-def get_midpoint(obj: list[list[int]]) -> tuple[int, int]:
+import numpy as np
+
+def interpolate_objects(obj: list[list[int]], seg_dist: int=32) -> list[list[int]]:
+    """Converts line segments longer than seg_dist into multiple segments"""
+    result = [[obj[0][0], obj[0][1], obj[0][2]]]
+    for i in range(1, len(obj)):
+        num_segments = max(abs(obj[i-1][0] - obj[i][0]) // seg_dist, abs(obj[i-1][1] - obj[i][1]) // seg_dist) + 2
+        x_interp = np.linspace(obj[i-1][0], obj[i][0], num_segments)
+        y_interp = np.linspace(obj[i-1][1], obj[i][1], num_segments)
+        for x, y in zip(x_interp[1:], y_interp[1:]):
+            result.append([int(x), int(y), obj[i][2]])
+    return result
+
+def get_bounds(obj: list[list[int]]) -> tuple[int, int, int, int]:
     min_x, max_x = min(p[0] for p in obj), max(p[0] for p in obj)
     min_y, max_y = min(p[1] for p in obj), max(p[1] for p in obj)
-    mid_x = (max_x + min_x) // 2
-    mid_y = (max_y + min_y) // 2
-    return (mid_x, mid_y)
+    return (min_x, max_x, min_y, max_y)
+
+def get_size(obj: list[list[int]]) -> tuple[int, int]:
+    min_x, max_x, min_y, max_y = get_bounds(obj)
+    return (max_x - min_x, max_y - min_y)
+
+def get_midpoint(obj: list[list[int]]) -> tuple[int, int]:
+    min_x, max_x, min_y, max_y = get_bounds(obj)
+    return ((max_x + min_x) // 2, (max_y + min_y) // 2)
 
 def convert_to_xy(obj: list[int], x_offset: int=0, y_offset: int=0, 
                                   x_scale: float=1, y_scale: float=1) -> list[list[int]]:

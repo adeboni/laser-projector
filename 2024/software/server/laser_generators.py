@@ -20,17 +20,6 @@ def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
         p.b = min(max(p.b, 0), 255)
     return points
 
-def interpolate_objects(obj: list[int], seg_dist: int=32) -> list[int]:
-    """Converts line segments longer than seg_dist into multiple segments"""
-    result = [[obj[0][0], obj[0][1], obj[0][2]]]
-    for i in range(1, len(obj)):
-        num_segments = max(abs(obj[i-1][0] - obj[i][0]) // seg_dist, abs(obj[i-1][1] - obj[i][1]) // seg_dist) + 2
-        x_interp = np.linspace(obj[i-1][0], obj[i][0], num_segments)
-        y_interp = np.linspace(obj[i-1][1], obj[i][1], num_segments)
-        for x, y in zip(x_interp[1:], y_interp[1:]):
-            result.append([int(x), int(y), obj[i][2]])
-    return result
-
 def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates a rainbow circle"""
     d = 0
@@ -76,18 +65,53 @@ def letters(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
 def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates equation graphics on three lasers"""
-    imgs = [interpolate_objects(convert_to_xy(IMG_CATBODY, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(EQN_05, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(IMG_TOASTER, 2048, 2048))]
-    idxs = [0, 0, 0]
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_x, max_x = _xs[1], _xs[2]
+    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+
+    equation_list = [ EQN_01, EQN_02, EQN_03, EQN_04, EQN_05, EQN_06, EQN_07, EQN_08, 
+                      EQN_09, EQN_10, EQN_11, EQN_12, EQN_13, EQN_14, EQN_15, EQN_16, 
+                      EQN_17, EQN_18, EQN_19, EQN_20, EQN_21, EQN_22, EQN_23, EQN_24, 
+                      EQN_25, EQN_26, EQN_27, EQN_28, EQN_29, EQN_30, EQN_31, EQN_32, 
+                      EQN_33, EQN_34, EQN_35, EQN_36 ]
+    
+    scaled_equations = [interpolate_objects(convert_to_xy(eq, x_scale=0.5, y_scale=0.5)) for eq in equation_list]
+    equation_sizes = [get_size(eq) for eq in scaled_equations]
+    
+    point_idxs = [0 for _ in range(num_lasers)]
+    offsets = [[(min_x + max_x) // 2, (min_y + max_y) // 2] for _ in range(num_lasers)]
+    dirs = [[2, 2] for _ in range(num_lasers)]
+    eqn_idxs = [i % len(equation_list) for i in range(num_lasers)]
+
+    next_update = 0
     while True:
+        if time.time() > next_update:
+            for i in range(num_lasers):
+                eqn_idxs[i] = (eqn_idxs[i] + num_lasers) % len(equation_list)
+                point_idxs[i] = 0
+            next_update = time.time() + 30
+
         output = []
         for i in range(num_lasers):
-            if i >= len(imgs):
-                continue
-            x, y, on = imgs[i][idxs[i]]
-            idxs[i] = (idxs[i] + 1) % len(imgs[i])
-            output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
+            x, y, on = scaled_equations[eqn_idxs[i]][point_idxs[i]]
+            x += offsets[i][0]
+            y += offsets[i][1]
+            output.append(LaserPoint(i, int(x), int(y), 255 * on, 0, 0))
+
+            point_idxs[i] = (point_idxs[i] + 1) % len(scaled_equations[eqn_idxs[i]])
+            if point_idxs[i] == 0:
+                offsets[i][0] += dirs[i][0]
+                offsets[i][1] += dirs[i][1]
+                if offsets[i][0] + equation_sizes[eqn_idxs[i]][0] / 2 > max_x and dirs[i][0] > 0:
+                    dirs[i][0] *= -1
+                if offsets[i][0] - equation_sizes[eqn_idxs[i]][0] / 2 < min_x and dirs[i][0] < 0:
+                    dirs[i][0] *= -1
+                if offsets[i][1] + equation_sizes[eqn_idxs[i]][1] / 2 > max_y and dirs[i][1] > 0:
+                    dirs[i][1] *= -1
+                if offsets[i][1] - equation_sizes[eqn_idxs[i]][1] / 2 < min_y and dirs[i][1] < 0:
+                    dirs[i][1] *= -1
+
         yield verify_points(output)
 
 def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
@@ -162,12 +186,12 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     """Generates an audio visualization"""
     bounds = sierpinski.get_laser_coordinate_bounds()
     _xs = sorted([b[0] for b in bounds])
-    min_y = min(b[1] for b in bounds)
-    max_y = max(b[1] for b in bounds)
+    min_x, max_x = _xs[1], _xs[2]
+    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
     base_y = (max_y + min_y) / 2
     sample_blocksize = 256
     sample_interval = 8
-    xs = np.linspace(_xs[1], _xs[2], num=sample_blocksize)
+    xs = np.linspace(min_x, max_x, num=sample_blocksize)
     ys = [base_y for _ in range(sample_blocksize)]
     rgb = [0, 255, 0]
     index = 0
