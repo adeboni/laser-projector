@@ -200,7 +200,7 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     center_x = (max_x + min_x) // 2
     center_y = (max_y + min_y) // 2
     ball_radius = 20
-    ball_laser = num_lasers - 1
+    ball_laser = 1
     ball_x = center_x
     ball_y = center_y
     dx = 2
@@ -210,35 +210,48 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     paddle_half_height = 100
     left_paddle = center_y
     right_paddle = center_y
+    score_timeout = False
+    game_reset_time = 0
 
     while True:
-        ball_x += dx
-        ball_y += dy
+        if score_timeout and time.time() > game_reset_time:
+            score_timeout = False
+            ball_x = center_x
+            ball_y = center_y
+            ball_laser = 1
+            dx = 2
+            dy = 2
 
-        if _xs[0] <= ball_x <= _xs[1]:
-            y_limit = np.interp(ball_x, [_xs[0], _xs[1]], [min_y, max_y])
-            if ball_y > y_limit:
-                ball_laser = (ball_laser + num_lasers - 1) % num_lasers
-                ball_x = np.interp(ball_y, [min_y, max_y], [_xs[3], _xs[2]])
-        elif _xs[2] <= ball_x <= _xs[3]:
-            y_limit = np.interp(ball_x, [_xs[2], _xs[3]], [max_y, min_y])
-            if ball_y > y_limit:
-                ball_laser = (ball_laser + 1) % num_lasers
-                ball_x = np.interp(ball_y, [min_y, max_y], [_xs[0], _xs[1]])
+        if not score_timeout:
+            ball_x += dx
+            ball_y += dy
 
-        if (ball_y + ball_radius > max_y and dy > 0) or (ball_y - ball_radius < min_y and dy < 0):
-            dy *= -1
+            if _xs[0] <= ball_x <= _xs[1]:
+                y_limit = np.interp(ball_x, [_xs[0], _xs[1]], [min_y, max_y])
+                if ball_y > y_limit:
+                    ball_laser = (ball_laser + num_lasers - 1) % num_lasers
+                    ball_x = np.interp(ball_y, [min_y, max_y], [_xs[3], _xs[2]])
+            elif _xs[2] <= ball_x <= _xs[3]:
+                y_limit = np.interp(ball_x, [_xs[2], _xs[3]], [max_y, min_y])
+                if ball_y > y_limit:
+                    ball_laser = (ball_laser + 1) % num_lasers
+                    ball_x = np.interp(ball_y, [min_y, max_y], [_xs[0], _xs[1]])
 
-        if ball_laser == 0 and center_x - paddle_gap < ball_x < center_x and dx > 0:
-            if abs(ball_y - left_paddle) < paddle_half_height:
-                dx *= -1
-            else:
-                pass # todo: score and reset
-        elif ball_laser == 0 and center_x < ball_x < center_x + paddle_gap and dx < 0:
-            if abs(ball_y - right_paddle) < paddle_half_height:
-                dx *= -1
-            else:
-                pass # todo: score and reset
+            if (ball_y + ball_radius > max_y and dy > 0) or (ball_y - ball_radius < min_y and dy < 0):
+                dy *= -1
+
+            if ball_laser == 0 and center_x - paddle_gap < ball_x < center_x and dx > 0:
+                if abs(ball_y - left_paddle) < paddle_half_height:
+                    dx *= -1
+                else:
+                    score_timeout = True
+                    game_reset_time = time.time() + 3
+            elif ball_laser == 0 and center_x < ball_x < center_x + paddle_gap and dx < 0:
+                if abs(ball_y - right_paddle) < paddle_half_height:
+                    dx *= -1
+                else:
+                    score_timeout = True
+                    game_reset_time = time.time() + 3
 
         for d in range(0, 360, 30):
             x = ball_radius * np.sin(d * np.pi / 180) + ball_x
@@ -254,23 +267,24 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         for p in paddle_points:
             yield verify_points([LaserPoint(i) if i > 0 else p for i in range(num_lasers)])
 
-        if len(current_wands) > 0:
-            if lp := list(current_wands.values())[0].get_laser_point():
-                left_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
-        else:
-            if left_paddle < ball_y and left_paddle + paddle_half_height < max_y:
-                left_paddle += 1
-            elif left_paddle > ball_y and left_paddle - paddle_half_height > min_y:
-                left_paddle -= 1
-        
-        if len(current_wands) > 1:
-            if lp := list(current_wands.values())[1].get_laser_point():
-                right_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
-        else:
-            if right_paddle < ball_y and right_paddle + paddle_half_height < max_y:
-                right_paddle += 1
-            elif right_paddle > ball_y and right_paddle - paddle_half_height > min_y:
-                right_paddle -= 1
+        if not score_timeout:
+            if len(current_wands) > 0:
+                if lp := list(current_wands.values())[0].get_laser_point():
+                    left_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+            else:
+                if left_paddle < ball_y and left_paddle + paddle_half_height < max_y:
+                    left_paddle += 1
+                elif left_paddle > ball_y and left_paddle - paddle_half_height > min_y:
+                    left_paddle -= 1
+            
+            if len(current_wands) > 1:
+                if lp := list(current_wands.values())[1].get_laser_point():
+                    right_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+            else:
+                if right_paddle < ball_y and right_paddle + paddle_half_height < max_y:
+                    right_paddle += 1
+                elif right_paddle > ball_y and right_paddle - paddle_half_height > min_y:
+                    right_paddle -= 1
         
 
 def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
@@ -305,25 +319,41 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     PATH_TIME = 3
     DELTA_TIME = 0.1
-    path = []
+    paths = {}
+    current_path = 0
     path_index = 0
     next_update = 0
     
     while True:
         if time.time() > next_update:
-            data = [LaserPoint(i) for i in range(num_lasers)]
             if current_wands is not None:
-                for wand in current_wands.values():
-                    lp = wand.get_laser_point()
-                    if lp is not None:
-                        data[lp.id] = lp
-            path.append(verify_points(data))
-            while len(path) > PATH_TIME / DELTA_TIME:
-                path.pop(0)
+                for path in paths:
+                    if path not in current_wands:
+                        del paths[path]
+                for wand in current_wands:
+                    if wand not in paths:
+                        paths[wand] = []
+                    if lp := current_wands[wand].get_laser_point():
+                        paths[wand].append(lp)
+            for path in paths.values():
+                while len(path) > PATH_TIME / DELTA_TIME:
+                    path.pop(0)
             next_update = time.time() + DELTA_TIME
 
-        if path_index == 0:
-            yield [LaserPoint(l.id, l.x, l.y, 0, 0, 0) for l in path[path_index]]
+        data = [LaserPoint(i) for i in range(num_lasers)]
+        if len(paths) == 0:
+            yield data
         else:
-            yield path[path_index]
-        path_index = (path_index + 1) % len(path)
+            current_path = current_path % len(paths)
+            p = list(paths.values())[current_path]
+            path_index = path_index % len(p)
+
+            if path_index == 0:
+                data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
+            else:
+                data[p[path_index].id] = p[path_index]
+            
+            yield verify_points(data)
+
+            if (path_index := (path_index + 1) % len(p)) == 0:
+                current_path = (current_path + 1) % len(paths)
