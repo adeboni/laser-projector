@@ -17,13 +17,13 @@ class MainApp:
         self.sacn = sacn_handler.SACNHandler(target_ip)
 
         self.font = pygame.font.SysFont('Arial', 32)
-        self.wands = {}
+        self.wands = { -1: wand.WandSimulator() }
         self.laser_server.set_wands(self.wands)
-        self.labels = {'Mode': '0 - Invalid Mode',
-                       'Song Input': 'A0',
-                       'Playing': 'None',
-                       'Song Queue': 'Empty',
-                       'Wands': '0'}
+        self.labels = { 'Mode': '0 - Invalid Mode',
+                        'Song Input': 'A0',
+                        'Playing': 'None',
+                        'Song Queue': 'Empty',
+                        'Wands': '1 (Simulated)' }
 
         self.songs = song_handler.SongHandler(self.laser_server)
         self.current_letter = ord('A')
@@ -82,7 +82,7 @@ class MainApp:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
                         for w in self.wands.values():
-                            w.callback = self.songs.play_effect() if self.current_mode == 8 else None
+                            w.callback = self.songs.play_effect if self.current_mode == 8 else None
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
                     elif event.key == pygame.K_RETURN:
@@ -103,6 +103,8 @@ class MainApp:
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     if joystick.get_numaxes() >= 8:
+                        if -1 in self.wands:
+                            del self.wands[-1]
                         self.wands[joystick.get_instance_id()] = wand.Wand(joystick)
                         self.labels['Wands'] = f'{len(self.wands)}'
                     else:

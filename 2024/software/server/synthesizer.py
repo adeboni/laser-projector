@@ -47,10 +47,10 @@ class SynthServer:
         self.synths[id].set(**kwargs)
 
 if __name__ == '__main__':
-    import pyautogui
+    import wand
     import numpy as np
 
-    screen_width, screen_height = pyautogui.size()
+    wand_sim = wand.WandSimulator()
     server = SynthServer()
     server.start_server()
     id = 0
@@ -58,9 +58,10 @@ if __name__ == '__main__':
 
     try:
         while True:
-            mouse = pyautogui.position()
-            freq = np.interp(mouse.y, [0, screen_width], [1200, 300])
-            x = np.interp(mouse.x, [0, screen_height], [3, 15])
+            wand_sim.update_position()
+            lp = wand_sim.get_laser_point()
+            freq = np.interp(lp.x, [wand_sim.min_x, wand_sim.max_x], [1200, 300])
+            x = np.interp(lp.y, [wand_sim.min_y, wand_sim.max_y], [3, 15])
             server.update_synth(id, freq=freq, x=x)
     except KeyboardInterrupt:
         server.stop_server()

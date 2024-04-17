@@ -25,10 +25,7 @@ def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
 
 def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an audio-reactive rgb circle"""
-    bounds = sierpinski.get_laser_coordinate_bounds()
-    _xs = sorted([b[0] for b in bounds])
-    min_x, max_x = _xs[1], _xs[2]
-    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
     x_offset = (min_x + max_x) // 2
     y_offset = (min_y + max_y) // 2
 
@@ -51,11 +48,7 @@ def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
 def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates equation graphics on three lasers"""
-    bounds = sierpinski.get_laser_coordinate_bounds()
-    _xs = sorted([b[0] for b in bounds])
-    min_x, max_x = _xs[1], _xs[2]
-    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
-
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
     colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [255, 255, 255]]
 
     equation_list = [ EQN_01, EQN_02, EQN_03, EQN_04, EQN_05, EQN_06, EQN_07, EQN_08, 
@@ -141,10 +134,7 @@ class Spirograph:
 
 def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates random spirographs"""
-    bounds = sierpinski.get_laser_coordinate_bounds()
-    _xs = sorted([b[0] for b in bounds])
-    min_x, max_x = _xs[1], _xs[2]
-    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
 
     spiros = [Spirograph(r1=random.uniform(100, 110),
                          r2=random.uniform(40, 80), 
@@ -264,23 +254,28 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         for p in paddle_points:
             yield verify_points([LaserPoint(i) if i > 0 else p for i in range(num_lasers)])
 
-        if left_paddle < ball_y and left_paddle + paddle_half_height < max_y:
-            left_paddle += 2
-        elif left_paddle > ball_y and left_paddle - paddle_half_height > min_y:
-            left_paddle -= 2
-
-        if right_paddle < ball_y and right_paddle + paddle_half_height < max_y:
-            right_paddle += 2
-        elif right_paddle > ball_y and right_paddle - paddle_half_height > min_y:
-            right_paddle -= 2
+        if len(current_wands) > 0:
+            if lp := list(current_wands.values())[0].get_laser_point():
+                left_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+        else:
+            if left_paddle < ball_y and left_paddle + paddle_half_height < max_y:
+                left_paddle += 1
+            elif left_paddle > ball_y and left_paddle - paddle_half_height > min_y:
+                left_paddle -= 1
+        
+        if len(current_wands) > 1:
+            if lp := list(current_wands.values())[1].get_laser_point():
+                right_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+        else:
+            if right_paddle < ball_y and right_paddle + paddle_half_height < max_y:
+                right_paddle += 1
+            elif right_paddle > ball_y and right_paddle - paddle_half_height > min_y:
+                right_paddle -= 1
         
 
 def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an audio visualization"""
-    bounds = sierpinski.get_laser_coordinate_bounds()
-    _xs = sorted([b[0] for b in bounds])
-    min_x, max_x = _xs[1], _xs[2]
-    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
     base_y = (max_y + min_y) / 2
     sample_blocksize = 256
     sample_interval = 8

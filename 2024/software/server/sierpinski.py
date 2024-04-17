@@ -104,6 +104,13 @@ def laser_to_sierpinksi_coords(laser_index, x, y):
 def get_laser_coordinate_bounds():
     return [sierpinski_to_laser_coords(0, *p) for p in surfaces[0]]
 
+def get_laser_min_max_interior():
+    bounds = get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_x, max_x = _xs[1], _xs[2]
+    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+    return (min_x, max_x, min_y, max_y)
+
 def point_in_triangle(a, b, c, p):
     same_side = lambda p1, p2, a, b: np.dot(np.cross(b - a, p1 - a), np.cross(b - a, p2 - a)) >= 0
     return same_side(p, a, b, c) and same_side(p, b, a, c) and same_side(p, c, a, b)
