@@ -68,6 +68,9 @@ class LaserServer:
         while self.server.is_alive():
             pass
 
+    def set_effect(self, effect) -> None:
+        laser_generators.current_effect_end_time = time.time() + effect.length_s
+
     def set_song(self, song) -> None:
         laser_generators.current_song = song
         

@@ -87,6 +87,14 @@ class Song:
         else:
             return None
 
+class Effect:
+    def __init__(self, path: str) -> None:
+        self.path = path
+        self.sound_obj = pygame.mixer.Sound(self.path)
+        self.length_s = self.sound_obj.get_length()
+
+    def play(self) -> None:
+        self.sound_obj.play()
 
 class SongHandler:
     """Class implementing a song handler"""
@@ -101,7 +109,7 @@ class SongHandler:
 
         if not os.path.exists('effects'):
             os.mkdir('effects')
-        self.effects = [pygame.mixer.Sound(os.path.join('effects', file)) for file in os.listdir('effects')]
+        self.effects = [Effect(os.path.join('effects', file)) for file in os.listdir('effects')]
 
         self.laser_server = laser_server
 
@@ -152,6 +160,6 @@ class SongHandler:
     def play_effect(self, index: int=None) -> None:
         """Plays a file from the effects folder"""
         if index is None:
-            random.choice(self.effects).play()
-        else:
-            self.effects[index].play()
+            index = random.randrange(len(self.effects))
+        self.laser_server.set_effect(self.effects[index])
+        self.effects[index].play()

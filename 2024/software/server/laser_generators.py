@@ -1,5 +1,6 @@
 """This module defines laser graphics generators"""
 
+import colorsys
 import random
 import time
 import numpy as np
@@ -8,6 +9,7 @@ from laser_objects import *
 from typing import Generator
 import sierpinski
 
+current_effect_end_time = 0
 current_song = None
 current_wands = None
 
@@ -21,48 +23,31 @@ def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
         p.b = min(max(p.b, 0), 255)
     return points
 
-def rainbow_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    """Generates a rainbow circle"""
-    d = 0
-    while True:
-        x = int(400 * np.sin(d * np.pi / 180) + 2048)
-        y = int(400 * np.cos(d * np.pi / 180) + 2048)
-        rgb = [d % 255, (d + 60) % 255, (d + 120) % 255]
-        yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
-        d = (d + 8) % 360
-
 def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    """Generates an rgb circle"""
+    """Generates an audio-reactive rgb circle"""
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    _xs = sorted([b[0] for b in bounds])
+    min_x, max_x = _xs[1], _xs[2]
+    min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+    x_offset = (min_x + max_x) // 2
+    y_offset = (min_y + max_y) // 2
+
+    rotation = 0
     d = 0
-    radius = 200
+    amplitude = 100
     while True:
         if d == 0:
-            amplitude = None
-            if current_song:
-                amplitude = current_song.get_amplitude(256, 8)
-            radius = 50 + 800 * amplitude if amplitude is not None else 200
-                
-        x = int(radius * np.sin(d * np.pi / 180) + 2048)
-        y = int(radius * np.cos(d * np.pi / 180) + 2048)
-        rgb = [255 if d < 120 else 0, 255 if 120 <= d <= 240 else 0, 255 if d > 240 else 0]
-        yield verify_points([LaserPoint(i, x, y, *rgb) for i in range(num_lasers)])
+            rotation += 0.2
+            if time.time() < current_effect_end_time:
+                amplitude = amplitude * 0.5 + random.uniform(100, 250) * 0.5
+            else:
+                amplitude = 100
+ 
+        x = int((50 + amplitude) * np.sin(d * np.pi / 180) + x_offset)
+        y = int((50 + amplitude) * np.cos(d * np.pi / 180) + y_offset)
+        r, g, b = colorsys.hsv_to_rgb((int(rotation + d) % 360) / 360, 1, 1)
+        yield verify_points([LaserPoint(i, x, y, int(r * 255), int(g * 255), int(b * 255)) for i in range(num_lasers)])
         d = (d + 8) % 360
-
-def letters(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    """Generates A, B, C on three lasers"""
-    chars = [interpolate_objects(convert_to_xy(CHAR_A, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(CHAR_B, 2048, 2048)), 
-             interpolate_objects(convert_to_xy(CHAR_C, 2048, 2048))]
-    idxs = [0, 0, 0]
-    while True:
-        output = []
-        for i in range(num_lasers):
-            if i >= len(chars):
-                continue
-            x, y, on = chars[i][idxs[i]]
-            idxs[i] = (idxs[i] + 1) % len(chars[i])
-            output.append(LaserPoint(i, x, y, 255 * on, 0, 0))
-        yield verify_points(output)
 
 def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates equation graphics on three lasers"""
@@ -70,6 +55,8 @@ def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     _xs = sorted([b[0] for b in bounds])
     min_x, max_x = _xs[1], _xs[2]
     min_y, max_y = min(b[1] for b in bounds), max(b[1] for b in bounds)
+
+    colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [255, 255, 255]]
 
     equation_list = [ EQN_01, EQN_02, EQN_03, EQN_04, EQN_05, EQN_06, EQN_07, EQN_08, 
                       EQN_09, EQN_10, EQN_11, EQN_12, EQN_13, EQN_14, EQN_15, EQN_16, 
@@ -84,12 +71,14 @@ def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     offsets = [[(min_x + max_x) // 2, (min_y + max_y) // 2] for _ in range(num_lasers)]
     dirs = [[2, 2] for _ in range(num_lasers)]
     eqn_idxs = [i % len(equation_list) for i in range(num_lasers)]
+    color_idxs = [i % len(colors) for i in range(num_lasers)]
 
     next_update = 0
     while True:
         if time.time() > next_update:
             for i in range(num_lasers):
                 eqn_idxs[i] = (eqn_idxs[i] + num_lasers) % len(equation_list)
+                color_idxs[i] = (color_idxs[i] + num_lasers) % len(colors)
                 point_idxs[i] = 0
             next_update = time.time() + 30
 
@@ -98,7 +87,7 @@ def equations(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             x, y, on = scaled_equations[eqn_idxs[i]][point_idxs[i]]
             x += offsets[i][0]
             y += offsets[i][1]
-            output.append(LaserPoint(i, int(x), int(y), 255 * on, 0, 0))
+            output.append(LaserPoint(i, int(x), int(y), *(colors[color_idxs[i]] if on else [0, 0, 0])))
 
             point_idxs[i] = (point_idxs[i] + 1) % len(scaled_equations[eqn_idxs[i]])
             if point_idxs[i] == 0:
@@ -170,12 +159,35 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     xs, ys = 1.5, 1.5
     offsets = [[(min_x + max_x) // 2, (min_y + max_y) // 2] for _ in range(num_lasers)]
     dirs = [[0.01, 0.01] for _ in range(num_lasers)]
+    for dir in dirs:
+        dir[0] *= random.choice([1, -1])
+        dir[1] *= random.choice([1, -1])
+    colors = [random.uniform(0, 0.9) for _ in range(num_lasers)]
+    iteration = 0
+    point_mode = True
+    next_update = 0
 
     while True:
-        yield verify_points([LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), 255, 0, 0) 
-                             for i in range(num_lasers)])
+        if time.time() > next_update:
+            point_mode = not point_mode
+            next_update = time.time() + 30
 
-        for i in range(num_lasers):
+        iteration += 1
+        output = []
+
+        for i in range(num_lasers):  
+            r, g, b = colorsys.hsv_to_rgb(colors[i], 1, 1)
+            if not point_mode:
+                output.append(LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), int(r * 255), int(g * 255), int(b * 255)))
+            elif iteration % 2 == 0:
+                output.append(LaserPoint(i, spiros[i].x, spiros[i].y, int(r * 255), int(g * 255), int(b * 255)))  
+            else:
+                output.append(LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), 0, 0, 0))
+            
+            colors[i] += 0.00001
+            if colors[i] > 1:
+                colors[i] = 0
+
             offsets[i][0] += dirs[i][0]
             offsets[i][1] += dirs[i][1]
             if spiros[i].x > max_x and dirs[i][0] > 0:
@@ -186,6 +198,8 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 dirs[i][1] *= -1
             elif spiros[i].y < min_y and dirs[i][1] < 0:
                 dirs[i][1] *= -1
+
+        yield verify_points(output)
         
 
 def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
@@ -238,8 +252,10 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     sample_interval = 8
     xs = np.linspace(min_x, max_x, num=sample_blocksize)
     ys = [base_y for _ in range(sample_blocksize)]
-    rgb = [0, 255, 0]
     index = 0
+    colors = [colorsys.hsv_to_rgb(abs(i - base_y) / 600, 1, 1) for i in range(4095)]
+    for i in range(len(colors)):
+        colors[i] = (int(colors[i][0] * 255), int(colors[i][1] * 255), int(colors[i][2] * 255))
 
     while True:
         if index == 0:
@@ -253,49 +269,9 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
             else:
                 ys = [base_y for _ in range(sample_blocksize)]
         
+        rgb = colors[int(ys[index])] if int(ys[index]) < len(colors) and index > 0 else [0, 0, 0]
         yield verify_points([LaserPoint(i, int(xs[index]), int(ys[index]), *rgb) for i in range(num_lasers)])
         index = (index + 1) % sample_blocksize
-
-def mouse_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
-    import pyautogui
-    rgb = [0, 0, 255]
-    screen_width, screen_height = pyautogui.size()
-    bounds = sierpinski.get_laser_coordinate_bounds()
-    _xs = sorted([b[0] for b in bounds])
-    min_y = min(b[1] for b in bounds)
-    max_y = max(b[1] for b in bounds)
-
-    PATH_TIME = 3
-    DELTA_TIME = 0.1
-    path = []
-    path_index = 0
-    next_update = 0
-
-    while True:
-        if time.time() > next_update:
-            m = pyautogui.position()
-            if m.x < screen_width / 3:
-                x = np.interp(m.x, [0, screen_width / 3], [_xs[1], _xs[2]])
-                laser_id = 0
-            elif m.x < screen_width * 2 / 3:
-                x = np.interp(m.x, [screen_width / 3, screen_width * 2 / 3], [_xs[1], _xs[2]])
-                laser_id = 1
-            else:
-                x = np.interp(m.x, [screen_width * 2 / 3, screen_width], [_xs[1], _xs[2]])
-                laser_id = 2
-            y = np.interp(m.y, [0, screen_height], [max_y, min_y])
-            data = [LaserPoint(i, 0, 0, *rgb) for i in range(num_lasers)]
-            data[laser_id] = LaserPoint(laser_id, int(x), int(y), *rgb)
-            path.append(verify_points(data))
-            while len(path) > PATH_TIME / DELTA_TIME:
-                path.pop(0)
-            next_update = time.time() + DELTA_TIME
-
-        if path_index == 0:
-            yield [LaserPoint(l.id, l.x, l.y, 0, 0, 0) for l in path[path_index]]
-        else:
-            yield path[path_index]
-        path_index = (path_index + 1) % len(path)
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     PATH_TIME = 3
