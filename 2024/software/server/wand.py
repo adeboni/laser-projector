@@ -16,6 +16,7 @@ class Wand:
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.4
 
+        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.joystick = joystick
         self.position = None
         self.callback = None
@@ -38,6 +39,15 @@ class Wand:
     def get_wand_color(self) -> list[int]:
         r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
         return [int(r * 255), int(g * 255), int(b * 255)]
+
+    def get_synth_point(self) -> list[float]:
+        if lp := self.get_laser_point():
+            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
+            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
+            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
+            return (x, y, r)
+        else:
+            return None
 
     def get_laser_point(self) -> laser_point.LaserPoint:
         start = self.position.rotate(self.BASE_VECTOR_START)
@@ -91,6 +101,13 @@ class WandSimulator:
     def get_wand_color(self) -> list[int]:
         r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
         return [int(r * 255), int(g * 255), int(b * 255)]
+
+    def get_synth_point(self) -> list[float]:
+        lp = self.get_laser_point()
+        x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
+        y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
+        r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
+        return (x, y, r)
 
     def get_laser_point(self) -> laser_point.LaserPoint:
         return laser_point.LaserPoint(0, int(self.position[0]), int(self.position[1]), *self.get_wand_color())

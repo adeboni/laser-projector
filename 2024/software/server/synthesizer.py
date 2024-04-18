@@ -1,50 +1,64 @@
 """This module controls SuperCollider to create sounds"""
 
+import decorators
 import supriya
 from supriya.ugens import SinOsc, CombC, Out
 
 @supriya.synthdef()
-def simple_sine(freq=440, amplitude=0.1):
-    sine = SinOsc.ar(frequency=freq) * amplitude
+def simple_sine(amplitude=0.1, x=0, y=0, r=0):
+    sine = SinOsc.ar(frequency=y) * amplitude
     Out.ar(bus=0, source=[sine, sine])
 
 @supriya.synthdef()
-def sci_fi(freq=440, x=15, amplitude=0.1):
-    sine = SinOsc.ar(frequency=freq) * amplitude
-    comb = CombC.ar(source=sine, maximum_delay_time=0.2, delay_time=0.13, decay_time=x)
+def sci_fi(amplitude=0.1, x=0, y=0, r=0):
+    sine = SinOsc.ar(frequency=(y*800+300)) * amplitude
+    comb = CombC.ar(source=sine, maximum_delay_time=0.2, delay_time=0.13, decay_time=(x*12+3))
     Out.ar(bus=0, source=[comb, comb])
 
 class SynthServer:
     """This class handles synth server operations"""
 
-    def __init__(self, ) -> None:
+    def __init__(self) -> None:
+        self.running = False
         self.server = None
         self.synths = {}
 
+    @decorators.threaded
     def start_server(self) -> None:
-        self.server = supriya.Server().boot()
-        self.server.add_synthdefs(simple_sine)
-        self.server.add_synthdefs(sci_fi)
-        self.server.sync()
+        try:
+            self.server = supriya.Server().boot()
+            self.server.add_synthdefs(simple_sine)
+            self.server.add_synthdefs(sci_fi)
+            self.server.sync()
+            self.running = True
+        except RuntimeError:
+            pass
         
     def stop_server(self) -> None:
-        for synth in list(self.synths):
-            self.stop_synth(synth)
+        self.stop_all_synths()
         if self.server:
             try:
                 self.server.quit()
             except TimeoutError:
                 pass
+        self.running = False
 
     def start_synth(self, id: int, synth_def) -> None:
-        self.synths[id] = self.server.add_synth(synth_def)
+        if self.running and id not in self.synths:
+            self.synths[id] = self.server.add_synth(synth_def)
+
+    def stop_all_synths(self) -> None:
+        for id in list(self.synths):
+            self.stop_synth(id)
 
     def stop_synth(self, id: int) -> None:
-        self.synths[id].free()
-        del self.synths[id]
+        if id in self.synths:
+            self.synths[id].free()
+            del self.synths[id]
 
     def update_synth(self, id: int, **kwargs) -> None:
-        self.synths[id].set(**kwargs)
+        if id in self.synths:
+            self.synths[id].set(**kwargs)
 
 if __name__ == '__main__':
     import wand
@@ -54,15 +68,15 @@ if __name__ == '__main__':
     server = SynthServer()
     server.start_server()
     id = 0
+    while not server.running:
+        pass
     server.start_synth(id, sci_fi)
 
     try:
         while True:
             wand_sim.update_position()
-            lp = wand_sim.get_laser_point()
-            freq = np.interp(lp.x, [wand_sim.min_x, wand_sim.max_x], [1200, 300])
-            x = np.interp(lp.y, [wand_sim.min_y, wand_sim.max_y], [3, 15])
-            server.update_synth(id, freq=freq, x=x)
+            x, y, r = wand_sim.get_synth_point()
+            server.update_synth(id, x=x, y=y, r=r)            
     except KeyboardInterrupt:
         server.stop_server()
     

@@ -6,6 +6,7 @@ import decorators
 import laser_server
 import song_handler
 import sacn_handler
+import synthesizer
 import wand
   
 class MainApp:
@@ -15,6 +16,7 @@ class MainApp:
         pygame.init()
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
         self.sacn = sacn_handler.SACNHandler(target_ip)
+        self.synth = synthesizer.SynthServer()
 
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
@@ -23,7 +25,8 @@ class MainApp:
                         'Song Input': 'A0',
                         'Playing': 'None',
                         'Song Queue': 'Empty',
-                        'Wands': '1 (Simulated)' }
+                        'Wands': '1 (Simulated)',
+                        'Synthesizer': 'Not Running' }
 
         self.songs = song_handler.SongHandler(self.laser_server)
         self.current_letter = ord('A')
@@ -38,7 +41,8 @@ class MainApp:
                        5: ('Pong', True), 
                        6: ('Wand Drawing', True), 
                        7: ('Wand Music', False), 
-                       8: ('Drums', False) }
+                       8: ('Drums', False),
+                       9: ('Calibration', False) }
 
     @decorators.threaded_time_delay(5)
     def start_sacn(self):
@@ -69,6 +73,7 @@ class MainApp:
                     decorators.is_closing = True
                     self.sacn.stop()
                     self.laser_server.stop()
+                    self.synth.stop_server()
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
@@ -81,8 +86,12 @@ class MainApp:
                         else:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
-                        for w in self.wands.values():
+                        for k, w in self.wands.items():
                             w.callback = self.songs.play_effect if self.current_mode == 8 else None
+                            if self.current_mode == 7:
+                                self.synth.start_synth(k, synthesizer.sci_fi)
+                            else:
+                                self.synth.stop_all_synths()
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
                     elif event.key == pygame.K_RETURN:
@@ -100,6 +109,7 @@ class MainApp:
                     self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
                     self._update_lcds()
                     self._update_screen(screen)
+                    self.labels['Synthesizer'] = 'Running' if self.synth.running else 'Not Running'
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     if joystick.get_numaxes() >= 8:
@@ -115,8 +125,10 @@ class MainApp:
                         del self.wands[event.instance_id]
                         self.labels['Wands'] = f'{len(self.wands)}'
             
-            for w in self.wands.values():
+            for k, w in self.wands.items():
                 w.update_position()
+                if sp := w.get_synth_point():
+                    self.synth.update_synth(k, x=sp[0], y=sp[1], r=sp[2])
                 
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
@@ -145,5 +157,6 @@ if __name__ == '__main__':
     else:
         app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app.laser_server.start()
+    app.synth.start_server()
     app.start_sacn()
     app.show_screen()

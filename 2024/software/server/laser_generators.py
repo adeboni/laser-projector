@@ -357,3 +357,13 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
             if (path_index := (path_index + 1) % len(p)) == 0:
                 current_path = (current_path + 1) % len(paths)
+
+def calibration(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    bounds = sierpinski.get_laser_coordinate_bounds()
+    points = interpolate_objects([[int(b[0]), int(b[1]), 1] for b in bounds])
+    index = 0
+    
+    while True:
+        x, y, on = points[index]
+        yield [LaserPoint(i, x, y, 0, 255 if on else 0, 0) for i in range(num_lasers)]
+        index = (index + 1) % len(points)

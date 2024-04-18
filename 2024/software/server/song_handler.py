@@ -159,6 +159,8 @@ class SongHandler:
 
     def play_effect(self, index: int=None) -> None:
         """Plays a file from the effects folder"""
+        if len(self.effects) == 0:
+            return
         if index is None:
             index = random.randrange(len(self.effects))
         self.laser_server.set_effect(self.effects[index])

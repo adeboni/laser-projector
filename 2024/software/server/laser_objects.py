@@ -34,6 +34,7 @@ def convert_to_xy(obj: list[int], x_offset: int=0, y_offset: int=0,
     for p in result:
         p[0] = p[0] - mid_x + x_offset
         p[1] = p[1] - mid_y + y_offset
+    result.append(result[0])
     return result
 
 CHAR_A = [
