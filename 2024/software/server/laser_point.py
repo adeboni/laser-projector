@@ -42,10 +42,11 @@ class LaserSegment:
     def __repr__(self):
         return f'Start: [{self.start.x}, {self.start.y}], End: [{self.end.x}, {self.end.y}], Color: {self.color}'
 
-def get_segment_data(segs: list[LaserSegment]) -> tuple[list, list]:
+def get_segment_data(segs: list[LaserSegment], show_off_beam: bool=False) -> tuple[list, list]:
     segments = []
     colors = []
     for seg in segs:
-        segments.append([[seg.start.x, seg.start.y], [seg.end.x, seg.end.y]])
-        colors.append(seg.color)
+        if sum(seg.color) > 0 or show_off_beam:
+            segments.append([[seg.start.x, seg.start.y], [seg.end.x, seg.end.y]])
+            colors.append(seg.color)
     return (segments, colors)
