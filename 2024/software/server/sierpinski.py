@@ -112,7 +112,8 @@ def get_laser_min_max_interior():
     return (min_x, max_x, min_y, max_y)
 
 def point_in_triangle(a, b, c, p):
-    same_side = lambda p1, p2, a, b: np.dot(np.cross(b - a, p1 - a), np.cross(b - a, p2 - a)) >= 0
+    def same_side(p1, p2, a, b):
+        return np.dot(np.cross(b - a, p1 - a), np.cross(b - a, p2 - a)) >= 0
     return same_side(p, a, b, c) and same_side(p, b, a, c) and same_side(p, c, a, b)
 
 def point_in_surface(s, p):

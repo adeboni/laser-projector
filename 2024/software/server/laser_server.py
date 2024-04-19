@@ -37,7 +37,7 @@ class LaserServer:
         seq = 0
         packet = None
         while self.server_running:
-            if not self.mode in self.mode_list or self.mode_list[self.mode] is None:
+            if self.mode not in self.mode_list or self.mode_list[self.mode] is None:
                 continue
 
             if not packet:

@@ -100,7 +100,7 @@ class WandSimulator:
         self.prev_speed = 0
 
     def __repr__(self):
-        return f'WandSimulator()'
+        return 'WandSimulator()'
 
     def quit(self) -> None:
         pass

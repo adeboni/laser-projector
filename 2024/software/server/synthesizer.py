@@ -62,7 +62,6 @@ class SynthServer:
 
 if __name__ == '__main__':
     import wand
-    import numpy as np
 
     wand_sim = wand.WandSimulator()
     server = SynthServer()
