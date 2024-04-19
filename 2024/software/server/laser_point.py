@@ -27,7 +27,7 @@ class LaserPoint:
         return xy_to_bytes(self.x, self.y) + [self.r, self.g, self.b]
     
     def __repr__(self):
-        return f'ID: {self.id}, Point: [{self.x}, {self.y}], Color: [{self.r}, {self.g}, {self.b}]'
+        return f'LaserPoint(ID: {self.id}, Point: [{self.x}, {self.y}], Color: [{self.r}, {self.g}, {self.b}])'
     
     @property
     def rgb(self):
@@ -40,7 +40,7 @@ class LaserSegment:
         self.color = color if color else [0, 0, 0]
 
     def __repr__(self):
-        return f'Start: [{self.start.x}, {self.start.y}], End: [{self.end.x}, {self.end.y}], Color: {self.color}'
+        return f'LaserSegment(Start: [{self.start.x}, {self.start.y}], End: [{self.end.x}, {self.end.y}], Color: {self.color})'
 
 def get_segment_data(segs: list[LaserSegment], show_off_beam: bool=False) -> tuple[list, list]:
     segments = []
