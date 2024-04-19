@@ -42,8 +42,11 @@ class LaserServer:
 
             if not packet:
                 packet = [[seq] for _ in range(self.num_lasers)]
+                gen = self.mode_list[self.mode]
+                if gen is None:
+                    continue
                 for _ in range(170):
-                    p = next(self.mode_list[self.mode])
+                    p = next(gen)
                     for i in range(self.num_lasers):
                         packet[i].extend(p[i].get_bytes())
                 seq = (seq + 1) % 255

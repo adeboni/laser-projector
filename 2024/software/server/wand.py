@@ -57,6 +57,8 @@ class Wand:
             return None
 
     def get_laser_point(self) -> laser_point.LaserPoint:
+        if self.position is None:
+            return None
         start = self.position.rotate(self.BASE_VECTOR_START)
         end = self.position.rotate(self.BASE_VECTOR_END)
         start[2] += sierpinski.HUMAN_HEIGHT

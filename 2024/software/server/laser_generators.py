@@ -143,8 +143,8 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                          for _ in range(num_lasers)] 
     
     for i in range(num_lasers):
-        spiros[i].add_delta('r2', 0.0000002, 40, 80)
-        spiros[i].add_delta('a', 0.00000002, 0.3, 0.9)
+        spiros[i].add_delta('r2', 0.00000002, 40, 80)
+        spiros[i].add_delta('a', 0.000000002, 0.3, 0.9)
 
     xs, ys = 1.5, 1.5
     offsets = [[(min_x + max_x) // 2, (min_y + max_y) // 2] for _ in range(num_lasers)]
@@ -304,11 +304,9 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
 
     while True:
         if index == 0:
-            audio_data = None
-            if current_song:
-                audio_data = current_song.get_envelope(sample_blocksize * sample_interval, sample_interval, 0.05)
-            if audio_data:
-                ys = [base_y + v * 600 for v in audio_data]
+            if current_song and (audio_data := current_song.get_envelope(sample_blocksize * sample_interval, sample_interval, 0.05)):
+                audio_data = current_song.center_on_peak(audio_data, sample_blocksize // 10)
+                ys = [base_y + v * 300 for v in audio_data]
                 while len(ys) < sample_blocksize:
                     ys.append(base_y)
             else:

@@ -69,8 +69,7 @@ class Song:
             
     def get_amplitude(self, blocksize: int, interval: int) -> float:
         """Returns the average amplitude of a block of data"""
-        raw_data = self.get_data(blocksize, interval)
-        if raw_data is not None:
+        if raw_data := self.get_data(blocksize, interval):
             return sum([abs(x) for x in raw_data]) / len(raw_data)
         else:
             return 0
@@ -86,6 +85,23 @@ class Song:
             return result
         else:
             return None
+            
+    def center_on_peak(self, data: list[float], search_area: int) -> list[float]:
+        max_reading = 0
+        old_center = len(data) // 2
+        new_center = old_center
+        for i in range(old_center - search_area, old_center + search_area):
+            if data[i] > max_reading:
+                max_reading = data[i]
+                new_center = i
+        new_data = [0] * len(data)
+        if new_center > old_center:
+            centered_data = data[new_center-old_center:]
+        else:
+            centered_data = data[:len(data)-(old_center-new_center)]
+        start_index = (len(data) - len(centered_data)) // 2
+        new_data[start_index:start_index+len(centered_data)] = centered_data
+        return new_data
 
 class Effect:
     def __init__(self, path: str) -> None:
