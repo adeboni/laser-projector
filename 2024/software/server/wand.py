@@ -18,7 +18,7 @@ class Wand:
         self.BASE_VECTOR_START = np.array([-1, 0, 0])
         self.BASE_VECTOR_END = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.4
+        self.SPEED_THRESHOLD = 0.3
 
         self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.joystick = joystick

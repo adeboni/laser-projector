@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def interpolate_objects(obj: list[list[int]], seg_dist: int=32) -> list[list[int]]:
+def interpolate_objects(obj: list[list[int]], seg_dist: int=8) -> list[list[int]]:
     """Converts line segments longer than seg_dist into multiple segments"""
     result = [[obj[0][0], obj[0][1], obj[0][2]]]
     for i in range(1, len(obj)):

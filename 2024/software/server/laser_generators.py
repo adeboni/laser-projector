@@ -169,8 +169,10 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             r, g, b = colorsys.hsv_to_rgb(colors[i], 1, 1)
             if not point_mode:
                 output.append(LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), r * 255, g * 255, b * 255))
-            elif iteration % 2 == 0:
-                output.append(LaserPoint(i, spiros[i].x, spiros[i].y, r * 255, g * 255, b * 255))  
+            elif iteration % 3 == 0:
+                output.append(LaserPoint(i, spiros[i].x, spiros[i].y, 0, 0, 0))  
+            elif iteration % 3 == 1:
+                output.append(LaserPoint(i, spiros[i].x, spiros[i].y, r * 255, g * 255, b * 255))
             else:
                 output.append(LaserPoint(i, *spiros[i].update(xs, ys, offsets[i][0], offsets[i][1]), 0, 0, 0))
             
@@ -327,7 +329,7 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     while True:
         if time.time() > next_update:
             if current_wands is not None:
-                for path in paths:
+                for path in list(paths):
                     if path not in current_wands:
                         del paths[path]
                 for wand in current_wands:
@@ -360,7 +362,9 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
 def calibration(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     bounds = sierpinski.get_laser_coordinate_bounds()
-    points = interpolate_objects([[int(b[0]), int(b[1]), 1] for b in bounds])
+    points = [[int(b[0]), int(b[1]), 1] for b in bounds]
+    points.append(points[0])
+    points = interpolate_objects(points)
     index = 0
     
     while True:
