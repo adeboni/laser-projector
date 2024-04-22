@@ -13,7 +13,7 @@ import asyncio
 import bleak
 
 class Wand:
-    def __init__(self, joystick: pygame.joystick.Joystick) -> None:
+    def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
         self.BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
         self.BASE_VECTOR_START = np.array([-1, 0, 0])
         self.BASE_VECTOR_END = np.array([1, 0, 0])
@@ -27,6 +27,7 @@ class Wand:
         self.pos_queue = []
         self.prev_speed = 0
         self.cal_offset = None
+        self.pump = pump
 
     def __repr__(self):
         return f'Wand(ID: {self.joystick.get_instance_id()})'
@@ -63,15 +64,16 @@ class Wand:
         end = self.position.rotate(self.BASE_VECTOR_END)
         start[2] += sierpinski.HUMAN_HEIGHT
         end[2] += sierpinski.HUMAN_HEIGHT
-        wand_projection = sierpinski.get_wand_projection(start, end)
-        if wand_projection:
+        if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
             laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
             return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
         else:
             return None
 
-    def update_position(self) -> None:
+    def update_position(self) -> pyquaternion.quaternion:
+        if self.pump:
+            pygame.event.pump()
         q = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
                                     x=self.joystick.get_axis(0), 
                                     y=self.joystick.get_axis(1), 
@@ -88,6 +90,7 @@ class Wand:
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
+        return self.position
         
 class WandSimulator:
     def __init__(self) -> None:
@@ -124,7 +127,7 @@ class WandSimulator:
     def get_laser_point(self) -> laser_point.LaserPoint:
         return laser_point.LaserPoint(0, int(self.position[0]), int(self.position[1]), *self.get_wand_color())
 
-    def update_position(self) -> None:
+    def update_position(self) -> tuple[float, float]:
         mouse = pyautogui.position()
         x = np.interp(mouse.x, [0, self.screen_width], [self.min_x, self.max_x])
         y = np.interp(mouse.y, [0, self.screen_height], [self.max_y, self.min_y])
@@ -138,6 +141,7 @@ class WandSimulator:
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
+        return self.position
 
 
 class KANO_INFO(enum.Enum):
@@ -253,15 +257,14 @@ class KanoWand(object):
         end = self.position.rotate(self.BASE_VECTOR_END)
         start[2] += sierpinski.HUMAN_HEIGHT
         end[2] += sierpinski.HUMAN_HEIGHT
-        wand_projection = sierpinski.get_wand_projection(start, end)
-        if wand_projection:
+        if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
             laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
             return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
         else:
             return None
 
-    def update_position(self) -> None:
+    def update_position(self) -> pyquaternion.Quaternion:
         x, y, z, w = self.get_position_raw() # or self.position_raw if using notify
         q = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         if not self.cal_offset:
@@ -276,6 +279,7 @@ class KanoWand(object):
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
+        return self.position
 
     def reset_position(self):
         self._await_bleak(self._dev.write_gatt_char(KANO_SENSOR.QUATERNIONS_RESET_CHAR.value, bytearray([1]), response=True))
@@ -339,11 +343,11 @@ if __name__ == '__main__':
     kano_handler = KanoHandler()
     wands.extend(kano_handler.scan())
     
-    pygame.joystick.init()
+    pygame.init()
     joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
     for joystick in joysticks:
         if joystick.get_numaxes() >= 8:
-            wands.append(Wand(joystick))
+            wands.append(Wand(joystick, pump=True))
         else:
             joystick.quit()
  
@@ -351,4 +355,3 @@ if __name__ == '__main__':
         wands.append(WandSimulator())
 
     print('Found wands:', [wand for wand in wands])
-

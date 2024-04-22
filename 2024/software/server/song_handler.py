@@ -2,6 +2,7 @@
 
 import os
 import random
+import time
 import soundfile
 import laser_server
 import pygame
@@ -87,30 +88,52 @@ class Song:
             return None
             
     def center_on_peak(self, data: list[float], search_area: int) -> list[float]:
-        max_reading = 0
-        old_center = len(data) // 2
-        new_center = old_center
-        for i in range(old_center - search_area, old_center + search_area):
-            if data[i] > max_reading:
-                max_reading = data[i]
-                new_center = i
-        new_data = [0] * len(data)
-        if new_center > old_center:
-            centered_data = data[new_center-old_center:]
-        else:
-            centered_data = data[:len(data)-(old_center-new_center)]
-        start_index = (len(data) - len(centered_data)) // 2
-        new_data[start_index:start_index+len(centered_data)] = centered_data
-        return new_data
+        try:
+            max_reading = 0
+            old_center = len(data) // 2
+            new_center = old_center
+            for i in range(old_center - search_area, old_center + search_area):
+                if data[i] > max_reading:
+                    max_reading = data[i]
+                    new_center = i
+            new_data = [0] * len(data)
+            if new_center > old_center:
+                centered_data = data[new_center-old_center:]
+            else:
+                centered_data = data[:len(data)-(old_center-new_center)]
+            start_index = (len(data) - len(centered_data)) // 2
+            new_data[start_index:start_index+len(centered_data)] = centered_data
+            return new_data
+        except:
+            return data
 
 class Effect:
     def __init__(self, path: str) -> None:
         self.path = path
+        self.data, self.sr = soundfile.read(self.path)
+        self.length_s = len(self.data) / self.sr
         self.sound_obj = pygame.mixer.Sound(self.path)
-        self.length_s = self.sound_obj.get_length()
+        self.start_time = 0
 
     def play(self) -> None:
+        """Plays the file"""
+        self.start_time = time.time()
         self.sound_obj.play()
+
+    def get_data(self, blocksize: int, interval: int) -> list[float]:
+        """Returns a block of data from the current audio"""
+        if self.data is not None and time.time() < self.start_time + self.length_s:
+            start_index = int((time.time() - self.start_time) * self.sr)
+            return [x[0] for x in self.data[start_index:start_index + blocksize]][::interval]
+        else:
+            return None
+            
+    def get_amplitude(self, blocksize: int, interval: int) -> float:
+        """Returns the average amplitude of a block of data"""
+        if raw_data := self.get_data(blocksize, interval):
+            return sum([abs(x) for x in raw_data]) / len(raw_data)
+        else:
+            return 0
 
 class SongHandler:
     """Class implementing a song handler"""

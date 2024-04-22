@@ -73,7 +73,7 @@ class LaserServer:
             pass
 
     def set_effect(self, effect) -> None:
-        laser_generators.current_effect_end_time = time.time() + effect.length_s / 6
+        laser_generators.current_effect = effect
 
     def set_song(self, song) -> None:
         laser_generators.current_song = song

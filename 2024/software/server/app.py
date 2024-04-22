@@ -95,9 +95,11 @@ class MainApp:
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
                     elif event.key == pygame.K_RETURN:
-                        self.songs.add_to_queue(self.current_letter, self.current_number)
+                        if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                            self.songs.add_to_queue(self.current_letter, self.current_number)
                     elif event.key == pygame.K_SPACE:
-                        self.songs.play_next_song()
+                        if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                            self.songs.play_next_song()
                     self._update_screen(screen)
                     self.sacn.key_down(event.key)
                 elif event.type == update_songs:

@@ -9,7 +9,7 @@ from laser_objects import *
 from typing import Generator
 import sierpinski
 
-current_effect_end_time = 0
+current_effect = None
 current_song = None
 current_wands = None
 
@@ -28,6 +28,8 @@ def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
     x_offset = (min_x + max_x) // 2
     y_offset = (min_y + max_y) // 2
+    sample_blocksize = 256
+    sample_interval = 8
 
     rotation = 0
     d = 0
@@ -35,8 +37,8 @@ def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     while True:
         if d == 0:
             rotation += 0.2
-            if time.time() < current_effect_end_time:
-                amplitude = amplitude * 0.5 + random.uniform(100, 250) * 0.5
+            if current_effect:
+                amplitude = 100 + current_effect.get_amplitude(sample_blocksize * sample_interval, sample_interval) * 300
             else:
                 amplitude = 100
  
@@ -312,8 +314,12 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
             else:
                 ys = [base_y for _ in range(sample_blocksize)]
         
-        rgb = colors[int(ys[index])] if ys[index] < len(colors) and index > 0 else [0, 0, 0]
-        yield verify_points([LaserPoint(i, xs[index], ys[index], *rgb) for i in range(num_lasers)])
+        if index == 0:
+            yield verify_points([LaserPoint(i, xs[-1], ys[-1], 0, 0, 0) for i in range(num_lasers)])
+            yield verify_points([LaserPoint(i, xs[0], ys[0], 0, 0, 0) for i in range(num_lasers)])
+        else:
+            rgb = colors[int(ys[index])] if ys[index] < len(colors) else [0, 0, 0]
+            yield verify_points([LaserPoint(i, xs[index], ys[index], *rgb) for i in range(num_lasers)])
         index = (index + 1) % sample_blocksize
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
