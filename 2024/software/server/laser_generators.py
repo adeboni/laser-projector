@@ -210,12 +210,21 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     dx = 2
     dy = 2
 
+    ai_paddle_speed = 2
     paddle_gap = 60
     paddle_half_height = 100
     left_paddle = center_y
     right_paddle = center_y
+    left_paddle_speed = 0
+    right_paddle_speed = 0
     score_timeout = False
     game_reset_time = 0
+
+    def calculate_new_angle():
+        return (dx * -1, dy)
+    
+    def new_paddle_pos(old_pos, curr_speed, delta):
+        return (old_pos + delta, 0.25 * curr_speed + 0.75 * delta)
 
     while True:
         if score_timeout and time.time() > game_reset_time:
@@ -246,13 +255,13 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
             if ball_laser == 0 and center_x - paddle_gap < ball_x < center_x and dx > 0:
                 if abs(ball_y - left_paddle) < paddle_half_height:
-                    dx *= -1
+                    dx, dy = calculate_new_angle()
                 else:
                     score_timeout = True
                     game_reset_time = time.time() + 3
             elif ball_laser == 0 and center_x < ball_x < center_x + paddle_gap and dx < 0:
                 if abs(ball_y - right_paddle) < paddle_half_height:
-                    dx *= -1
+                    dx, dy = calculate_new_angle()
                 else:
                     score_timeout = True
                     game_reset_time = time.time() + 3
@@ -274,21 +283,23 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         if not score_timeout:
             if len(current_wands) > 0:
                 if lp := list(current_wands.values())[0].get_laser_point():
-                    left_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+                    left_paddle, left_paddle_speed = new_paddle_pos(left_paddle, left_paddle_speed, 
+                            max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height) - left_paddle)
             else:
                 if left_paddle < ball_y and left_paddle + paddle_half_height < max_y:
-                    left_paddle += 1
+                    left_paddle, left_paddle_speed = new_paddle_pos(left_paddle, left_paddle_speed, ai_paddle_speed)
                 elif left_paddle > ball_y and left_paddle - paddle_half_height > min_y:
-                    left_paddle -= 1
+                    left_paddle, left_paddle_speed = new_paddle_pos(left_paddle, left_paddle_speed, -ai_paddle_speed)
             
             if len(current_wands) > 1:
                 if lp := list(current_wands.values())[1].get_laser_point():
-                    right_paddle = max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height)
+                   right_paddle, right_paddle_speed = new_paddle_pos(right_paddle, right_paddle_speed, 
+                            max(min(lp.y, max_y - paddle_half_height), min_y + paddle_half_height) - right_paddle)
             else:
                 if right_paddle < ball_y and right_paddle + paddle_half_height < max_y:
-                    right_paddle += 1
+                    right_paddle, right_paddle_speed = new_paddle_pos(right_paddle, right_paddle_speed, ai_paddle_speed)
                 elif right_paddle > ball_y and right_paddle - paddle_half_height > min_y:
-                    right_paddle -= 1
+                    right_paddle, right_paddle_speed = new_paddle_pos(right_paddle, right_paddle_speed, -ai_paddle_speed)
         
 
 def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
@@ -360,6 +371,10 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 data[p[path_index].id] = p[path_index]
             
             yield verify_points(data)
+
+            if path_index == len(p) - 1:
+                data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
+                yield verify_points(data)
 
             if (path_index := (path_index + 1) % len(p)) == 0:
                 current_path = (current_path + 1) % len(paths)
