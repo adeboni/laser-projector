@@ -274,9 +274,12 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             yield verify_points(data)
 
         paddle_points = [LaserPoint(0, center_x - paddle_gap, left_paddle - paddle_half_height, 0, 0, 0),
+                         LaserPoint(0, center_x - paddle_gap, left_paddle - paddle_half_height, 0, 0, 0),
                          LaserPoint(0, center_x - paddle_gap, left_paddle + paddle_half_height, 0, 255, 0),
+                         LaserPoint(0, center_x - paddle_gap, left_paddle + paddle_half_height, 0, 0, 0),
                          LaserPoint(0, center_x + paddle_gap, right_paddle - paddle_half_height, 0, 0, 0),
                          LaserPoint(0, center_x + paddle_gap, right_paddle + paddle_half_height, 0, 255, 0)]
+        
         for p in paddle_points:
             yield verify_points([LaserPoint(i) if i > 0 else p for i in range(num_lasers)])
 
