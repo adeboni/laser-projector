@@ -11,6 +11,7 @@ import numpy as np
 import pyautogui
 import asyncio
 import bleak
+import time
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
@@ -203,14 +204,19 @@ class KanoWand(object):
         if not connected:
             raise Exception(f'Could not connect to {self.name}')
         
-        self._await_bleak(self._dev.write_gatt_char(KANO_IO.KEEP_ALIVE_CHAR.value, bytearray([1]), response=True))
+        #self._await_bleak(self._dev.write_gatt_char(KANO_IO.KEEP_ALIVE_CHAR.value, bytearray([1]), response=True))
         self._org = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.ORGANIZATION_CHAR.value)).decode('utf-8')
         self._sw_ver = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.SOFTWARE_CHAR.value)).decode('utf-8')
         self._hw_ver = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.HARDWARE_CHAR.value)).decode('utf-8')
-        #self._await_bleak(self._dev.start_notify(KANO_SENSOR.QUATERNIONS_CHAR.value, self._handle_notification))
-        #self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
-        self.connected = True
-        print(f'Connected to {self.name}')
+        self._await_bleak(self._dev.start_notify(KANO_SENSOR.QUATERNIONS_CHAR.value, self._handle_notification))
+        self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
+        
+        timeout = time.time() + 3
+        while time.time() < timeout:
+            if self.position_raw is not None:
+                self.connected = True
+                print(f'Connected to {self.name}')
+                break
 
     def __repr__(self):
         return f'KanoWand(Name: {self.name}, Address: {self._dev.address}, Org: {self._org}, SW Ver: {self._sw_ver}, HW Ver: {self._hw_ver})'
@@ -219,10 +225,14 @@ class KanoWand(object):
         return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
 
     def _handle_notification(self, sender, data):
-        if sender == KANO_SENSOR.QUATERNIONS_CHAR.value:
-            self.get_position_raw(data)
-        elif sender == KANO_IO.USER_BUTTON_CHAR.value:
-            self.get_button(data)
+        if sender.uuid == KANO_SENSOR.QUATERNIONS_CHAR.value:
+            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little')))
+            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little')))
+            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little')))
+            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little')))
+            self.position_raw = (x, y, z, w)
+        elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
+            self.button = data[0] == 1
 
     def quit(self) -> None:
         if self.connected:
@@ -265,7 +275,7 @@ class KanoWand(object):
             return None
 
     def update_position(self) -> pyquaternion.Quaternion:
-        x, y, z, w = self.get_position_raw() # or self.position_raw if using notify
+        x, y, z, w = self.position_raw
         q = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         if not self.cal_offset:
             init_vector = self.BASE_QUATERNION.rotate(q).rotate([1, 0, 0])
@@ -283,22 +293,6 @@ class KanoWand(object):
 
     def reset_position(self):
         self._await_bleak(self._dev.write_gatt_char(KANO_SENSOR.QUATERNIONS_RESET_CHAR.value, bytearray([1]), response=True))
-
-    def get_position_raw(self, data=None):
-        if data is None:
-            data = self._await_bleak(self._dev.read_gatt_char(KANO_SENSOR.QUATERNIONS_CHAR.value))
-        y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little')))
-        x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little')))
-        w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little')))
-        z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little')))
-        self.position_raw = (x, y, z, w)
-        return self.position_raw
-
-    def get_button(self, data=None):
-        if data is None:
-            data = self._await_bleak(self._dev.read_gatt_char(KANO_IO.USER_BUTTON_CHAR.value))
-        self.button = data[0] == 1
-        return self.button
 
     def vibrate(self, pattern=KANO_PATTERN.REGULAR):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
@@ -326,15 +320,11 @@ class KanoHandler(object):
 
     def scan(self, prefix="Kano-Wand", mac=None):
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
-        # print(devices)
         if prefix:
             devices = [d for d in devices if d.name is not None and d.name.startswith(prefix)]
         if mac:
             devices = [d for d in devices if d.address == mac]
-        # print(devices)
-        wands = [Wand(d.address, d.name, self._bleak_loop) for d in devices]
-        # print(self.wands)
-        return wands
+        return [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
     
 
 if __name__ == '__main__':
