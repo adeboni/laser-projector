@@ -14,7 +14,7 @@ import bleak
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
-        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
+        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, 1)
         self.BASE_VECTOR_START = np.array([-1, 0, 0])
         self.BASE_VECTOR_END = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
@@ -181,7 +181,7 @@ class KanoWand(object):
     """A wand class to interact with the Kano wand"""
 
     def __init__(self, device_addr, name, bleak_loop):
-        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, -1)
+        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 1, 0, 0) * pyquaternion.Quaternion(1, 0, 1, 0)
         self.BASE_VECTOR_START = np.array([-1, 0, 0])
         self.BASE_VECTOR_END = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
@@ -202,7 +202,8 @@ class KanoWand(object):
         print(f'Connecting to {self.name}...')
         connected = self._await_bleak(self._dev.connect())
         if not connected:
-            raise Exception(f'Could not connect to {self.name}')
+            print(f'Could not connect to {self.name}')
+            return
         
         # self._await_bleak(self._dev.write_gatt_char(KANO_IO.KEEP_ALIVE_CHAR.value, bytearray([1]), response=True))
         # self._org = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.ORGANIZATION_CHAR.value)).decode('utf-8')
@@ -221,12 +222,11 @@ class KanoWand(object):
 
     def _handle_notification(self, sender, data):
         if sender.uuid == KANO_SENSOR.QUATERNIONS_CHAR.value:
-            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little')))
-            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little')))
-            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little')))
-            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little')))
+            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
+            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
+            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
+            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
-            print(self.position_raw)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
 
