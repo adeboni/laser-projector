@@ -312,9 +312,9 @@ class KanoHandler(object):
         self._bleak_thread_ready.set()
         self._bleak_loop.run_forever()
 
-    def scan(self):
+    def scan(self, existing_wands=[]):
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
-        devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand")]
+        devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in existing_wands]
         return [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
     
 
