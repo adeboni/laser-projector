@@ -207,10 +207,10 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     ball_laser = 1
     ball_x = center_x
     ball_y = center_y
-    dx = 2
-    dy = 2
+    dx = 6
+    dy = 6
 
-    ai_paddle_speed = 2
+    ai_paddle_speed = 5
     paddle_gap = 60
     paddle_half_height = 100
     left_paddle = center_y
@@ -266,21 +266,22 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                     score_timeout = True
                     game_reset_time = time.time() + 3
 
+        paddle_points = interpolate_objects([ [int(center_x), int(center_y), 0], 
+                          [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
+                          [int(center_x - paddle_gap), int(left_paddle + paddle_half_height), 1],
+                          [int(center_x + paddle_gap), int(right_paddle + paddle_half_height), 0],
+                          [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 1] ])
+
+        data = [LaserPoint(i) for i in range(num_lasers)]
+
         for d in range(0, 360, 30):
             x = ball_radius * np.sin(d * np.pi / 180) + ball_x
             y = ball_radius * np.cos(d * np.pi / 180) + ball_y
-            data = [LaserPoint(i) for i in range(num_lasers)]
             data[ball_laser] = LaserPoint(ball_laser, x, y, 0, 0, 255 if d != 0 else 0)
             yield verify_points(data)
 
-        paddle_points = [LaserPoint(0, center_x - paddle_gap, left_paddle - paddle_half_height, 0, 0, 0),
-                         LaserPoint(0, center_x - paddle_gap, left_paddle - paddle_half_height, 0, 0, 0),
-                         LaserPoint(0, center_x - paddle_gap, left_paddle + paddle_half_height, 0, 255, 0),
-                         LaserPoint(0, center_x - paddle_gap, left_paddle + paddle_half_height, 0, 0, 0),
-                         LaserPoint(0, center_x + paddle_gap, right_paddle - paddle_half_height, 0, 0, 0),
-                         LaserPoint(0, center_x + paddle_gap, right_paddle + paddle_half_height, 0, 255, 0)]
-        
-        for p in paddle_points:
+        for paddle_point in paddle_points:
+            p = LaserPoint(0, paddle_point[0], paddle_point[1], 0, 255 * paddle_point[2], 0)
             yield verify_points([LaserPoint(i) if i > 0 else p for i in range(num_lasers)])
 
         if not score_timeout:
@@ -368,16 +369,12 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             p = list(paths.values())[current_path]
             path_index = path_index % len(p)
 
-            if path_index == 0:
+            if path_index == len(p) - 1 or path_index == 0:
                 data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
             else:
                 data[p[path_index].id] = p[path_index]
             
             yield verify_points(data)
-
-            if path_index == len(p) - 1:
-                data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
-                yield verify_points(data)
 
             if (path_index := (path_index + 1) % len(p)) == 0:
                 current_path = (current_path + 1) % len(paths)

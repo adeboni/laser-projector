@@ -36,6 +36,7 @@ if len(wands) > 0:
 
     def animate(_):
         q = wands[0].update_position()
+        q = wands[0].position_raw
         for line, start, end in zip(lines, startpoints, endpoints):
             start = q.rotate(start)
             end = q.rotate(end)
