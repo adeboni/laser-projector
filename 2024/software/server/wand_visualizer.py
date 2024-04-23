@@ -32,7 +32,7 @@ if len(wands) > 0:
     lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
     wand_graphic_scale = 2
     endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
-    startpoints = -endpoints
+    startpoints = -endpoints * 0
 
     def animate(_):
         q = wands[0].update_position()
