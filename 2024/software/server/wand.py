@@ -292,7 +292,7 @@ class KanoWand(object):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
 
-    def set_led(self, r, g, b, on=True):
+    def set_led(self, r: int, g: int, b: int, on=True):
         rgb = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3))
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
@@ -312,7 +312,7 @@ class KanoHandler(object):
         self._bleak_thread_ready.set()
         self._bleak_loop.run_forever()
 
-    def scan(self, existing_wands=[]):
+    def scan(self, existing_wands: list[str]=[]):
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
         devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in existing_wands]
         return [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
