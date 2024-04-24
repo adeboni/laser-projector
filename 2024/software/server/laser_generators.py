@@ -197,6 +197,7 @@ def spirograph(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         
 
 def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    START_SPEED = 6
     bounds = sierpinski.get_laser_coordinate_bounds()
     _xs = sorted([b[0] for b in bounds])
     min_x, max_x = min(b[0] for b in bounds), max(b[0] for b in bounds)
@@ -207,8 +208,8 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     ball_laser = 1
     ball_x = center_x
     ball_y = center_y
-    dx = 6
-    dy = 6
+    dx = START_SPEED
+    dy = START_SPEED
 
     ai_paddle_speed = 5
     paddle_gap = 60
@@ -232,8 +233,8 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             ball_x = center_x
             ball_y = center_y
             ball_laser = 1
-            dx = 2
-            dy = 2
+            dx = START_SPEED
+            dy = START_SPEED
 
         if not score_timeout:
             ball_x += dx
@@ -266,12 +267,6 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                     score_timeout = True
                     game_reset_time = time.time() + 3
 
-        paddle_points = interpolate_objects([ [int(center_x), int(center_y), 0], 
-                          [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
-                          [int(center_x - paddle_gap), int(left_paddle + paddle_half_height), 1],
-                          [int(center_x + paddle_gap), int(right_paddle + paddle_half_height), 0],
-                          [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 1] ])
-
         data = [LaserPoint(i) for i in range(num_lasers)]
 
         for d in range(0, 360, 30):
@@ -279,6 +274,13 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             y = ball_radius * np.cos(d * np.pi / 180) + ball_y
             data[ball_laser] = LaserPoint(ball_laser, x, y, 0, 0, 255 if d != 0 else 0)
             yield verify_points(data)
+
+        paddle_points = interpolate_objects([ 
+            [int(x), int(y), 0] if ball_laser == 0 else [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 0],
+            [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
+            [int(center_x - paddle_gap), int(left_paddle + paddle_half_height), 1],
+            [int(center_x + paddle_gap), int(right_paddle + paddle_half_height), 0],
+            [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 1] ])
 
         for paddle_point in paddle_points:
             p = LaserPoint(0, paddle_point[0], paddle_point[1], 0, 255 * paddle_point[2], 0)

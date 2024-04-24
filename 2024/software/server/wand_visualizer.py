@@ -16,6 +16,8 @@ if wand_type is None or wand_type == 1:
     print('Looking for KanoWand()')
     kano_handler = wand.KanoHandler()
     wands.extend(kano_handler.scan())
+    if len(wands) > 0:
+        wand_type = 1
 
 if wand_type is None or wand_type == 2:
     print('Looking for Wand()')
@@ -26,6 +28,8 @@ if wand_type is None or wand_type == 2:
             wands.append(wand.Wand(joystick, pump=True))
         else:
             joystick.quit()
+    if len(wands) > 0:
+        wand_type = 2
 
 print('Found wands:', [wand for wand in wands])
 
@@ -41,14 +45,23 @@ if len(wands) > 0:
     wand_graphic_scale = 2
     endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
 
-    base1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
-    base2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
     wands[0].update_position()
-    q_init = base2.rotate(base1.rotate(wands[0].position_raw)).inverse
+
+    if wand_type == 1:
+        base1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
+        base2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
+        q_init = base2.rotate(base1.rotate(wands[0].position_raw)).inverse
+    elif wand_type == 2:
+        base1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
+        base2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
+        q_init = base2.rotate(base1.rotate(wands[0].position_raw)).inverse
 
     def animate(_):
         wands[0].update_position()
-        q = q_init * base2.rotate(base1.rotate(wands[0].position_raw))
+        if wand_type == 1:
+            q = q_init * base2.rotate(base1.rotate(wands[0].position_raw))
+        elif wand_type == 2:
+            q = q_init * base2.rotate(base1.rotate(wands[0].position_raw))
         for line, end in zip(lines, endpoints):
             end = q.rotate(end)
             line.set_data([0, end[0]], [0, end[1]])

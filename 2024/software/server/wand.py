@@ -14,9 +14,8 @@ import bleak
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
-        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 0, 0, 1)
-        self.BASE_VECTOR_START = np.array([-1, 0, 0])
-        self.BASE_VECTOR_END = np.array([1, 0, 0])
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
+        self.BASE_VECTOR = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.3
 
@@ -29,6 +28,7 @@ class Wand:
         self.cal_offset = None
         self.pump = pump
         self.position_raw = pyquaternion.Quaternion()
+        self.reset_cal = False
 
     def __repr__(self):
         return f'Wand(ID: {self.joystick.get_instance_id()})'
@@ -61,9 +61,8 @@ class Wand:
     def get_laser_point(self) -> laser_point.LaserPoint:
         if self.position is None:
             return None
-        start = self.position.rotate(self.BASE_VECTOR_START)
+        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
         end = self.position.rotate(self.BASE_VECTOR_END)
-        start[2] += sierpinski.HUMAN_HEIGHT
         end[2] += sierpinski.HUMAN_HEIGHT
         if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
@@ -79,10 +78,12 @@ class Wand:
                                                     x=self.joystick.get_axis(0), 
                                                     y=self.joystick.get_axis(1), 
                                                     z=self.joystick.get_axis(2))
-        if not self.cal_offset:
-            init_vector = self.BASE_QUATERNION.rotate(self.position_raw).rotate([1, 0, 0])
-            self.cal_offset = sierpinski.find_quat(init_vector, sierpinski.target_vector)
-        self.position = self.cal_offset * self.BASE_QUATERNION.rotate(self.position_raw)
+        # if self.joystick.get_button(1):
+        #     self.reset_cal = True
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = self.BASE_1.rotate(self.position_raw).inverse
+            self.reset_cal = False
+        self.position = self.cal_offset * self.BASE_1.rotate(self.position_raw)
         tip_pos = self.position.rotate(self.BASE_VECTOR_END)[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
@@ -181,9 +182,9 @@ class KanoWand(object):
     """A wand class to interact with the Kano wand"""
 
     def __init__(self, device_addr, name, bleak_loop):
-        self.BASE_QUATERNION = pyquaternion.Quaternion(1, 1, 0, 0) * pyquaternion.Quaternion(1, 0, 1, 0)
-        self.BASE_VECTOR_START = np.array([-1, 0, 0])
-        self.BASE_VECTOR_END = np.array([1, 0, 0])
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
+        self.BASE_VECTOR = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.4
 
@@ -194,6 +195,7 @@ class KanoWand(object):
         self.prev_speed = 0
         self.cal_offset = None
         self.position_raw = pyquaternion.Quaternion()
+        self.reset_cal = False
 
         self._dev = bleak.BleakClient(device_addr)
         self.name = name
@@ -205,10 +207,6 @@ class KanoWand(object):
             print(f'Could not connect to {self.name}')
             return
         
-        # self._await_bleak(self._dev.write_gatt_char(KANO_IO.KEEP_ALIVE_CHAR.value, bytearray([1]), response=True))
-        # self._org = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.ORGANIZATION_CHAR.value)).decode('utf-8')
-        # self._sw_ver = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.SOFTWARE_CHAR.value)).decode('utf-8')
-        # self._hw_ver = self._await_bleak(self._dev.read_gatt_char(KANO_INFO.HARDWARE_CHAR.value)).decode('utf-8')
         self._await_bleak(self._dev.start_notify(KANO_SENSOR.QUATERNIONS_CHAR.value, self._handle_notification))
         self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
         self.connected = True
@@ -229,6 +227,7 @@ class KanoWand(object):
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
+            self.reset_cal = True
 
     def quit(self) -> None:
         if self.connected:
@@ -259,9 +258,10 @@ class KanoWand(object):
             return None
 
     def get_laser_point(self) -> laser_point.LaserPoint:
-        start = self.position.rotate(self.BASE_VECTOR_START)
-        end = self.position.rotate(self.BASE_VECTOR_END)
-        start[2] += sierpinski.HUMAN_HEIGHT
+        if self.position is None:
+            return None
+        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
+        end = self.position.rotate(self.BASE_VECTOR)
         end[2] += sierpinski.HUMAN_HEIGHT
         if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
@@ -271,11 +271,11 @@ class KanoWand(object):
             return None
 
     def update_position(self) -> pyquaternion.Quaternion:
-        if not self.cal_offset:
-            init_vector = self.BASE_QUATERNION.rotate(self.position_raw).rotate([1, 0, 0])
-            self.cal_offset = sierpinski.find_quat(init_vector, sierpinski.target_vector)
-        self.position = self.cal_offset * self.BASE_QUATERNION.rotate(self.position_raw)
-        tip_pos = self.position.rotate(self.BASE_VECTOR_END)[2]
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.reset_cal = False
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+        tip_pos = self.position.rotate(self.BASE_VECTOR)[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
@@ -284,9 +284,6 @@ class KanoWand(object):
             self.callback()
         self.prev_speed = new_speed
         return self.position
-
-    def reset_position(self):
-        self._await_bleak(self._dev.write_gatt_char(KANO_SENSOR.QUATERNIONS_RESET_CHAR.value, bytearray([1]), response=True))
 
     def vibrate(self, pattern=KANO_PATTERN.REGULAR):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]

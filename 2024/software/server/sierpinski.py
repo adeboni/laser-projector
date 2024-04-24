@@ -197,11 +197,11 @@ if __name__ == '__main__':
         ax.plot([laser[0]], [laser[1]], [laser[2]], c='k', linestyle='', marker='o', alpha=0.2)
         ax.plot([laser[0], laser_center[0]], [laser[1], laser_center[1]], [laser[2], laser_center[2]], color='k', alpha=0.2)
 
-    lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
+    lines = sum([ax.plot([], [], [], c=c) for c in ['k', 'r', 'g', 'b']], [])
     projection = ax.plot([], [], [], c='r', linestyle='', marker='o')
     laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
     wand_graphic_scale = 2
-    endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
+    endpoints = np.array([target_vector, [1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
 
     try:
         quaternion_generator = joystick_quaternion()
