@@ -32,6 +32,9 @@ class LaserServer:
         }
 
     def _server(self):
+        for target_ip, _ in self.targets:
+            utilities.ping(target_ip)
+            
         PACKET_DELAY = 0.0258
         last_sent = 0
         seq = 0
@@ -61,8 +64,6 @@ class LaserServer:
     def start(self) -> None:
         if not self.server.is_alive():
             print(f'Starting laser server targeting {self.targets}')
-            for target_ip, _ in self.targets:
-                utilities.ping(target_ip)
             self.server_running = True
             self.server.start()
             
