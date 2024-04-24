@@ -269,18 +269,22 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
         data = [LaserPoint(i) for i in range(num_lasers)]
 
-        for d in range(0, 360, 30):
+        for d in range(0, 420, 30):
             x = ball_radius * np.sin(d * np.pi / 180) + ball_x
             y = ball_radius * np.cos(d * np.pi / 180) + ball_y
             data[ball_laser] = LaserPoint(ball_laser, x, y, 0, 0, 255 if d != 0 else 0)
             yield verify_points(data)
 
-        paddle_points = interpolate_objects([ 
-            [int(x), int(y), 0] if ball_laser == 0 else [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 0],
-            [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
-            [int(center_x - paddle_gap), int(left_paddle + paddle_half_height), 1],
-            [int(center_x + paddle_gap), int(right_paddle + paddle_half_height), 0],
-            [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 1] ])
+        paddle_points = [ [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
+                          [int(center_x - paddle_gap), int(left_paddle + paddle_half_height), 1],
+                          [int(center_x + paddle_gap), int(right_paddle + paddle_half_height), 0],
+                          [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 1] ]
+        if ball_laser == 0:
+            paddle_points.insert(0, [int(x), int(y), 0])
+            paddle_points.append([int(x), int(y), 0])
+        else:
+            paddle_points.insert(0, [int(center_x + paddle_gap), int(right_paddle - paddle_half_height), 0])
+        paddle_points = interpolate_objects(paddle_points)
 
         for paddle_point in paddle_points:
             p = LaserPoint(0, paddle_point[0], paddle_point[1], 0, 255 * paddle_point[2], 0)

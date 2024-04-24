@@ -14,8 +14,8 @@ import bleak
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
-        self.BASE_VECTOR = np.array([1, 0, 0])
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.3
 
@@ -37,6 +37,8 @@ class Wand:
         self.joystick.quit()
         
     def get_rotation_angle(self) -> int:
+        if self.position is None:
+            return 0
         v0 = self.position.rotate([0, 1, 0])
         v1 = self.position.rotate([1, 0, 0])
         v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
@@ -62,7 +64,7 @@ class Wand:
         if self.position is None:
             return None
         start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
-        end = self.position.rotate(self.BASE_VECTOR_END)
+        end = self.position.rotate(sierpinski.target_vector)
         end[2] += sierpinski.HUMAN_HEIGHT
         if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
@@ -81,10 +83,10 @@ class Wand:
         # if self.joystick.get_button(1):
         #     self.reset_cal = True
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_1.rotate(self.position_raw).inverse
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_1.rotate(self.position_raw)
-        tip_pos = self.position.rotate(self.BASE_VECTOR_END)[2]
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+        tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
@@ -166,7 +168,6 @@ class KanoWand(object):
     def __init__(self, device_addr, name, bleak_loop):
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
-        self.BASE_VECTOR = np.array([1, 0, 0])
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.4
 
@@ -219,6 +220,8 @@ class KanoWand(object):
             print(f'Disconnected from {self.name}')
         
     def get_rotation_angle(self) -> int:
+        if self.position is None:
+            return 0
         v0 = self.position.rotate([0, 1, 0])
         v1 = self.position.rotate([1, 0, 0])
         v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
@@ -244,7 +247,7 @@ class KanoWand(object):
         if self.position is None:
             return None
         start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
-        end = self.position.rotate(self.BASE_VECTOR)
+        end = self.position.rotate(sierpinski.target_vector)
         end[2] += sierpinski.HUMAN_HEIGHT
         if wand_projection := sierpinski.get_wand_projection(start, end):
             laser_index, wand_point = wand_projection
@@ -258,7 +261,7 @@ class KanoWand(object):
             self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
             self.reset_cal = False
         self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
-        tip_pos = self.position.rotate(self.BASE_VECTOR)[2]
+        tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
