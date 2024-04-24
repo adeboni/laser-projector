@@ -371,10 +371,12 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
             if path_index == len(p) - 1 or path_index == 0:
                 data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
+                yield verify_points(data)
+                yield verify_points(data)
+                yield verify_points(data)
             else:
                 data[p[path_index].id] = p[path_index]
-            
-            yield verify_points(data)
+                yield verify_points(data)
 
             if (path_index := (path_index + 1) % len(p)) == 0:
                 current_path = (current_path + 1) % len(paths)
