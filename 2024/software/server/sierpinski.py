@@ -162,23 +162,6 @@ def _laser_thread(laser_index):
     except:
         pass
 
-def joystick_quaternion():
-    import pygame
-    pygame.init()
-    controller = pygame.joystick.Joystick(0)
-
-    wand_offset = pyquaternion.Quaternion(1, 0, 0, -1)
-    q_init = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
-    q_init = wand_offset.rotate(q_init)
-    init_vector = q_init.rotate([1, 0, 0])
-    q_offset = find_quat(init_vector, target_vector)
-    
-    while True:
-        pygame.event.pump()
-        q = pyquaternion.Quaternion(w=controller.get_axis(5), x=controller.get_axis(0), y=controller.get_axis(1), z=controller.get_axis(2))
-        q = wand_offset.rotate(q)
-        yield q_offset * q
-
 if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -197,18 +180,7 @@ if __name__ == '__main__':
         ax.plot([laser[0]], [laser[1]], [laser[2]], c='k', linestyle='', marker='o', alpha=0.2)
         ax.plot([laser[0], laser_center[0]], [laser[1], laser_center[1]], [laser[2], laser_center[2]], color='k', alpha=0.2)
 
-    lines = sum([ax.plot([], [], [], c=c) for c in ['k', 'r', 'g', 'b']], [])
-    projection = ax.plot([], [], [], c='r', linestyle='', marker='o')
     laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
-    wand_graphic_scale = 2
-    endpoints = np.array([target_vector, [1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
-
-    try:
-        quaternion_generator = joystick_quaternion()
-        next(quaternion_generator)
-        ax.plot([center_point[0]], [center_point[1]], [center_point[2]], c='b', linestyle='', marker='o')
-    except:
-        quaternion_generator = None
 
     for i in range(3):
         threading.Thread(target=_laser_thread, args=(i,), daemon=True).start()
@@ -216,35 +188,13 @@ if __name__ == '__main__':
     def animate(_):
         for i in range(3):
             if laser_lines[i]:
-                xs = []
-                ys = []
-                zs = []
+                xs, ys, zs = [], [], []
                 for ll in laser_lines[i]:
                     xs.append(ll[0])
                     ys.append(ll[1])
                     zs.append(ll[2])
                 laser_plots[i][0].set_data(xs, ys)
                 laser_plots[i][0].set_3d_properties(zs)
-
-        if quaternion_generator:
-            q = next(quaternion_generator)
-            for axis, (line, end) in enumerate(zip(lines, endpoints)):
-                start = [0, 0, HUMAN_HEIGHT]
-                end = q.rotate(end)
-                end[2] += HUMAN_HEIGHT
-                line.set_data([start[0], end[0]], [start[1], end[1]])
-                line.set_3d_properties([start[2], end[2]])
-                if axis == 0:
-                    projection[0].set_data([], [])
-                    projection[0].set_3d_properties([])
-                    wand_projection = get_wand_projection(start, end)
-                    if wand_projection:
-                        laser_index, wand_point = wand_projection
-                        # wand_point is in 3D here, but we're transforming it to 2D laser coordinates and then back to 3D
-                        laser_x, laser_y = sierpinski_to_laser_coords(laser_index, *wand_point)
-                        wand_point = laser_to_sierpinksi_coords(laser_index, laser_x, laser_y)
-                        projection[0].set_data([wand_point[0]], [wand_point[1]])
-                        projection[0].set_3d_properties([wand_point[2]])
 
     ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
     plt.show()

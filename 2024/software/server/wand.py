@@ -145,29 +145,11 @@ class WandSimulator:
         self.prev_speed = new_speed
         return self.position
 
-
-class KANO_INFO(enum.Enum):
-    SERVICE = '64a70010-f691-4b93-a6f4-0968f5b648f8'
-    ORGANIZATION_CHAR = '64a7000b-f691-4b93-a6f4-0968f5b648f8'
-    SOFTWARE_CHAR = '64a70013-f691-4b93-a6f4-0968f5b648f8'
-    HARDWARE_CHAR = '64a70001-f691-4b93-a6f4-0968f5b648f8'
-
 class KANO_IO(enum.Enum):
-    SERVICE = '64a70012-f691-4b93-a6f4-0968f5b648f8'
-    BATTERY_CHAR = '64a70007-f691-4b93-a6f4-0968f5b648f8'
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
     VIBRATOR_CHAR = '64a70008-f691-4b93-a6f4-0968f5b648f8'
     LED_CHAR = '64a70009-f691-4b93-a6f4-0968f5b648f8'
-    KEEP_ALIVE_CHAR = '64a7000f-f691-4b93-a6f4-0968f5b648f8'
-
-class KANO_SENSOR(enum.Enum):
-    SERVICE = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    TEMP_CHAR = '64a70014-f691-4b93-a6f4-0968f5b648f8'
     QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
-    # RAW_CHAR = '64a7000a-f691-4b93-a6f4-0968f5b648f8'
-    # MOTION_CHAR = '64a7000c-f691-4b93-a6f4-0968f5b648f8'
-    MAGN_CALIBRATE_CHAR = '64a70021-f691-4b93-a6f4-0968f5b648f8'
-    QUATERNIONS_RESET_CHAR = '64a70004-f691-4b93-a6f4-0968f5b648f8'
 
 class KANO_PATTERN(enum.Enum):
     REGULAR = 1
@@ -207,7 +189,7 @@ class KanoWand(object):
             print(f'Could not connect to {self.name}')
             return
         
-        self._await_bleak(self._dev.start_notify(KANO_SENSOR.QUATERNIONS_CHAR.value, self._handle_notification))
+        self._await_bleak(self._dev.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_notification))
         self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
         self.connected = True
         print(f'Connected to {self.name}')
@@ -219,7 +201,7 @@ class KanoWand(object):
         return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
 
     def _handle_notification(self, sender, data):
-        if sender.uuid == KANO_SENSOR.QUATERNIONS_CHAR.value:
+        if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
             y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
             x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
             w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
