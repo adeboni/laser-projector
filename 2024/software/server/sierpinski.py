@@ -128,7 +128,8 @@ def get_wand_projection(start, end):
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
         v = end - start
         if v[2] < 0:
-            v = -v
+            continue
+            # v = -v
         point = end + (np.dot(pp - end, pn / np.dot(v, pn)) * v)
         if point_in_surface(s, point):
             return (i, point)
@@ -201,7 +202,6 @@ if __name__ == '__main__':
     laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
     wand_graphic_scale = 2
     endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
-    startpoints = -endpoints
 
     try:
         quaternion_generator = joystick_quaternion()
@@ -228,10 +228,9 @@ if __name__ == '__main__':
 
         if quaternion_generator:
             q = next(quaternion_generator)
-            for axis, (line, start, end) in enumerate(zip(lines, startpoints, endpoints)):
-                start = q.rotate(start)
+            for axis, (line, end) in enumerate(zip(lines, endpoints)):
+                start = [0, 0, HUMAN_HEIGHT]
                 end = q.rotate(end)
-                start[2] += HUMAN_HEIGHT
                 end[2] += HUMAN_HEIGHT
                 line.set_data([start[0], end[0]], [start[1], end[1]])
                 line.set_3d_properties([start[2], end[2]])

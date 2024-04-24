@@ -1,4 +1,4 @@
-"""This module simulates the sierpinski pyramid"""
+"""This module visualizes wand positions in 3D"""
 
 import sys
 import numpy as np
