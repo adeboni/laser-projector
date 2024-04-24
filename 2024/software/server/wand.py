@@ -191,6 +191,7 @@ class KanoWand(object):
         
         self._await_bleak(self._dev.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_notification))
         self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
+        self.set_led(0, 0, 255)
         self.connected = True
         print(f'Connected to {self.name}')
 
