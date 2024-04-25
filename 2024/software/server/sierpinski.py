@@ -3,7 +3,6 @@
 import threading
 import socket
 import numpy as np
-import pyquaternion
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
@@ -53,7 +52,6 @@ def find_surface_normal(surface):
 
 plane_normals = np.array([find_surface_normal(surface) for surface in surfaces])
 plane_points = np.array([surface[0] for surface in surfaces])
-
 center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
 center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
 target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
@@ -118,11 +116,6 @@ def point_in_triangle(a, b, c, p):
 
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
-
-def find_quat(start, end):
-    axis = np.cross(start, end)
-    theta = np.arctan(np.linalg.norm(axis) / np.dot(start, end))
-    return pyquaternion.Quaternion(axis=axis, angle=theta)
 
 def get_wand_projection(start, end):
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
