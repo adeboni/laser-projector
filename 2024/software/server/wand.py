@@ -156,6 +156,70 @@ class WandSimulator:
             self.callback()
         self.prev_speed = new_speed
 
+class WandSimulatorQuat:
+    def __init__(self) -> None:
+        self.POS_QUEUE_LIMIT = 5
+        self.SPEED_THRESHOLD = 0.3
+
+        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
+        self.screen_width, self.screen_height = pyautogui.size()
+        self.position = pyquaternion.Quaternion()
+        self.callback = None
+        self.pos_queue = []
+        self.prev_speed = 0
+        self.connected = True
+
+    def __repr__(self):
+        return 'WandSimulatorQuat()'
+
+    def quit(self) -> None:
+        self.connected = False
+        
+    def get_rotation_angle(self) -> int:
+        return 0
+
+    def get_wand_color(self) -> list[int]:
+        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
+        return [int(r * 255), int(g * 255), int(b * 255)]
+
+    def get_synth_point(self) -> list[float]:
+        if lp := self.get_laser_point():
+            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
+            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
+            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
+            return (x, y, r)
+        else:
+            return None
+
+    def get_laser_point(self) -> laser_point.LaserPoint:
+        if self.position is None:
+            return None
+        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
+        end = self.position.rotate(sierpinski.target_vector)
+        end[2] += sierpinski.HUMAN_HEIGHT
+        if wand_projection := sierpinski.get_wand_projection(start, end):
+            laser_index, wand_point = wand_projection
+            laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
+            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
+        else:
+            return None
+
+    def update_position(self) -> tuple[float, float]:
+        if not self.connected:
+            return
+        mouse = pyautogui.position()
+        x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
+        y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
+        self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
+        tip_pos = self.position.rotate([1, 0, 0])[2]
+        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
+            self.pos_queue.pop(0)
+        self.pos_queue.append(tip_pos)
+        new_speed = self.pos_queue[-1] - self.pos_queue[0]
+        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
+            self.callback()
+        self.prev_speed = new_speed
+
 class KANO_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
     VIBRATOR_CHAR = '64a70008-f691-4b93-a6f4-0968f5b648f8'
