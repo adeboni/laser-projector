@@ -129,6 +129,8 @@ class MainApp:
                         del self.wands[event.instance_id]
                         self.labels['Wands'] = f'{len(self.wands)}'
                 elif event.type == wand.KANO_WAND_CONNECT:
+                    if -1 in self.wands:
+                        del self.wands[-1]
                     self.wands[event.wand.name] = event.wand
                     self.labels['Wands'] = f'{len(self.wands)}'
                 elif event.type == wand.KANO_WAND_DISCONNECT:
