@@ -282,6 +282,7 @@ class KanoWand(object):
         new_speed = self.pos_queue[-1] - self.pos_queue[0]
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
+            self.vibrate(KANO_PATTERN.BURST)
         self.prev_speed = new_speed
 
         # Auto disconnect after 10 minutes of not pressing any buttons
@@ -307,8 +308,11 @@ class KanoScanner(object):
         self._bleak_thread.start()
         self._bleak_thread_ready.wait()
         self.found_wands = {}
-        self.scanning = False
 
+        self._scan_thread = threading.Thread(target=self._scan_thread, daemon=True)
+        self._scan_event = threading.Event()
+        self.scanning = False
+        
     def _run_bleak_loop(self):
         self._bleak_loop = asyncio.new_event_loop()
         self._bleak_thread_ready.set()
@@ -318,13 +322,13 @@ class KanoScanner(object):
         if not self.scanning:
             print('Starting Kano Wand scanner')
             self.scanning = True
-            self._scan_thread = threading.Thread(target=self._server, daemon=True)
             self._scan_thread.start()
 
     def stop(self):
         if self.scanning:
             print('Stopping Kano Wand scanner')
             self.scanning = False
+            self._scan_event.set()
             self._scan_thread.join()
     
     def _scan_thread(self):
@@ -332,10 +336,7 @@ class KanoScanner(object):
             new_wands = self.scan()
             for wand in new_wands:
                 pygame.event.post(pygame.event.Event(KANO_WAND_CONNECT, wand=wand))
-            for _ in range(5):
-                time.sleep(1)
-                if not self.scanning:
-                    return
+            self._scan_event.wait(5)
 
     def scan(self):
         for wand in list(self.found_wands):
