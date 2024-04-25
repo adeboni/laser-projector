@@ -45,18 +45,6 @@ def quaternion_between_vectors(v1, v2):
 
 q_init = quaternion_between_vectors(endpoints[1], endpoints[0])
 
-def euler_angles(v1, v2):
-    dot = np.dot(v1, v2)
-    cross = np.cross(v1, v2)
-    yaw = np.arctan2(cross[1], cross[0])
-    pitch = np.arctan2(cross[2], np.sqrt(cross[0]**2 + cross[1]**2))
-    roll = np.arctan2(dot, np.sqrt(1 - dot**2))
-    return (np.degrees(yaw), np.degrees(pitch), np.degrees(roll))
-
-def two_angles(v1, v2):
-    v = v2 - v1
-    return (np.degrees(-np.arcsin(v[1])), np.degrees(np.arcsin(v[2])))
-
 next_print = 0
 def animate(_):
     global next_print
@@ -67,7 +55,8 @@ def animate(_):
         line.set_data([0, new_end[0]], [0, new_end[1]])
         line.set_3d_properties([0, new_end[2]])
         if time.time() > next_print and i == 1:
-            print(f'{end} -> {new_end} = {two_angles(end, new_end)}')
+            v = new_end - end
+            print(f'{end} -> {new_end} = {(np.degrees(-np.arcsin(v[1])), np.degrees(np.arcsin(v[2])))}')
             next_print = time.time() + 0.25
 
 ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
