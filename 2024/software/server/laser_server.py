@@ -62,16 +62,16 @@ class LaserServer:
                 packet = None
     
     def start(self) -> None:
-        if not self.server.is_alive():
+        if not self.server_running:
             print(f'Starting laser server targeting {self.targets}')
             self.server_running = True
             self.server.start()
             
     def stop(self) -> None:
-        print('Stopping laser server')
-        self.server_running = False
-        while self.server.is_alive():
-            pass
+        if self.server_running:
+            print('Stopping laser server')
+            self.server_running = False
+            self.server.join()
 
     def set_effect(self, effect) -> None:
         laser_generators.current_effect = effect

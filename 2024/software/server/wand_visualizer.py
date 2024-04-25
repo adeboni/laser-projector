@@ -1,12 +1,11 @@
 """This module visualizes wand positions in 3D"""
 
-import sys
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
 import pygame
-import pyquaternion
+import sierpinski
 
 wands = []
 
@@ -31,12 +30,13 @@ if len(wands) > 0:
     ax.set_zlim((-5, 5))
     ax.view_init(20, 50)
 
-    lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
+    lines = sum([ax.plot([], [], [], c=c) for c in ['k', 'r', 'g', 'b']], [])
     wand_graphic_scale = 2
-    endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
+    endpoints = np.array([sierpinski.target_vector, [1, 0, 0], [0, 1, 0], [0, 0, 1]]) * wand_graphic_scale
 
     def animate(_):
-        q = wands[0].update_position()
+        wands[0].update_position()
+        q = wands[0].position
         for line, end in zip(lines, endpoints):
             end = q.rotate(end)
             line.set_data([0, end[0]], [0, end[1]])

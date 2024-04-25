@@ -11,6 +11,10 @@ import numpy as np
 import pyautogui
 import asyncio
 import bleak
+import time
+
+KANO_WAND_CONNECT = pygame.USEREVENT + 1
+KANO_WAND_DISCONNECT = pygame.USEREVENT + 2
 
 class Wand:
     def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
@@ -29,11 +33,13 @@ class Wand:
         self.pump = pump
         self.position_raw = pyquaternion.Quaternion()
         self.reset_cal = False
+        self.connected = True
 
     def __repr__(self):
         return f'Wand(ID: {self.joystick.get_instance_id()})'
 
     def quit(self) -> None:
+        self.connected = False
         self.joystick.quit()
         
     def get_rotation_angle(self) -> int:
@@ -74,6 +80,8 @@ class Wand:
             return None
 
     def update_position(self) -> pyquaternion.quaternion:
+        if not self.connected:
+            return
         if self.pump:
             pygame.event.pump()
         self.position_raw = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
@@ -94,7 +102,6 @@ class Wand:
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
-        return self.position
         
 class WandSimulator:
     def __init__(self) -> None:
@@ -107,12 +114,13 @@ class WandSimulator:
         self.callback = None
         self.pos_queue = []
         self.prev_speed = 0
+        self.connected = True
 
     def __repr__(self):
         return 'WandSimulator()'
 
     def quit(self) -> None:
-        pass
+        self.connected = False
         
     def get_rotation_angle(self) -> int:
         return 0
@@ -132,6 +140,8 @@ class WandSimulator:
         return laser_point.LaserPoint(0, int(self.position[0]), int(self.position[1]), *self.get_wand_color())
 
     def update_position(self) -> tuple[float, float]:
+        if not self.connected:
+            return
         mouse = pyautogui.position()
         x = np.interp(mouse.x, [0, self.screen_width], [self.min_x, self.max_x])
         y = np.interp(mouse.y, [0, self.screen_height], [self.max_y, self.min_y])
@@ -145,7 +155,6 @@ class WandSimulator:
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
-        return self.position
 
 class KANO_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
@@ -194,6 +203,7 @@ class KanoWand(object):
         self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
         self.set_led(0, 0, 255)
         self.connected = True
+        self.connected_time = time.time()
         print(f'Connected to {self.name}')
 
     def __repr__(self):
@@ -212,11 +222,13 @@ class KanoWand(object):
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
             self.reset_cal = True
+            self.connected_time = time.time()
 
     def quit(self) -> None:
         if self.connected:
-            self._await_bleak(self._dev.disconnect())
+            pygame.event.post(pygame.event.Event(KANO_WAND_DISCONNECT, wand_name=self.name))
             self.connected = False
+            self._await_bleak(self._dev.disconnect())
             print(f'Disconnected from {self.name}')
         
     def get_rotation_angle(self) -> int:
@@ -257,6 +269,8 @@ class KanoWand(object):
             return None
 
     def update_position(self) -> pyquaternion.Quaternion:
+        if not self.connected:
+            return
         if not self.cal_offset or self.reset_cal:
             self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
             self.reset_cal = False
@@ -269,7 +283,10 @@ class KanoWand(object):
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
-        return self.position
+
+        # Auto disconnect after 10 minutes of not pressing any buttons
+        if time.time() > self.connected_time + 600:
+            self.quit()
 
     def vibrate(self, pattern=KANO_PATTERN.REGULAR):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
@@ -280,7 +297,7 @@ class KanoWand(object):
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
 
-class KanoHandler(object):
+class KanoScanner(object):
     """A scanner class to connect to wands"""
 
     def __init__(self):
@@ -289,23 +306,54 @@ class KanoHandler(object):
         self._bleak_thread_ready = threading.Event()
         self._bleak_thread.start()
         self._bleak_thread_ready.wait()
+        self.found_wands = {}
+        self.scanning = False
 
     def _run_bleak_loop(self):
         self._bleak_loop = asyncio.new_event_loop()
         self._bleak_thread_ready.set()
         self._bleak_loop.run_forever()
 
-    def scan(self, existing_wands: list[str]=[]):
+    def start(self):
+        if not self.scanning:
+            print('Starting Kano Wand scanner')
+            self.scanning = True
+            self._scan_thread = threading.Thread(target=self._server, daemon=True)
+            self._scan_thread.start()
+
+    def stop(self):
+        if self.scanning:
+            print('Stopping Kano Wand scanner')
+            self.scanning = False
+            self._scan_thread.join()
+    
+    def _scan_thread(self):
+        while self.scanning:
+            new_wands = self.scan()
+            for wand in new_wands:
+                pygame.event.post(pygame.event.Event(KANO_WAND_CONNECT, wand=wand))
+            for _ in range(5):
+                time.sleep(1)
+                if not self.scanning:
+                    return
+
+    def scan(self):
+        for wand in list(self.found_wands):
+            if not self.found_wands[wand].connected:
+                del self.found_wands[wand]
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
-        devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in existing_wands]
-        return [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
+        devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in self.found_wands]
+        new_wands = [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
+        for wand in new_wands:
+            self.found_wands[wand.name] = wand
+        return new_wands
     
 
 if __name__ == '__main__':
     wands = []
 
-    kano_handler = KanoHandler()
-    wands.extend(kano_handler.scan())
+    kano_scanner = KanoScanner()
+    wands.extend(kano_scanner.scan())
     
     pygame.init()
     joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]

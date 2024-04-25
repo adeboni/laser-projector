@@ -17,6 +17,7 @@ class MainApp:
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
         self.sacn = sacn_handler.SACNHandler(target_ip)
         self.synth = synthesizer.SynthServer()
+        self.kano_scanner = wand.KanoScanner()
 
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
@@ -62,8 +63,8 @@ class MainApp:
     def show_screen(self) -> None:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption('Laser Control Station')
-        update_songs = pygame.USEREVENT
-        pygame.time.set_timer(update_songs, 100)
+        UPDATE_SONGS = pygame.USEREVENT
+        pygame.time.set_timer(UPDATE_SONGS, 100)
         clock = pygame.time.Clock()
 
         while True:
@@ -74,6 +75,7 @@ class MainApp:
                     self.sacn.stop()
                     self.laser_server.stop()
                     self.synth.stop_server()
+                    self.kano_scanner.stop()
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
@@ -102,7 +104,7 @@ class MainApp:
                             self.songs.play_next_song()
                     self._update_screen(screen)
                     self.sacn.key_down(event.key)
-                elif event.type == update_songs:
+                elif event.type == UPDATE_SONGS:
                     self.songs.update()
                     song_queue = ' '.join([x.song_id_str for x in self.songs.song_queue])
                     if len(song_queue) > 28:
@@ -125,6 +127,13 @@ class MainApp:
                     if event.instance_id in self.wands:
                         self.wands[event.instance_id].quit()
                         del self.wands[event.instance_id]
+                        self.labels['Wands'] = f'{len(self.wands)}'
+                elif event.type == wand.KANO_WAND_CONNECT:
+                    self.wands[event.wand.name] = event.wand
+                    self.labels['Wands'] = f'{len(self.wands)}'
+                elif event.type == wand.KANO_WAND_DISCONNECT:
+                    if event.wand_name in self.wands:
+                        del self.wands[event.wand_name]
                         self.labels['Wands'] = f'{len(self.wands)}'
             
             for k, w in self.wands.items():
@@ -160,5 +169,6 @@ if __name__ == '__main__':
         app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app.laser_server.start()
     app.synth.start_server()
+    app.kano_scanner.start()
     app.start_sacn()
     app.show_screen()
