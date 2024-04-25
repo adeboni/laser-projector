@@ -48,7 +48,8 @@ q_init = quaternion_between_vectors(endpoints[1], endpoints[0])
 
 def animate(_):
     wands[0].update_position()
-    q = q_init * wands[0].position
+    #q = q_init * wands[0].position
+    q = wands[0].position
     for line, end in zip(lines, endpoints):
         end = q.rotate(end)
         line.set_data([0, end[0]], [0, end[1]])
