@@ -46,14 +46,25 @@ def quaternion_between_vectors(v1, v2):
 
 q_init = quaternion_between_vectors(endpoints[1], endpoints[0])
 
+def euler_angles_between_vectors(v1, v2):
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = v2 / np.linalg.norm(v2)
+    dot = np.dot(v1, v2)
+    cross = np.cross(v1, v2)
+    yaw = np.arctan2(cross[1], cross[0])
+    pitch = np.arctan2(cross[2], np.sqrt(cross[0]**2 + cross[1]**2))
+    roll = np.arctan2(dot, np.sqrt(1 - dot**2))
+    return (np.degrees(yaw), np.degrees(pitch), np.degrees(roll))
+
 def animate(_):
     wands[0].update_position()
     #q = q_init * wands[0].position
     q = wands[0].position
     for line, end in zip(lines, endpoints):
-        end = q.rotate(end)
-        line.set_data([0, end[0]], [0, end[1]])
-        line.set_3d_properties([0, end[2]])
+        new_end = q.rotate(end)
+        #print(euler_angles_between_vectors(end, new_end))
+        line.set_data([0, new_end[0]], [0, new_end[1]])
+        line.set_3d_properties([0, new_end[2]])
 
 ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
 plt.show()
