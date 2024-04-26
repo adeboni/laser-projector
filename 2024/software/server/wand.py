@@ -227,7 +227,7 @@ class KanoWand(WandBase):
         new_speed = self.pos_queue[0] - self.pos_queue[-1]
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
-            self.vibrate(KANO_PATTERN.BURST)
+            self.vibrate(KANO_PATTERN.SHORT)
         self.prev_speed = new_speed
 
         # Auto disconnect after 10 minutes of not pressing any buttons
