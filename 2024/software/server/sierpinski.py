@@ -56,6 +56,10 @@ center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
 center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
 target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
 target_vector = target_vector / np.linalg.norm(target_vector)
+target_yaw = np.arctan2(target_vector[1], target_vector[0])
+target_pitch = np.arctan2(-target_vector[2], np.sqrt(target_vector[0]**2 + target_vector[1]**2))
+yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
+pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
 
 tp_offsets = [
     [[1, 0], [0, 1], [-1, 0], [0, -1]],
@@ -117,12 +121,14 @@ def point_in_triangle(a, b, c, p):
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
-def get_wand_projection(start, end):
+def get_wand_projection(quaternion):
+    start = np.array([0, 0, HUMAN_HEIGHT])
+    end = np.dot(yaw_matrix, np.dot(pitch_matrix, quaternion.rotate([1, 0, 0])))
+    end[2] += HUMAN_HEIGHT
+    v = end - start
+    if v[2] < 0:
+        return None
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
-        v = end - start
-        if v[2] < 0:
-            continue
-            # v = -v
         point = end + (np.dot(pp - end, pn / np.dot(v, pn)) * v)
         if point_in_surface(s, point):
             return (i, point)

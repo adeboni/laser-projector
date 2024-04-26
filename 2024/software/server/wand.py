@@ -16,23 +16,70 @@ import time
 KANO_WAND_CONNECT = pygame.USEREVENT + 1
 KANO_WAND_DISCONNECT = pygame.USEREVENT + 2
 
-class Wand:
-    def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.3
-
+class WandBase:
+    def __init__(self) -> None:
         self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
-        self.joystick = joystick
         self.position = None
         self.callback = None
         self.pos_queue = []
         self.prev_speed = 0
         self.cal_offset = None
-        self.pump = pump
-        self.position_raw = pyquaternion.Quaternion()
+        self.position = pyquaternion.Quaternion()
         self.reset_cal = False
+        self.last_angle = 0
+
+    def get_rotation_angle(self) -> int:
+        if self.position is None:
+            return self.last_angle
+        v0 = self.position.rotate([0, 1, 0])
+        v1 = self.position.rotate([1, 0, 0])
+        v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
+        v3 = np.cross(v1, v2)
+        d1 = np.dot(v0, v2)
+        d2 = np.dot(v0, v3)
+        if np.isnan(d1) or np.isnan(d2):
+            return self.last_angle
+        d1 = np.arccos(d1)
+        d2 = np.arccos(d2)
+        if np.isnan(d1) or np.isnan(d2):
+            return self.last_angle
+        phi1 = int(np.degrees(d1))
+        phi2 = int(np.degrees(d2))
+        self.last_angle = phi1 if phi2 < 90 else 360 - phi1
+        return self.last_angle
+
+    def get_wand_color(self) -> list[int]:
+        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
+        return [int(r * 255), int(g * 255), int(b * 255)]
+
+    def get_synth_point(self) -> list[float]:
+        if lp := self.get_laser_point():
+            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
+            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
+            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
+            return (x, y, r)
+        else:
+            return None
+
+    def get_laser_point(self) -> laser_point.LaserPoint:
+        if self.position is None:
+            return None
+        if wand_projection := sierpinski.get_wand_projection(self.position):
+            laser_index, wand_point = wand_projection
+            laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
+            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
+        else:
+            return None
+
+class Wand(WandBase):
+    def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
+        super().__init__()
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
+        self.POS_QUEUE_LIMIT = 5
+        self.SPEED_THRESHOLD = 0.3
+        self.joystick = joystick
+        self.pump = pump
         self.connected = True
 
     def __repr__(self):
@@ -42,131 +89,37 @@ class Wand:
         self.connected = False
         self.joystick.quit()
         
-    def get_rotation_angle(self) -> int:
-        if self.position is None:
-            return 0
-        v0 = self.position.rotate([0, 1, 0])
-        v1 = self.position.rotate([1, 0, 0])
-        v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
-        v3 = np.cross(v1, v2)
-        phi1 = int(np.degrees(np.arccos(np.dot(v0, v2))))
-        phi2 = int(np.degrees(np.arccos(np.dot(v0, v3))))
-        return phi1 if phi2 < 90 else 360 - phi1
-
-    def get_wand_color(self) -> list[int]:
-        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
-        return [int(r * 255), int(g * 255), int(b * 255)]
-
-    def get_synth_point(self) -> list[float]:
-        if lp := self.get_laser_point():
-            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
-            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
-            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
-            return (x, y, r)
-        else:
-            return None
-
-    def get_laser_point(self) -> laser_point.LaserPoint:
-        if self.position is None:
-            return None
-        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
-        end = self.position.rotate(sierpinski.target_vector)
-        end[2] += sierpinski.HUMAN_HEIGHT
-        if wand_projection := sierpinski.get_wand_projection(start, end):
-            laser_index, wand_point = wand_projection
-            laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
-            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
-        else:
-            return None
-
-    def update_position(self) -> pyquaternion.quaternion:
+    def update_position(self) -> None:
         if not self.connected:
             return
         if self.pump:
             pygame.event.pump()
-        self.position_raw = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
+        position_raw = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
                                                     x=self.joystick.get_axis(0), 
                                                     y=self.joystick.get_axis(1), 
                                                     z=self.joystick.get_axis(2))
         # if self.joystick.get_button(1):
         #     self.reset_cal = True
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
+        
         tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[-1] - self.pos_queue[0]
+        new_speed = self.pos_queue[0] - self.pos_queue[-1]
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
         
-class WandSimulator:
+class WandSimulator(WandBase):
     def __init__(self) -> None:
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 300
-
-        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
-        self.screen_width, self.screen_height = pyautogui.size()
-        self.position = [0, 0]
-        self.callback = None
-        self.pos_queue = []
-        self.prev_speed = 0
-        self.connected = True
-
-    def __repr__(self):
-        return 'WandSimulator()'
-
-    def quit(self) -> None:
-        self.connected = False
-        
-    def get_rotation_angle(self) -> int:
-        return 0
-
-    def get_wand_color(self) -> list[int]:
-        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
-        return [int(r * 255), int(g * 255), int(b * 255)]
-
-    def get_synth_point(self) -> list[float]:
-        lp = self.get_laser_point()
-        x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
-        y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
-        r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
-        return (x, y, r)
-
-    def get_laser_point(self) -> laser_point.LaserPoint:
-        return laser_point.LaserPoint(0, int(self.position[0]), int(self.position[1]), *self.get_wand_color())
-
-    def update_position(self) -> tuple[float, float]:
-        if not self.connected:
-            return
-        mouse = pyautogui.position()
-        x = np.interp(mouse.x, [0, self.screen_width], [self.min_x, self.max_x])
-        y = np.interp(mouse.y, [0, self.screen_height], [self.max_y, self.min_y])
-        self.position = [x, y]
-
-        tip_pos = self.position[1]
-        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
-            self.pos_queue.pop(0)
-        self.pos_queue.append(tip_pos)
-        new_speed = -(self.pos_queue[-1] - self.pos_queue[0])
-        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
-            self.callback()
-        self.prev_speed = new_speed
-
-class WandSimulatorQuat:
-    def __init__(self) -> None:
+        super().__init__()
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.3
-
-        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.screen_width, self.screen_height = pyautogui.size()
-        self.position = pyquaternion.Quaternion()
-        self.callback = None
-        self.pos_queue = []
-        self.prev_speed = 0
         self.connected = True
 
     def __repr__(self):
@@ -174,48 +127,20 @@ class WandSimulatorQuat:
 
     def quit(self) -> None:
         self.connected = False
-        
-    def get_rotation_angle(self) -> int:
-        return 0
 
-    def get_wand_color(self) -> list[int]:
-        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
-        return [int(r * 255), int(g * 255), int(b * 255)]
-
-    def get_synth_point(self) -> list[float]:
-        if lp := self.get_laser_point():
-            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
-            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
-            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
-            return (x, y, r)
-        else:
-            return None
-
-    def get_laser_point(self) -> laser_point.LaserPoint:
-        if self.position is None:
-            return None
-        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
-        end = self.position.rotate(sierpinski.target_vector)
-        end[2] += sierpinski.HUMAN_HEIGHT
-        if wand_projection := sierpinski.get_wand_projection(start, end):
-            laser_index, wand_point = wand_projection
-            laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
-            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
-        else:
-            return None
-
-    def update_position(self) -> tuple[float, float]:
+    def update_position(self) -> None:
         if not self.connected:
             return
         mouse = pyautogui.position()
         x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
         y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
         self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
+
         tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[-1] - self.pos_queue[0]
+        new_speed = self.pos_queue[0] - self.pos_queue[-1]
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
@@ -235,27 +160,19 @@ class KANO_PATTERN(enum.Enum):
     SHORT_SHORT = 6
     BIG_PAUSE = 7
 
-class KanoWand(object):
+class KanoWand(WandBase):
     """A wand class to interact with the Kano wand"""
 
     def __init__(self, device_addr, name, bleak_loop):
+        super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.4
-
-        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
-        self.position = None
-        self.callback = None
-        self.pos_queue = []
-        self.prev_speed = 0
-        self.cal_offset = None
-        self.position_raw = pyquaternion.Quaternion()
-        self.reset_cal = False
-
-        self._dev = bleak.BleakClient(device_addr)
         self.name = name
+        self._dev = bleak.BleakClient(device_addr)
         self._bleak_loop = bleak_loop
+        self.position_raw = pyquaternion.Quaternion()
         
         print(f'Connecting to {self.name}...')
         connected = self._await_bleak(self._dev.connect())
@@ -295,55 +212,19 @@ class KanoWand(object):
             self._await_bleak(self._dev.disconnect())
             print(f'Disconnected from {self.name}')
         
-    def get_rotation_angle(self) -> int:
-        if self.position is None:
-            return 0
-        v0 = self.position.rotate([0, 1, 0])
-        v1 = self.position.rotate([1, 0, 0])
-        v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
-        v3 = np.cross(v1, v2)
-        phi1 = int(np.degrees(np.arccos(np.dot(v0, v2))))
-        phi2 = int(np.degrees(np.arccos(np.dot(v0, v3))))
-        return phi1 if phi2 < 90 else 360 - phi1
-
-    def get_wand_color(self) -> list[int]:
-        r, g, b = colorsys.hsv_to_rgb(self.get_rotation_angle() / 360, 1, 1)
-        return [int(r * 255), int(g * 255), int(b * 255)]
-
-    def get_synth_point(self) -> list[float]:
-        if lp := self.get_laser_point():
-            x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
-            y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
-            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
-            return (x, y, r)
-        else:
-            return None
-
-    def get_laser_point(self) -> laser_point.LaserPoint:
-        if self.position is None:
-            return None
-        start = np.array([0, 0, sierpinski.HUMAN_HEIGHT])
-        end = self.position.rotate(sierpinski.target_vector)
-        end[2] += sierpinski.HUMAN_HEIGHT
-        if wand_projection := sierpinski.get_wand_projection(start, end):
-            laser_index, wand_point = wand_projection
-            laser_x, laser_y = sierpinski.sierpinski_to_laser_coords(laser_index, *wand_point)
-            return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
-        else:
-            return None
-
-    def update_position(self) -> pyquaternion.Quaternion:
+    def update_position(self) -> None:
         if not self.connected:
             return
         if not self.cal_offset or self.reset_cal:
             self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
             self.reset_cal = False
         self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+
         tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[-1] - self.pos_queue[0]
+        new_speed = self.pos_queue[0] - self.pos_queue[-1]
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
             self.vibrate(KANO_PATTERN.BURST)
@@ -362,7 +243,7 @@ class KanoWand(object):
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
 
-class KanoScanner(object):
+class KanoScanner:
     """A scanner class to connect to wands"""
 
     def __init__(self):

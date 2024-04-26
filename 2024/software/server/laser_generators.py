@@ -373,6 +373,8 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         else:
             current_path = current_path % len(paths)
             p = list(paths.values())[current_path]
+            if len(p) == 0:
+                continue
             path_index = path_index % len(p)
 
             if path_index == len(p) - 1 or path_index == 0:

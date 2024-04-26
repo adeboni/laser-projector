@@ -5,9 +5,6 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
 import pygame
-import sierpinski
-import pyquaternion
-import time
 
 wands = []
 
@@ -23,7 +20,7 @@ for joystick in joysticks:
         joystick.quit()
 
 if len(wands) == 0:
-    wands.append(wand.WandSimulatorQuat())
+    wands.append(wand.WandSimulator())
 
 print('Found wands:', [wand for wand in wands])
 
@@ -32,32 +29,22 @@ ax = fig.add_subplot(111, projection='3d')
 ax.set_xlim((-2, 2))
 ax.set_ylim((-2, 2))
 ax.set_zlim((-2, 2))
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_zlabel('Z')
 ax.view_init(20, 50)
 
-lines = sum([ax.plot([], [], [], c=c) for c in ['k', 'r', 'g', 'b']], [])
-endpoints = np.array([sierpinski.target_vector, [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
+endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
-def quaternion_between_vectors(v1, v2):
-    w = np.sqrt((np.linalg.norm(v1)**2) * (np.linalg.norm(v2)**2)) + np.dot(v1, v2)
-    x, y, z = np.cross(v1, v2)
-    q = np.array([w, x, y, z]) / np.linalg.norm([w, x, y, z])
-    return pyquaternion.Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-
-q_init = quaternion_between_vectors(endpoints[1], endpoints[0])
-
-next_print = 0
 def animate(_):
-    global next_print
+    global next_update
     wands[0].update_position()
     q = wands[0].position
-    for i, (line, end) in enumerate(zip(lines, endpoints)):
-        new_end = q.rotate(end)
-        line.set_data([0, new_end[0]], [0, new_end[1]])
-        line.set_3d_properties([0, new_end[2]])
-        if time.time() > next_print and i == 1:
-            v = new_end - end
-            print(f'{end} -> {new_end} = {(np.degrees(-np.arcsin(v[1])), np.degrees(np.arcsin(v[2])))}')
-            next_print = time.time() + 0.25
+    for line, end in zip(lines, endpoints):
+        v = q.rotate(end)
+        line.set_data([0, v[0]], [0, v[1]])
+        line.set_3d_properties([0, v[2]])
 
 ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
 plt.show()
