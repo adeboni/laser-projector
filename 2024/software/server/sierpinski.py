@@ -121,9 +121,12 @@ def point_in_triangle(a, b, c, p):
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
+def apply_quaternion(quaternion):
+    return np.dot(yaw_matrix, np.dot(pitch_matrix, quaternion.rotate([1, 0, 0])))
+
 def get_wand_projection(quaternion):
     start = np.array([0, 0, HUMAN_HEIGHT])
-    end = np.dot(yaw_matrix, np.dot(pitch_matrix, quaternion.rotate([1, 0, 0])))
+    end = apply_quaternion(quaternion)
     end[2] += HUMAN_HEIGHT
     v = end - start
     if v[2] < 0:

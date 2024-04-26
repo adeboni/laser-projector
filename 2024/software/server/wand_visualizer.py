@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
 import pygame
+import sierpinski
 
 wands = []
 
@@ -42,7 +43,8 @@ def animate(_):
     wands[0].update_position()
     q = wands[0].position
     for line, end in zip(lines, endpoints):
-        v = q.rotate(end)
+        #v = q.rotate(end)
+        v = sierpinski.apply_quaternion(q)
         line.set_data([0, v[0]], [0, v[1]])
         line.set_3d_properties([0, v[2]])
 
