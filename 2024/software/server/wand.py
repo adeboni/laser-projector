@@ -35,12 +35,10 @@ class WandBase:
         v1 = self.position.rotate([1, 0, 0])
         v2 = np.array([-1.0 * v1[0] * v1[2], -1.0 * v1[1] * v1[2], v1[0]**2 + v1[1]**2]) / np.sqrt(v1[0]**2 + v1[1]**2)
         v3 = np.cross(v1, v2)
-        d1 = np.dot(v0, v2)
-        d2 = np.dot(v0, v3)
+        d1, d2 = np.dot(v0, v2), np.dot(v0, v3)
         if np.isnan(d1) or np.isnan(d2):
             return self.last_angle
-        d1 = np.arccos(d1)
-        d2 = np.arccos(d2)
+        d1, d2 = np.arccos(np.clip(d1, -1, 1)), np.arccos(np.clip(d2, -1, 1))
         if np.isnan(d1) or np.isnan(d2):
             return self.last_angle
         phi1 = int(np.degrees(d1))
@@ -134,7 +132,10 @@ class WandSimulator(WandBase):
         mouse = pyautogui.position()
         x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
         y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
-        self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
+        self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
+                      * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
+                      * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
+                      * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
 
         tip_pos = self.position.rotate([1, 0, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
