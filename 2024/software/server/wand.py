@@ -231,10 +231,6 @@ class KanoWand(WandBase):
             self.vibrate(KANO_PATTERN.SHORT)
         self.prev_speed = new_speed
 
-        # Auto disconnect after 10 minutes of not pressing any buttons
-        if time.time() > self.connected_time + 600:
-            self.quit()
-
     def vibrate(self, pattern=KANO_PATTERN.REGULAR):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
