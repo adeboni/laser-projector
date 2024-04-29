@@ -185,7 +185,7 @@ class KanoWand(WandBase):
         self._await_bleak(self._dev.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_notification))
         self.set_led(0, 0, 255)
         self.connected = True
-        self.connected_time = time.time()
+        self.last_update = time.time()
         print(f'Connected to {self.name}')
 
     def __repr__(self):
@@ -195,6 +195,7 @@ class KanoWand(WandBase):
         return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
 
     def _handle_notification(self, sender, data):
+        self.last_update = time.time()
         if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
             y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
             x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
@@ -203,14 +204,16 @@ class KanoWand(WandBase):
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
-            self.reset_cal = True
-            self.connected_time = time.time()
+            self.reset_cal = True   
 
     def quit(self) -> None:
         if self.connected:
             pygame.event.post(pygame.event.Event(KANO_WAND_DISCONNECT, wand_name=self.name))
             self.connected = False
-            self._await_bleak(self._dev.disconnect())
+            try:
+                self._await_bleak(self._dev.disconnect())
+            except:
+                pass
             print(f'Disconnected from {self.name}')
         
     def update_position(self) -> None:
@@ -230,6 +233,9 @@ class KanoWand(WandBase):
             self.callback()
             self.vibrate(KANO_PATTERN.SHORT)
         self.prev_speed = new_speed
+        
+        if time.time() > self.last_update + 30:
+            self.quit()
 
     def vibrate(self, pattern=KANO_PATTERN.REGULAR):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
