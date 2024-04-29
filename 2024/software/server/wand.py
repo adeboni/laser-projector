@@ -174,10 +174,10 @@ class KanoWand(WandBase):
         self._dev = bleak.BleakClient(device_addr)
         self._bleak_loop = bleak_loop
         self.position_raw = pyquaternion.Quaternion()
+        self.connected = False
         
         print(f'Connecting to {self.name}...')
-        connected = self._await_bleak(self._dev.connect())
-        if not connected:
+        if not self._await_bleak(self._dev.connect()):
             print(f'Could not connect to {self.name}')
             return
         
@@ -192,7 +192,10 @@ class KanoWand(WandBase):
         return f'KanoWand(Name: {self.name}, Address: {self._dev.address})'
     
     def _await_bleak(self, coro):
-        return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
+        try:
+            return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
+        except:
+            return None
 
     def _handle_notification(self, sender, data):
         self.last_update = time.time()
@@ -210,10 +213,7 @@ class KanoWand(WandBase):
         if self.connected:
             pygame.event.post(pygame.event.Event(KANO_WAND_DISCONNECT, wand_name=self.name))
             self.connected = False
-            try:
-                self._await_bleak(self._dev.disconnect())
-            except:
-                pass
+            self._await_bleak(self._dev.disconnect())
             print(f'Disconnected from {self.name}')
         
     def update_position(self) -> None:
@@ -293,6 +293,7 @@ class KanoScanner:
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
         devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in self.found_wands]
         new_wands = [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
+        new_wands = [wand for wand in new_wands if wand.connected]
         for wand in new_wands:
             self.found_wands[wand.name] = wand
         return new_wands
