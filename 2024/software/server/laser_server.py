@@ -33,7 +33,8 @@ class LaserServer:
 
     def _server(self):
         for target_ip, _ in self.targets:
-            utilities.ping(target_ip)
+            if not utilities.ping(target_ip):
+                print(f'Could not ping {target_ip}!')
             
         PACKET_DELAY = 0.0258
         last_sent = 0
