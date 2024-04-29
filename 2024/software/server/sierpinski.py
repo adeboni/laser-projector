@@ -48,6 +48,8 @@ surfaces = [
 
 def find_surface_normal(surface):
     pn = np.cross(surface[1] - surface[0], surface[2] - surface[0])
+    if pn[2] < 0:
+        pn = -pn
     return pn / np.linalg.norm(pn)
 
 plane_normals = np.array([find_surface_normal(surface) for surface in surfaces])
@@ -61,11 +63,6 @@ target_pitch = np.arctan2(-target_vector[2], np.sqrt(target_vector[0]**2 + targe
 yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
 pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
 
-tp_offsets = [
-    [[1, 0], [0, 1], [-1, 0], [0, -1]],
-    [[-1, 0], [0, 1], [1, 0], [0, -1]],
-    [[1, 0], [0, 1], [-1, 0], [0, -1]]
-]
 tp_orig = np.array([
     [0, 2048, 0],
     [2048, 4095, 0],
@@ -85,11 +82,11 @@ laser_centers = [laser - np.dot(laser - pp, pn) * pn
 laser_distance = np.linalg.norm(laser_centers[0] - lasers[0])
 half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
 
-for lc, pn, tpo in zip(laser_centers, plane_normals, tp_offsets):
+for lc, pn in zip(laser_centers, plane_normals):
     v1 = np.array([-pn[1], pn[0], 0])
     v1 = v1 / np.linalg.norm(v1)
     v2 = np.cross(pn, v1) 
-    tp_new = np.array([lc + half_width * (tpo[0] * v1 + tpo[1] * v2) for tpo in tpo])
+    tp_new = np.array([lc + half_width * (tpo[0] * v1 + tpo[1] * v2) for tpo in [(1, 0), (0, 1), (-1, 0), (0, -1)]])
     a = np.concatenate((tp_orig, np.ones((tp_orig.shape[0], 1))), axis=1)
     b = np.concatenate((tp_new, np.ones((tp_new.shape[0], 1))), axis=1)
     t, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
@@ -132,7 +129,10 @@ def get_wand_projection(quaternion):
     if v[2] < 0:
         return None
     for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
-        point = end + (np.dot(pp - end, pn / np.dot(v, pn)) * v)
+        denom = np.dot(v, pn)
+        if denom < 0.01:
+            continue
+        point = end + (np.dot(pp - end, pn / denom) * v)
         if point_in_surface(s, point):
             return (i, point)
     return None
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     for e1, e2 in edges:
         ax.plot([e1[0], e2[0]], [e1[1], e2[1]], [e1[2], e2[2]], color='k')
-
+        
     for surface in surfaces:
         ax.plot_trisurf(*[[s[i] for s in surface] for i in range(3)], color='y', alpha=0.2)
 
