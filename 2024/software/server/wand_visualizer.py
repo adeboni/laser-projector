@@ -35,18 +35,20 @@ ax.set_ylabel('Y')
 ax.set_zlabel('Z')
 ax.view_init(20, 50)
 
+target_line = ax.plot([], [], [], c='k')
 lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
 endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 def animate(_):
-    global next_update
     wands[0].update_position()
     q = wands[0].position
     for line, end in zip(lines, endpoints):
-        #v = q.rotate(end)
-        v = sierpinski.apply_quaternion(q)
+        v = q.rotate(end)
         line.set_data([0, v[0]], [0, v[1]])
         line.set_3d_properties([0, v[2]])
+    v = sierpinski.apply_quaternion(q)
+    target_line[0].set_data([0, v[0]], [0, v[1]])
+    target_line[0].set_3d_properties([0, v[2]])
 
 ani = animation.FuncAnimation(fig, animate, interval=25, cache_frame_data=False)
 plt.show()

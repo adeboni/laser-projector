@@ -170,6 +170,9 @@ if __name__ == '__main__':
     ax.set_xlim((-25, 25))
     ax.set_ylim((-25, 25))
     ax.set_zlim((0, 40))
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
     ax.view_init(20, 50)
 
     for e1, e2 in edges:
@@ -182,7 +185,7 @@ if __name__ == '__main__':
         ax.plot([laser[0]], [laser[1]], [laser[2]], c='k', linestyle='', marker='o', alpha=0.2)
         ax.plot([laser[0], laser_center[0]], [laser[1], laser_center[1]], [laser[2], laser_center[2]], color='k', alpha=0.2)
 
-    laser_plots = [ax.plot([], [], [], c='r', alpha=0.6) for _ in range(3)]
+    laser_plots = [ax.plot([], [], [], c=c, alpha=0.6) for c in ['r', 'g', 'b']]
 
     for i in range(3):
         threading.Thread(target=_laser_thread, args=(i,), daemon=True).start()
