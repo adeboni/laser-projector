@@ -24,7 +24,7 @@ class SynthServer:
 
     def start_synth(self, id: int) -> None:
         if self.running and id not in self.synths:
-            self.synths[id] = supercollider.Synth(self.server, 'scifi', {'x': 0, 'y': 0, 'r': 0})
+            self.synths[id] = supercollider.Synth(self.server, 'scifi')
 
     def stop_all_synths(self) -> None:
         for id in list(self.synths):
