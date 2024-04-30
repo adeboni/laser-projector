@@ -91,7 +91,7 @@ class MainApp:
                         for k, w in self.wands.items():
                             w.callback = self.songs.play_effect if self.current_mode == 8 else None
                             if self.current_mode == 7:
-                                self.synth.start_synth(k, synthesizer.sci_fi)
+                                self.synth.start_synth(k)
                             else:
                                 self.synth.stop_all_synths()
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
