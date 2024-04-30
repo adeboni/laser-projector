@@ -4,8 +4,8 @@ import subprocess
 def ping(host: str) -> bool:
     """Returns True if host responds to a ping request"""
 
-    if platform.system().lower() == "windows":
-        command = "ping -n 1 " + host
+    if platform.system().lower() == 'windows':
+        command = f'ping -n 1 {host}'
         window_creation_flag = 0x08000000  # CREATE_NO_WINDOW
         process = subprocess.Popen(command, 
                                    stdin=subprocess.PIPE, 
@@ -13,7 +13,7 @@ def ping(host: str) -> bool:
                                    stderr=subprocess.PIPE, 
                                    creationflags=window_creation_flag)
     else:
-        command = "ping -c 1 " + host
+        command = ['ping', '-c 1', host]
         process = subprocess.Popen(command, 
                                    stdin=subprocess.PIPE, 
                                    stdout=subprocess.PIPE, 
