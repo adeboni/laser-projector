@@ -120,6 +120,10 @@ class Effect:
         self.start_time = time.time()
         self.sound_obj.play()
 
+    def stop(self) -> None:
+        """Stops the file"""
+        self.sound_obj.stop()
+
     def get_data(self, blocksize: int, interval: int) -> list[float]:
         """Returns a block of data from the current audio"""
         if self.data is not None and time.time() < self.start_time + self.length_s:
@@ -145,10 +149,16 @@ class SongHandler:
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
         self.song_queue = []
         self.current_song = None
+        self.last_song_ended = None
 
         if not os.path.exists('effects'):
             os.mkdir('effects')
         self.effects = [Effect(os.path.join('effects', file)) for file in os.listdir('effects')]
+
+        if not os.path.exists('robbie_sounds'):
+            os.mkdir('robbie_sounds')
+        self.robbie_sounds = [Effect(os.path.join('robbie_sounds', file)) for file in os.listdir('robbie_sounds')]
+        self.robbie_sound_index = None
 
         self.laser_server = laser_server
 
@@ -189,6 +199,18 @@ class SongHandler:
         if self.current_song is None and any(self.song_queue):
             self.play_next_song()
 
+        if self.current_song is not None:
+            self.last_song_ended = None
+            if self.robbie_sound_index is not None:
+                self.stop_robbie_sound(self.robbie_sound_index)
+                self.robbie_sound_index = None
+        else:
+            if self.last_song_ended is None:
+                self.last_song_ended = time.time()
+            elif time.time() > self.last_song_ended + 5 * 60:
+                self.last_song_ended = time.time()
+                self.robbie_sound_index = self.play_robbie_sound()
+
     def set_music_playing(self, playing: bool) -> None:
         """Pauses or unpauses music"""
         if playing:
@@ -196,11 +218,31 @@ class SongHandler:
         else:
             pygame.mixer.music.pause()
 
-    def play_effect(self, index: int=None) -> None:
+    def play_effect(self, index: int=None) -> int:
         """Plays a file from the effects folder"""
         if len(self.effects) == 0:
             return
         if index is None:
             index = random.randrange(len(self.effects))
-        self.laser_server.set_effect(self.effects[index])
+        if self.laser_server:
+            self.laser_server.set_effect(self.effects[index])
         self.effects[index].play()
+        return index
+
+    def play_robbie_sound(self, index: int=None) -> int:
+        """Plays a robbie sound"""
+        if len(self.robbie_sounds) == 0:
+            return
+        if index is None:
+            index = random.randrange(len(self.robbie_sounds))
+        self.robbie_sounds[index].play()
+        return index
+
+    def stop_robbie_sound(self, index: int=None) -> None:
+        """Stops all robbie sounds"""
+        if index is None:
+            for sound in self.robbie_sounds:
+                sound.stop()
+        else:
+            self.robbie_sounds[index].stop()
+            

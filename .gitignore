@@ -3,6 +3,7 @@ gerbers/
 .venv
 songs/
 effects/
+robbie_sounds/
 __pycache__/
 obj/
 bin/
