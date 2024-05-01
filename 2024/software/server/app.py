@@ -105,15 +105,16 @@ class MainApp:
                     self._update_screen(screen)
                     self.sacn.key_down(event.key)
                 elif event.type == UPDATE_SONGS:
-                    self.songs.update()
+                    if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                        self.songs.update()
                     song_queue = ' '.join([x.song_id_str for x in self.songs.song_queue])
                     if len(song_queue) > 28:
                         song_queue = f'{song_queue[:25]}...'
                     self.labels['Playing'] = self.songs.current_song.running_str if self.songs.current_song else 'None'
                     self.labels['Song Queue'] = song_queue if song_queue else 'Empty'
+                    self.labels['Synthesizer'] = 'Running' if self.synth.running else 'Not Running'
                     self._update_lcds()
                     self._update_screen(screen)
-                    self.labels['Synthesizer'] = 'Running' if self.synth.running else 'Not Running'
                 elif event.type == pygame.JOYDEVICEADDED:
                     joystick = pygame.joystick.Joystick(event.device_index)
                     if joystick.get_numaxes() >= 8:
