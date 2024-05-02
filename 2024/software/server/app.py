@@ -129,6 +129,9 @@ class MainApp:
                         self.wands[event.instance_id].quit()
                         del self.wands[event.instance_id]
                         self.labels['Wands'] = f'{len(self.wands)}'
+                        if len(self.wands) == 0:
+                            self.wands[-1] = wand.WandSimulator()
+                            self.labels['Wands'] = '1 (Simulated)'
                 elif event.type == wand.KANO_WAND_CONNECT:
                     if -1 in self.wands:
                         del self.wands[-1]
@@ -138,6 +141,10 @@ class MainApp:
                     if event.wand_name in self.wands:
                         del self.wands[event.wand_name]
                         self.labels['Wands'] = f'{len(self.wands)}'
+                        if len(self.wands) == 0:
+                            self.wands[-1] = wand.WandSimulator()
+                            self.labels['Wands'] = '1 (Simulated)'
+                            
             
             for k, w in self.wands.items():
                 w.update_position()
