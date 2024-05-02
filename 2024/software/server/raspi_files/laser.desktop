@@ -1,0 +1,4 @@
+[Desktop Entry]
+Name=Laser Control Station
+Type=Application
+Exec=/home/pi/start_laser.sh
