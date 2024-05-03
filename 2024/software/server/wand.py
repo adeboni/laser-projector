@@ -78,7 +78,7 @@ class WandSimulator(WandBase):
         self.connected = True
 
     def __repr__(self):
-        return 'WandSimulatorQuat()'
+        return 'WandSimulator()'
 
     def quit(self) -> None:
         self.connected = False
@@ -104,8 +104,8 @@ class WandSimulator(WandBase):
         self.prev_speed = new_speed
 
 class MATH_CAMP_WAND_IO(enum.Enum):
-    USER_BUTTON_CHAR = 'c3850c47-f815-4d0a-980b-ca210894ce42'
-    QUATERNIONS_CHAR = 'da662d4c-5444-4557-b1fd-f1a0e66c3b44'
+    USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
+    QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
 
 class MathCampWand(WandBase):
     """A wand class to interact with the Math Camp wand"""
@@ -122,7 +122,7 @@ class MathCampWand(WandBase):
         self.position_raw = pyquaternion.Quaternion()
         self.connected = False
         
-        print(f'Connecting to {self.name}...')
+        print(f'Connecting to {self.name} ({device_addr})...')
         if not self._await_bleak(self._dev.connect()):
             print(f'Could not connect to {self.name}')
             return
@@ -139,16 +139,17 @@ class MathCampWand(WandBase):
     def _await_bleak(self, coro):
         try:
             return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
-        except:
+        except Exception as e:
+            print(f'Bleak error! {e}')
             return None
 
     def _handle_notification(self, sender, data):
         self.last_update = time.time()
         if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
-            x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='big'))) - 16384) / 16384
-            y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='big'))) - 16384) / 16384
-            z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='big'))) - 16384) / 16384
-            w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='big'))) - 16384) / 16384
+            x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) - 16384) / 16384
+            y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
+            z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) - 16384) / 16384
+            w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
@@ -211,7 +212,7 @@ class KanoWand(WandBase):
         self.position_raw = pyquaternion.Quaternion()
         self.connected = False
         
-        print(f'Connecting to {self.name}...')
+        print(f'Connecting to {self.name} ({device_addr})...')
         if not self._await_bleak(self._dev.connect()):
             print(f'Could not connect to {self.name}')
             return
@@ -229,7 +230,8 @@ class KanoWand(WandBase):
     def _await_bleak(self, coro):
         try:
             return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
-        except:
+        except Exception as e:
+            print(f'Bleak error! {e}')
             return None
 
     def _handle_notification(self, sender, data):
