@@ -145,10 +145,10 @@ class MathCampWand(WandBase):
     def _handle_notification(self, sender, data):
         self.last_update = time.time()
         if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
-            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
-            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
-            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
-            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
+            x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='big'))) - 16384) / 16384
+            y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='big'))) - 16384) / 16384
+            z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='big'))) - 16384) / 16384
+            w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='big'))) - 16384) / 16384
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
@@ -235,10 +235,10 @@ class KanoWand(WandBase):
     def _handle_notification(self, sender, data):
         self.last_update = time.time()
         if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
-            x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) - 16384) / 16384
-            y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
-            z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) - 16384) / 16384
-            w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
+            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
+            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
+            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
+            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
