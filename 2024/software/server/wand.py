@@ -13,8 +13,8 @@ import asyncio
 import bleak
 import time
 
-KANO_WAND_CONNECT = pygame.USEREVENT + 1
-KANO_WAND_DISCONNECT = pygame.USEREVENT + 2
+BLE_WAND_CONNECT = pygame.USEREVENT + 1
+BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
 
 class WandBase:
     def __init__(self) -> None:
@@ -68,49 +68,6 @@ class WandBase:
             return laser_point.LaserPoint(laser_index, int(laser_x), int(laser_y), *self.get_wand_color())
         else:
             return None
-
-class Wand(WandBase):
-    def __init__(self, joystick: pygame.joystick.Joystick, pump: bool=False) -> None:
-        super().__init__()
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.3
-        self.joystick = joystick
-        self.pump = pump
-        self.connected = True
-
-    def __repr__(self):
-        return f'Wand(ID: {self.joystick.get_instance_id()})'
-
-    def quit(self) -> None:
-        self.connected = False
-        self.joystick.quit()
-        
-    def update_position(self) -> None:
-        if not self.connected:
-            return
-        if self.pump:
-            pygame.event.pump()
-        position_raw = pyquaternion.Quaternion(w=self.joystick.get_axis(5), 
-                                                    x=self.joystick.get_axis(0), 
-                                                    y=self.joystick.get_axis(1), 
-                                                    z=self.joystick.get_axis(2))
-        # if self.joystick.get_button(1):
-        #     self.reset_cal = True
-        if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
-            self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
-        
-        tip_pos = self.position.rotate([1, 0, 0])[2]
-        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
-            self.pos_queue.pop(0)
-        self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[0] - self.pos_queue[-1]
-        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
-            self.callback()
-        self.prev_speed = new_speed
         
 class WandSimulator(WandBase):
     def __init__(self) -> None:
@@ -145,6 +102,84 @@ class WandSimulator(WandBase):
         if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
             self.callback()
         self.prev_speed = new_speed
+
+class MATH_CAMP_WAND_IO(enum.Enum):
+    USER_BUTTON_CHAR = 'c3850c47-f815-4d0a-980b-ca210894ce42'
+    QUATERNIONS_CHAR = 'da662d4c-5444-4557-b1fd-f1a0e66c3b44'
+
+class MathCampWand(WandBase):
+    """A wand class to interact with the Math Camp wand"""
+
+    def __init__(self, device_addr, name, bleak_loop):
+        super().__init__()
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
+        self.POS_QUEUE_LIMIT = 5
+        self.SPEED_THRESHOLD = 0.4
+        self.name = name
+        self._dev = bleak.BleakClient(device_addr)
+        self._bleak_loop = bleak_loop
+        self.position_raw = pyquaternion.Quaternion()
+        self.connected = False
+        
+        print(f'Connecting to {self.name}...')
+        if not self._await_bleak(self._dev.connect()):
+            print(f'Could not connect to {self.name}')
+            return
+        
+        self._await_bleak(self._dev.start_notify(MATH_CAMP_WAND_IO.QUATERNIONS_CHAR.value, self._handle_notification))
+        self._await_bleak(self._dev.start_notify(MATH_CAMP_WAND_IO.USER_BUTTON_CHAR.value, self._handle_notification))
+        self.connected = True
+        self.last_update = time.time()
+        print(f'Connected to {self.name}')
+
+    def __repr__(self):
+        return f'MathCampWand(Name: {self.name}, Address: {self._dev.address})'
+    
+    def _await_bleak(self, coro):
+        try:
+            return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
+        except:
+            return None
+
+    def _handle_notification(self, sender, data):
+        self.last_update = time.time()
+        if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
+            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
+            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
+            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
+            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
+            self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
+        elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
+            self.button = data[0] == 1
+            self.reset_cal = True   
+
+    def quit(self) -> None:
+        if self.connected:
+            pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=self.name))
+            self.connected = False
+            self._await_bleak(self._dev.disconnect())
+            print(f'Disconnected from {self.name}')
+        
+    def update_position(self) -> None:
+        if not self.connected:
+            return
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.reset_cal = False
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+
+        tip_pos = self.position.rotate([1, 0, 0])[2]
+        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
+            self.pos_queue.pop(0)
+        self.pos_queue.append(tip_pos)
+        new_speed = self.pos_queue[0] - self.pos_queue[-1]
+        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
+            self.callback()
+        self.prev_speed = new_speed
+        
+        if time.time() > self.last_update + 30:
+            self.quit()
 
 class KANO_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
@@ -200,10 +235,10 @@ class KanoWand(WandBase):
     def _handle_notification(self, sender, data):
         self.last_update = time.time()
         if sender.uuid == KANO_IO.QUATERNIONS_CHAR.value:
-            y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
-            x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
-            w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
-            z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
+            x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) - 16384) / 16384
+            y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
+            z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) - 16384) / 16384
+            w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
             self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
         elif sender.uuid == KANO_IO.USER_BUTTON_CHAR.value:
             self.button = data[0] == 1
@@ -211,7 +246,7 @@ class KanoWand(WandBase):
 
     def quit(self) -> None:
         if self.connected:
-            pygame.event.post(pygame.event.Event(KANO_WAND_DISCONNECT, wand_name=self.name))
+            pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=self.name))
             self.connected = False
             self._await_bleak(self._dev.disconnect())
             print(f'Disconnected from {self.name}')
@@ -246,7 +281,7 @@ class KanoWand(WandBase):
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
         self._await_bleak(self._dev.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
 
-class KanoScanner:
+class BLEScanner:
     """A scanner class to connect to wands"""
 
     def __init__(self):
@@ -268,13 +303,13 @@ class KanoScanner:
 
     def start(self):
         if not self.scanning:
-            print('Starting Kano Wand scanner')
+            print('Starting wand scanner')
             self.scanning = True
             self._scan_thread.start()
 
     def stop(self):
         if self.scanning:
-            print('Stopping Kano Wand scanner')
+            print('Stopping wand scanner')
             self.scanning = False
             self._scan_event.set()
             self._scan_thread.join()
@@ -283,7 +318,7 @@ class KanoScanner:
         while self.scanning:
             new_wands = self.scan()
             for wand in new_wands:
-                pygame.event.post(pygame.event.Event(KANO_WAND_CONNECT, wand=wand))
+                pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand))
             self._scan_event.wait(5)
 
     def scan(self):
@@ -291,29 +326,22 @@ class KanoScanner:
             if not self.found_wands[wand].connected:
                 del self.found_wands[wand]
         devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
-        devices = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in self.found_wands]
-        new_wands = [KanoWand(d.address, d.name, self._bleak_loop) for d in devices]
-        new_wands = [wand for wand in new_wands if wand.connected]
+
+        kano_wands = [d for d in devices if d.name is not None and d.name.startswith("Kano-Wand") and d.name not in self.found_wands]
+        kano_wands = [KanoWand(d.address, d.name, self._bleak_loop) for d in kano_wands]
+        kano_wands = [wand for wand in kano_wands if wand.connected]
+
+        math_camp_wands = [d for d in devices if d.name is not None and d.name.startswith("Math Camp Wand") and d.name not in self.found_wands]
+        math_camp_wands = [MathCampWand(d.address, d.name, self._bleak_loop) for d in math_camp_wands]
+        math_camp_wands = [wand for wand in math_camp_wands if wand.connected]
+
+        new_wands = [*kano_wands, *math_camp_wands]
         for wand in new_wands:
             self.found_wands[wand.name] = wand
         return new_wands
     
 
 if __name__ == '__main__':
-    wands = []
-
-    kano_scanner = KanoScanner()
-    wands.extend(kano_scanner.scan())
-    
-    pygame.init()
-    joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
-    for joystick in joysticks:
-        if joystick.get_numaxes() >= 8:
-            wands.append(Wand(joystick, pump=True))
-        else:
-            joystick.quit()
- 
-    if not wands:
-        wands.append(WandSimulator())
-
-    print('Found wands:', [wand for wand in wands])
+    ble_scanner = BLEScanner()
+    wands = ble_scanner.scan()
+    print('Found wands:', wands)

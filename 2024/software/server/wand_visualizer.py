@@ -4,26 +4,15 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
-import pygame
 import sierpinski
 
-wands = []
-
-kano_handler = wand.KanoScanner()
-wands.extend(kano_handler.scan())
-
-pygame.init()
-joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
-for joystick in joysticks:
-    if joystick.get_numaxes() >= 8:
-        wands.append(wand.Wand(joystick, pump=True))
-    else:
-        joystick.quit()
+ble_scanner = wand.BLEScanner()
+wands = ble_scanner.scan()
 
 if len(wands) == 0:
     wands.append(wand.WandSimulator())
 
-print('Found wands:', [wand for wand in wands])
+print('Found wands:', wands)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')

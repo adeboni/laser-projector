@@ -1,6 +1,5 @@
 """Main entry point"""
 
-import os
 import pygame 
 import decorators
 import laser_server
@@ -12,12 +11,11 @@ import wand
 class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
-        os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
         pygame.init()
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
         self.sacn = sacn_handler.SACNHandler(target_ip)
         self.synth = synthesizer.SynthServer()
-        self.kano_scanner = wand.KanoScanner()
+        self.wand_scanner = wand.BLEScanner()
 
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
@@ -75,7 +73,7 @@ class MainApp:
                     self.sacn.stop()
                     self.laser_server.stop()
                     self.synth.stop_server()
-                    self.kano_scanner.stop()
+                    self.wand_scanner.stop()
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
@@ -115,29 +113,12 @@ class MainApp:
                     self.labels['Synthesizer'] = 'Running' if self.synth.running else 'Not Running'
                     self._update_lcds()
                     self._update_screen(screen)
-                elif event.type == pygame.JOYDEVICEADDED:
-                    joystick = pygame.joystick.Joystick(event.device_index)
-                    if joystick.get_numaxes() >= 8:
-                        if -1 in self.wands:
-                            del self.wands[-1]
-                        self.wands[joystick.get_instance_id()] = wand.Wand(joystick)
-                        self.labels['Wands'] = f'{len(self.wands)}'
-                    else:
-                        joystick.quit()
-                elif event.type == pygame.JOYDEVICEREMOVED:
-                    if event.instance_id in self.wands:
-                        self.wands[event.instance_id].quit()
-                        del self.wands[event.instance_id]
-                        self.labels['Wands'] = f'{len(self.wands)}'
-                        if len(self.wands) == 0:
-                            self.wands[-1] = wand.WandSimulator()
-                            self.labels['Wands'] = '1 (Simulated)'
-                elif event.type == wand.KANO_WAND_CONNECT:
+                elif event.type == wand.BLE_WAND_CONNECT:
                     if -1 in self.wands:
                         del self.wands[-1]
                     self.wands[event.wand.name] = event.wand
                     self.labels['Wands'] = f'{len(self.wands)}'
-                elif event.type == wand.KANO_WAND_DISCONNECT:
+                elif event.type == wand.BLE_WAND_DISCONNECT:
                     if event.wand_name in self.wands:
                         del self.wands[event.wand_name]
                         self.labels['Wands'] = f'{len(self.wands)}'
@@ -145,7 +126,6 @@ class MainApp:
                             self.wands[-1] = wand.WandSimulator()
                             self.labels['Wands'] = '1 (Simulated)'
                             
-            
             for k, w in self.wands.items():
                 w.update_position()
                 if sp := w.get_synth_point():
@@ -179,6 +159,6 @@ if __name__ == '__main__':
         app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app.laser_server.start()
     app.synth.start_server()
-    app.kano_scanner.start()
+    app.wand_scanner.start()
     app.start_sacn()
     app.show_screen()
