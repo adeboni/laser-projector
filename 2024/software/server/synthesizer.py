@@ -22,7 +22,7 @@ class SynthServer:
         self.server = None
         self.running = False
 
-    def start_synth(self, id: int) -> None:
+    def start_synth(self, id) -> None:
         if self.running and id not in self.synths:
             self.synths[id] = supercollider.Synth(self.server, 'scifi')
 
@@ -30,12 +30,12 @@ class SynthServer:
         for id in list(self.synths):
             self.stop_synth(id)
 
-    def stop_synth(self, id: int) -> None:
+    def stop_synth(self, id) -> None:
         if id in self.synths:
             self.synths[id].free()
             del self.synths[id]
 
-    def update_synth(self, id: int, **kwargs) -> None:
+    def update_synth(self, id, **kwargs) -> None:
         if id in self.synths:
             for k, v in kwargs.items():
                 self.synths[id].set(k, v)
