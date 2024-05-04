@@ -112,8 +112,8 @@ class MathCampWand(WandBase):
 
     def __init__(self, device_addr, name, bleak_loop):
         super().__init__()
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=-1)
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 0.4
         self.name = name
@@ -139,8 +139,8 @@ class MathCampWand(WandBase):
     def _await_bleak(self, coro):
         try:
             return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
-        except Exception as e:
-            print(f'Bleak error! {e}')
+        except Exception as ex:
+            print(f'Bleak error! {type(ex).__name__} {ex}')
             return None
 
     def _handle_notification(self, sender, data):
@@ -230,8 +230,8 @@ class KanoWand(WandBase):
     def _await_bleak(self, coro):
         try:
             return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
-        except Exception as e:
-            print(f'Bleak error! {e}')
+        except Exception as ex:
+            print(f'Bleak error! {type(ex).__name__} {ex}')
             return None
 
     def _handle_notification(self, sender, data):
