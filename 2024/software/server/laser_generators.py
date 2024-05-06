@@ -374,6 +374,7 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             current_path = current_path % len(paths)
             p = list(paths.values())[current_path]
             if len(p) == 0:
+                # print('Skipping path')
                 continue
             path_index = path_index % len(p)
 
