@@ -10,21 +10,45 @@ import numpy as np
 import pyautogui
 import time
 import simplepyble
+import threading
 
 BLE_WAND_CONNECT = pygame.USEREVENT + 1
 BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
 
 class WandBase:
     def __init__(self) -> None:
+        self.POS_QUEUE_LIMIT = 5
+        self.SPEED_THRESHOLD = 6
         self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
-        self.position = None
+        self.position = pyquaternion.Quaternion()
         self.callback = None
         self.pos_queue = []
         self.prev_speed = 0
         self.cal_offset = None
-        self.position = pyquaternion.Quaternion()
         self.reset_cal = False
         self.last_angle = 0
+        self.last_update = time.time()
+
+        self.watchdog_thread = threading.Thread(target=self._watchdog, daemon=True)
+        self._watchdog_event = threading.Event()
+        self.watchdog_running = False
+        
+    def start_watchdog(self) -> None:
+        if not self.watchdog_running:
+            self.last_update = time.time()
+            self.watchdog_running = True
+            self.watchdog_thread.start()
+
+    def stop_watchdog(self) -> None:
+        if self.watchdog_running:
+            self.watchdog_running = False
+            self._watchdog_event.set()
+
+    def _watchdog(self) -> None:
+        while self.watchdog_running:
+            self._watchdog_event.wait(1)
+            if time.time() > self.last_update + 30:
+                self.quit()
 
     def get_rotation_angle(self) -> int:
         if self.position is None:
@@ -67,39 +91,49 @@ class WandBase:
         else:
             return None
         
+    def check_for_impact(self) -> bool:
+        tip_pos = self.position.rotate([1, 0, 0])[2]
+        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
+            self.pos_queue.pop(0)
+        self.pos_queue.append((tip_pos, time.time()))
+        d = self.pos_queue[-1][0] - self.pos_queue[0][0]
+        t = self.pos_queue[-1][1] - self.pos_queue[0][1]
+        if t < 0.01:
+            return False
+        new_speed = -d / t
+        result = self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD
+        self.prev_speed = new_speed
+        return result
+        
 class WandSimulator(WandBase):
     def __init__(self) -> None:
         super().__init__()
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.3
         self.screen_width, self.screen_height = pyautogui.size()
         self.connected = True
+        self.notify_thread = threading.Thread(target=self._notify, daemon=True)
+        self._notify_event = threading.Event()
+        self.notify_thread.start()
 
     def __repr__(self):
         return 'WandSimulator()'
 
     def quit(self) -> None:
         self.connected = False
+        self._notify_event.set()
+        self.notify_thread.join()
 
-    def update_position(self) -> None:
-        if not self.connected:
-            return
-        mouse = pyautogui.position()
-        x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
-        y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
-        self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
-                      * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
-                      * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
-                      * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
-
-        tip_pos = self.position.rotate([1, 0, 0])[2]
-        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
-            self.pos_queue.pop(0)
-        self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[0] - self.pos_queue[-1]
-        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
-            self.callback()
-        self.prev_speed = new_speed
+    def _notify(self) -> None:
+        while self.connected:
+            mouse = pyautogui.position()
+            x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
+            y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
+            self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
+                          * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
+                          * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
+                          * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
+            self._notify_event.wait(0.02)
+            if self.check_for_impact() and self.callback:
+                self.callback()
 
 class MATH_CAMP_WAND_IO(enum.Enum):
     SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
@@ -129,7 +163,7 @@ class MathCampWand(WandBase):
         self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
         self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.USER_BUTTON_CHAR.value, self._handle_button)
         self.connected = True
-        self.last_update = time.time()
+        self.start_watchdog()
         print(f'Connected to {self.device.indentifier()}')
 
     def __repr__(self):
@@ -143,6 +177,14 @@ class MathCampWand(WandBase):
         w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
         self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.reset_cal = False
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+
+        if self.check_for_impact() and self.callback:
+            self.callback()
+
     def _handle_button(self, data):
         self.last_update = time.time()
         self.button = data[0] == 1
@@ -150,31 +192,13 @@ class MathCampWand(WandBase):
 
     def quit(self) -> None:
         if self.connected:
+            self.stop_watchdog()
             name = self.device.identifier()
             pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
             self.connected = False
             self.device.disconnect()
-            print(f'Disconnected from {name}')
+            print(f'Disconnected from {name}')       
         
-    def update_position(self) -> None:
-        if not self.connected:
-            return
-        if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
-            self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
-
-        tip_pos = self.position.rotate([1, 0, 0])[2]
-        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
-            self.pos_queue.pop(0)
-        self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[0] - self.pos_queue[-1]
-        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
-            self.callback()
-        self.prev_speed = new_speed
-        
-        if time.time() > self.last_update + 30:
-            self.quit()
 
 class KANO_IO(enum.Enum):
     QUAT_SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
@@ -223,7 +247,7 @@ class KanoWand(WandBase):
         self.device.notify(KANO_IO.QUAT_SERVICE_CHAR.value, KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
         self.device.notify(KANO_IO.BUTTON_SERVICE_CHAR.value, KANO_IO.USER_BUTTON_CHAR.value, self._handle_button)
         self.connected = True
-        self.last_update = time.time()
+        self.start_watchdog()
         print(f'Connected to {self.device.indentifier()}')
 
     def __repr__(self):
@@ -237,6 +261,15 @@ class KanoWand(WandBase):
         z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
         self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.reset_cal = False
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+
+        if self.check_for_impact() and self.callback:
+            self.callback()
+            self.vibrate(KANO_PATTERN.SHORT)
+
     def _handle_button(self, data):
         self.last_update = time.time()
         self.button = data[0] == 1
@@ -244,33 +277,13 @@ class KanoWand(WandBase):
 
     def quit(self) -> None:
         if self.connected:
+            self.stop_watchdog()
             name = self.device.identifier()
             pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
             self.connected = False
             self.device.disconnect()
             print(f'Disconnected from {name}')
         
-    def update_position(self) -> None:
-        if not self.connected:
-            return
-        if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
-            self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
-
-        tip_pos = self.position.rotate([1, 0, 0])[2]
-        if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
-            self.pos_queue.pop(0)
-        self.pos_queue.append(tip_pos)
-        new_speed = self.pos_queue[0] - self.pos_queue[-1]
-        if self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD and self.callback:
-            self.callback()
-            self.vibrate(KANO_PATTERN.SHORT)
-        self.prev_speed = new_speed
-        
-        if time.time() > self.last_update + 30:
-            self.quit()
-
     def vibrate(self, pattern):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
         self.device.write_request(KANO_IO.VIBRATOR_SERVICE_CHAR.value, KANO_IO.VIBRATOR_CHAR.value, bytes(message))

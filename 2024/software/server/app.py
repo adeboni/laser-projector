@@ -120,7 +120,6 @@ class MainApp:
                             self.labels['Wands'] = '1 (Simulated)'
                             
             for k, w in self.wands.items():
-                w.update_position()
                 if sp := w.get_synth_point():
                     self.synth.update_synth(k, x=sp[0], y=sp[1], r=sp[2])
                 

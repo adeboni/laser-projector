@@ -5,10 +5,14 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
 import sierpinski
+import time
 
 ble_scanner = wand.BLEScanner()
-wands = ble_scanner.scan()
+ble_scanner.start()
+time.sleep(2)
+ble_scanner.stop()
 
+wands = list(ble_scanner.found_wands.values())
 if len(wands) == 0:
     wands.append(wand.WandSimulator())
 
@@ -28,8 +32,9 @@ target_line = ax.plot([], [], [], c='k')
 lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
 endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
+wands[0].callback = lambda: print('Hit')
+
 def animate(_):
-    wands[0].update_position()
     q = wands[0].position
     for line, end in zip(lines, endpoints):
         v = q.rotate(end)
