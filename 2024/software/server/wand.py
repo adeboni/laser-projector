@@ -48,7 +48,7 @@ class WandBase:
         while self.watchdog_running:
             self._watchdog_event.wait(1)
             if time.time() > self.last_update + 30:
-                self.quit()
+                self.disconnect()
 
     def get_rotation_angle(self) -> int:
         if self.position is None:
@@ -117,7 +117,7 @@ class WandSimulator(WandBase):
     def __repr__(self):
         return 'WandSimulator()'
 
-    def quit(self) -> None:
+    def disconnect(self) -> None:
         self.connected = False
         self._notify_event.set()
         self.notify_thread.join()
@@ -136,7 +136,7 @@ class WandSimulator(WandBase):
                 self.callback()
 
 class MATH_CAMP_WAND_IO(enum.Enum):
-    SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
+    SERVICE_CHAR     = '64a70011-f691-4b93-a6f4-0968f5b648f8'
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
     QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
 
@@ -147,27 +147,24 @@ class MathCampWand(WandBase):
         super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=-1)
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.4
         self.device = device
-        self.position_raw = pyquaternion.Quaternion()
         self.connected = False
         
-        print(f'Connecting to {self.device.indentifier()} ({self.device.address()})...')
+        print(f'Connecting to {self.device.identifier()} ({self.device.address()})...')
         try:
             self.device.connect()
         except:
-            print(f'Could not connect to {self.device.indentifier()}')
+            print(f'Could not connect to {self.device.identifier()}')
             return
         
         self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
         self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.USER_BUTTON_CHAR.value, self._handle_button)
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.indentifier()}')
+        print(f'Connected to {self.device.identifier()}')
 
     def __repr__(self):
-        return f'MathCampWand(Name: {self.device.indentifier()}, Address: {self.device.address()})'
+        return f'MathCampWand(Name: {self.device.identifier()}, Address: {self.device.address()})'
     
     def _handle_quaternion(self, data):
         self.last_update = time.time()
@@ -175,12 +172,12 @@ class MathCampWand(WandBase):
         y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
         z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) - 16384) / 16384
         w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
-        self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
+        position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
 
         if self.check_for_impact() and self.callback:
             self.callback()
@@ -190,25 +187,25 @@ class MathCampWand(WandBase):
         self.button = data[0] == 1
         self.reset_cal = True
 
-    def quit(self) -> None:
+    def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
             name = self.device.identifier()
-            pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
             self.connected = False
             self.device.disconnect()
-            print(f'Disconnected from {name}')       
+            print(f'Disconnected from {name}')    
+            #pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))            
         
 
 class KANO_IO(enum.Enum):
-    QUAT_SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
-    BUTTON_SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
-    VIBRATOR_SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    VIBRATOR_CHAR = '64a70008-f691-4b93-a6f4-0968f5b648f8'
-    LED_SERVICE_CHAR = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    LED_CHAR = '64a70009-f691-4b93-a6f4-0968f5b648f8'
+    QUAT_SERVICE_CHAR     = '64a70011-f691-4b93-a6f4-0968f5b648f8'
+    QUATERNIONS_CHAR      = '64a70002-f691-4b93-a6f4-0968f5b648f8'
+    BUTTON_SERVICE_CHAR   = '64a70012-f691-4b93-a6f4-0968f5b648f8'
+    USER_BUTTON_CHAR      = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
+    VIBRATOR_SERVICE_CHAR = '64a70012-f691-4b93-a6f4-0968f5b648f8'
+    VIBRATOR_CHAR         = '64a70008-f691-4b93-a6f4-0968f5b648f8'
+    LED_SERVICE_CHAR      = '64a70012-f691-4b93-a6f4-0968f5b648f8'
+    LED_CHAR              = '64a70009-f691-4b93-a6f4-0968f5b648f8'
 
 class KANO_PATTERN(enum.Enum):
     REGULAR = 1
@@ -226,63 +223,58 @@ class KanoWand(WandBase):
         super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
-        self.POS_QUEUE_LIMIT = 5
-        self.SPEED_THRESHOLD = 0.4
         self.device = device
-        self.position_raw = pyquaternion.Quaternion()
         self.connected = False
         
-        print(f'Connecting to {self.device.indentifier()} ({self.device.address()})...')
+        print(f'Connecting to {self.device.identifier()} ({self.device.address()})...')
         try:
             self.device.connect()
         except:
-            print(f'Could not connect to {self.device.indentifier()}')
+            print(f'Could not connect to {self.device.identifier()}')
             return
         
-        print("Successfully connected, listing services...")
-        for service in self.device.services():
-            for characteristic in service.characteristics():
-                print((service.uuid(), characteristic.uuid()))
-        
-        self.device.notify(KANO_IO.QUAT_SERVICE_CHAR.value, KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
         self.device.notify(KANO_IO.BUTTON_SERVICE_CHAR.value, KANO_IO.USER_BUTTON_CHAR.value, self._handle_button)
+        self.device.notify(KANO_IO.QUAT_SERVICE_CHAR.value, KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
+        self.set_led(0, 0, 255)
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.indentifier()}')
+        print(f'Connected to {self.device.identifier()}')
 
     def __repr__(self):
-        return f'KanoWand(Name: {self.device.indentifier()}, Address: {self.device.address()})'
+        return f'KanoWand(Name: {self.device.identifier()}, Address: {self.device.address()})'
     
     def _handle_quaternion(self, data):
+        print('quat', data)
         self.last_update = time.time()
         y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
         x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
         w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
         z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
-        self.position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
+        position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw)).inverse
+            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(self.position_raw))
+        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
 
         if self.check_for_impact() and self.callback:
             self.callback()
             self.vibrate(KANO_PATTERN.SHORT)
 
     def _handle_button(self, data):
+        print('button', data)
         self.last_update = time.time()
         self.button = data[0] == 1
         self.reset_cal = True
 
-    def quit(self) -> None:
+    def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
             name = self.device.identifier()
-            pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
             self.connected = False
             self.device.disconnect()
             print(f'Disconnected from {name}')
+            #pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
         
     def vibrate(self, pattern):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
@@ -303,6 +295,7 @@ class BLEScanner:
         self.scanning = False
 
     def _device_found(self, device):
+        print(device.identifier())
         name = device.identifier()
         if name is not None:
             if name in self.found_wands and self.found_wands[name].connected:
@@ -314,7 +307,7 @@ class BLEScanner:
                 wand = MathCampWand(device)
             if wand is not None and wand.connected:
                 self.found_wands[name] = wand
-                pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand))
+                #pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand))
         
     def start(self):
         if not self.scanning:
