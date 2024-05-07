@@ -271,14 +271,14 @@ class KanoWand(WandBase):
         if time.time() > self.last_update + 30:
             self.quit()
 
-    def vibrate(self, pattern=KANO_PATTERN.REGULAR):
+    def vibrate(self, pattern):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
-        self._await_bleak(self._dev.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
+        self.device.write_request(KANO_IO.VIBRATOR_SERVICE_CHAR.value, KANO_IO.VIBRATOR_CHAR.value, bytes(message))
 
     def set_led(self, r: int, g: int, b: int, on=True):
         rgb = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3))
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
-        self._await_bleak(self._dev.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
+        self.device.write_request(KANO_IO.LED_SERVICE_CHAR.value, KANO_IO.LED_CHAR.value, bytes(message))
 
 class BLEScanner:
     """A scanner class to connect to wands"""
