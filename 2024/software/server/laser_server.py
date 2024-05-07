@@ -84,8 +84,6 @@ class LaserServer:
         laser_generators.current_wands = wands
 
 if __name__ == '__main__':
-    import time
-    import utilities
     if utilities.ping('10.0.0.2'):
         server = LaserServer(num_lasers=3, host_ip='10.0.0.2')
     else:

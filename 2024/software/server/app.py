@@ -1,7 +1,6 @@
 """Main entry point"""
 
 import pygame 
-import decorators
 import laser_server
 import song_handler
 import sacn_handler
@@ -43,11 +42,6 @@ class MainApp:
                        8: ('Drums', False),
                        9: ('Calibration', False) }
 
-    @decorators.threaded_time_delay(5)
-    def start_sacn(self):
-        self.sacn.start()
-        self.sacn.start_animations()
-
     def _update_screen(self, screen: pygame.Surface) -> None:
         x = screen.get_size()[0] // 2
         screen.fill((255, 255, 255))
@@ -69,7 +63,6 @@ class MainApp:
             clock.tick(50)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    decorators.is_closing = True
                     self.sacn.stop()
                     self.laser_server.stop()
                     self.synth.stop_server()
@@ -160,5 +153,5 @@ if __name__ == '__main__':
     app.laser_server.start()
     app.synth.start_server()
     app.wand_scanner.start()
-    app.start_sacn()
+    app.sacn.start()
     app.show_screen()

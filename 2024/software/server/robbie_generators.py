@@ -29,7 +29,7 @@ def dots_nightrider() -> Generator[list[int], None, None]:
         yield [cube(255 - 51 * abs(i - dotIndex)) for i in range(6)]
 
 def mouth_pulse() -> Generator[list[int], None, None]:
-    output = [0 for _ in range(15)]
+    output = [0] * 15
     while True:
         mouthColorIndex = np.sin(time.time() * 50 * np.pi / 180) + 1
         mouthRedLevel = cube(255 - 85 * abs(0 - mouthColorIndex))

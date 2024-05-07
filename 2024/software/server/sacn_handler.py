@@ -24,7 +24,7 @@ class SACNHandler:
         184 = Lamp
         185-191 = Buttons
         """
-        self.outputs = [0 for _ in range(80 + 80 + 15 + 6 + 3 + 1 + 7)]
+        self.outputs = [0] * (80 + 80 + 15 + 6 + 3 + 1 + 7)
 
         self.animations = [
             (self.set_dots, robbie_generators.dots_nightrider()),
@@ -34,6 +34,7 @@ class SACNHandler:
         ]
         self.animation_thread = threading.Thread(target=self._animation_thread, daemon=True)
         self.animation_running = False
+        self._animation_event = threading.Event()
 
         self.button_key_map = {
             pygame.K_UP: 190,
@@ -55,7 +56,7 @@ class SACNHandler:
     def key_down(self, key: int) -> None:
         if key in self.button_key_map:
             key_thread = threading.Thread(target=self._key_thread, args=(self.button_key_map[key],), daemon=True)
-            key_thread.start()            
+            key_thread.start()
 
     def set_mouth(self, values: list[int] | None) -> None:
         """Sets the mouth buffers"""
@@ -101,14 +102,21 @@ class SACNHandler:
         """Sends the pending buffer out to the network"""
         self.sender[1].dmx_data = tuple(self.outputs)
 
-    def start(self) -> None:
+    def start(self, animations: bool=True) -> None:
         """Starts sACN output"""
         self.sender.start()
+        if animations and not self.animation_running:
+            print('Starting animation thread')
+            self.animation_running = True
+            self.animation_thread.start()
 
     def stop(self) -> None:
         """Stops sACN output"""
         if self.animation_running:
-            self.stop_animations()
+            print('Stopping animation thread')
+            self.animation_running = False
+            self._animation_event.set()
+            self.animation_thread.join()
         self.sender.stop()
 
     def _animation_thread(self) -> None:
@@ -121,42 +129,29 @@ class SACNHandler:
                     time.sleep(0.02)
                 set_func(None)
                 self.update_output()
-                start_time = time.time()
-                while time.time() - start_time < 10 and self.animation_running:
-                    pass
-
-    def start_animations(self) -> None:
-        if not self.animation_running:
-            print('Starting animation thread')
-            self.animation_running = True
-            self.animation_thread.start()
-
-    def stop_animations(self) -> None:
-        if self.animation_running:
-            print('Stopping animation thread')
-            self.animation_running = False
-            self.animation_thread.join()
-
+                self._animation_event.wait(10)
 
 if __name__ == '__main__':
-    #sacn = SACNHandler('127.0.0.1')
-    sacn = SACNHandler('10.0.0.20')
-    sacn.start()
+    sacn = SACNHandler('127.0.0.1')
+    #sacn = SACNHandler('10.0.0.20')
+    sacn.start(animations=False)
 
     sacn.clear_display(0)
     sacn.clear_display(1)
 
-    for i in range(160, 192, 1):
-        sacn.outputs[i] = 255
+    try:
+        for i in range(160, 192, 1):
+            sacn.outputs[i] = 255
+            sacn.update_output()
+            time.sleep(0.5)
+            sacn.outputs[i] = 0
         sacn.update_output()
-        time.sleep(0.5)
-        sacn.outputs[i] = 0
-    sacn.update_output()
+    except KeyboardInterrupt:
+        pass
 
     sacn.outputs[:] = [0] * len(sacn.outputs)
     sacn.clear_display(0)
     sacn.clear_display(1)
     sacn.update_output()
     time.sleep(0.1)
-
     sacn.stop()
