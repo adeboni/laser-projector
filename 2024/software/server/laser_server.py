@@ -8,12 +8,13 @@ import utilities
 
 class LaserServer:
     """This class generates data for the lasers"""
-    def __init__(self, num_lasers: int, host_ip: str) -> None:
+    def __init__(self, num_lasers: int, host_ip: str, wands=None) -> None:
         if host_ip == '127.0.0.1':
             self.targets = [(host_ip, 8090 + i) for i in range(num_lasers)]
         else:
             self.targets = [(f'10.0.0.{10 + i}', 8090) for i in range(num_lasers)]
 
+        laser_generators.current_wands = wands
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server = threading.Thread(target=self._server, daemon=True)
         self.server_running = False
@@ -79,9 +80,6 @@ class LaserServer:
 
     def set_song(self, song) -> None:
         laser_generators.current_song = song
-        
-    def set_wands(self, wands) -> None:
-        laser_generators.current_wands = wands
 
 if __name__ == '__main__':
     if utilities.ping('10.0.0.2'):

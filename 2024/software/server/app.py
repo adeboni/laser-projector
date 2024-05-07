@@ -11,14 +11,14 @@ class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
-        self.laser_server = laser_server.LaserServer(num_lasers, host_ip)
-        self.sacn = sacn_handler.SACNHandler(target_ip)
-        self.synth = synthesizer.SynthServer()
-        self.wand_scanner = wand.BLEScanner()
-
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
-        self.laser_server.set_wands(self.wands)
+
+        self.laser_server = laser_server.LaserServer(num_lasers, host_ip, self.wands)
+        self.sacn = sacn_handler.SACNHandler(target_ip)
+        self.synth = synthesizer.SynthServer(self.wands)
+        self.wand_scanner = wand.BLEScanner()
+
         self.labels = { 'Mode': '0 - Invalid Mode',
                         'Song Input': 'A0',
                         'Playing': 'None',
@@ -118,11 +118,7 @@ class MainApp:
                         if len(self.wands) == 0:
                             self.wands[-1] = wand.WandSimulator()
                             self.labels['Wands'] = '1 (Simulated)'
-                            
-            for k, w in self.wands.items():
-                if sp := w.get_synth_point():
-                    self.synth.update_synth(k, x=sp[0], y=sp[1], r=sp[2])
-                
+                                            
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
             self.current_letter += 1
