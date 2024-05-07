@@ -287,32 +287,39 @@ class BLEScanner:
         self.found_wands = {}
         self.adapter = simplepyble.Adapter.get_adapters()[0]
         self.adapter.set_callback_on_scan_found(self._device_found)
+        self.scanning = False
 
     def _device_found(self, device):
-        address, name = device.address(), device.identifier()
+        name = device.identifier()
         if name is not None:
             if name in self.found_wands and self.found_wands[name].connected:
                 return
             wand = None
             if name.startswith('Kano-Wand'):
-                wand = KanoWand(address, name)
+                wand = KanoWand(device)
             elif name.startswith('Math Camp Wand'):
-                wand = MathCampWand(address, name)
+                wand = MathCampWand(device)
             if wand is not None and wand.connected:
                 self.found_wands[name] = wand
                 pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand))
         
     def start(self):
-        print('Starting wand scanner')
-        self.adapter.scan_start()
+        if not self.scanning:
+            print('Starting wand scanner')
+            self.scanning = True
+            self.adapter.scan_start()
 
     def stop(self):
-        print('Stopping wand scanner')
-        self.adapter.scan_stop()    
+        if self.scanning:
+            print('Stopping wand scanner')
+            self.scanning = False
+            self.adapter.scan_stop()
 
 if __name__ == '__main__':
     ble_scanner = BLEScanner()
     ble_scanner.start()
-    time.sleep(5)
-    ble_scanner.stop()
+    try:
+        time.sleep(60)
+    except KeyboardInterrupt:
+        ble_scanner.stop()
     print('Found wands:', ble_scanner.found_wands)
