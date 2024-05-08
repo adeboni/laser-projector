@@ -148,14 +148,16 @@ class MathCampWand(WandBase):
 
     def __init__(self, device, bleak_loop, disconnected_callback=None):
         super().__init__()
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=-1)
+        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
+        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
+        self.name = device.name
+        self.address = device.address
         self.device = bleak.BleakClient(device)
         self._bleak_loop = bleak_loop
         self.connected = False
         self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.device.name} ({self.device.address})...')
+        print(f'Connecting to {self.name} ({self.address})...')
         if not self._await_bleak(self.device.connect()):
             print(f'Could not connect to {self.name}')
             return
@@ -164,12 +166,12 @@ class MathCampWand(WandBase):
         self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.name}')
+        print(f'Connected to {self.name}')
 
     def __repr__(self):
-        return f'MathCampWand(Name: {self.device.name}, Address: {self.device.address})'
+        return f'MathCampWand(Name: {self.name}, Address: {self.address})'
     
-    def _handle_quaternion(self, data):
+    def _handle_quaternion(self, sender, data):
         self.last_update = time.time()
         x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) - 16384) / 16384
         y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
@@ -185,7 +187,7 @@ class MathCampWand(WandBase):
         if self.check_for_impact() and self.callback:
             self.callback()
 
-    def _handle_button(self, data):
+    def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 1
         self.reset_cal = True
@@ -193,12 +195,11 @@ class MathCampWand(WandBase):
     def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
-            name = self.device.name
             self.connected = False
             self.device.disconnect()
-            print(f'Disconnected from {name}')   
+            print(f'Disconnected from {self.name}')   
             if self.disconnected_callback:
-                self.disconnected_callback(name)          
+                self.disconnected_callback(self.name)          
         
 
 class KANO_IO(enum.Enum):
@@ -223,12 +224,14 @@ class KanoWand(WandBase):
         super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
+        self.name = device.name
+        self.address = device.address
         self.device = bleak.BleakClient(device)
         self._bleak_loop = bleak_loop
         self.connected = False
         self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.device.name} ({self.device.address})...')
+        print(f'Connecting to {self.name} ({self.address})...')
         if not self._await_bleak(self.device.connect()):
             print(f'Could not connect to {self.name}')
             return
@@ -238,12 +241,12 @@ class KanoWand(WandBase):
         self.set_led(0, 0, 255)
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.name}')
+        print(f'Connected to {self.name}')
 
     def __repr__(self):
-        return f'KanoWand(Name: {self.device.name}, Address: {self.device.address})'
+        return f'KanoWand(Name: {self.name}, Address: {self.address})'
     
-    def _handle_quaternion(self, data):
+    def _handle_quaternion(self, sender, data):
         self.last_update = time.time()
         y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
         x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
@@ -260,7 +263,7 @@ class KanoWand(WandBase):
             self.callback()
             self.vibrate(KANO_PATTERN.SHORT)
 
-    def _handle_button(self, data):
+    def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 1
         self.reset_cal = True
@@ -268,12 +271,11 @@ class KanoWand(WandBase):
     def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
-            name = self.device.name
             self.connected = False
             self.device.disconnect()
-            print(f'Disconnected from {name}')
+            print(f'Disconnected from {self.name}')
             if self.disconnected_callback:
-                self.disconnected_callback(name)
+                self.disconnected_callback(self.name)
         
     def vibrate(self, pattern):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
@@ -336,10 +338,10 @@ class BLEScanner:
         devices = [d for d in devices if d.name is not None and d.name not in self.found_wands]
 
         kano_wands = [KanoWand(d, self._bleak_loop, self.disconnected_callback) for d in devices if d.name.startswith("Kano-Wand")]
-        kano_wands = [w for w in kano_wands if wand.connected]
+        kano_wands = [w for w in kano_wands if w.connected]
 
         math_camp_wands = [MathCampWand(d, self._bleak_loop, self.disconnected_callback) for d in devices if d.name.startswith("Math Camp Wand")]
-        math_camp_wands = [w for w in math_camp_wands if wand.connected]
+        math_camp_wands = [w for w in math_camp_wands if w.connected]
 
         new_wands = [*kano_wands, *math_camp_wands]
         for wand in new_wands:
