@@ -244,7 +244,6 @@ class KanoWand(WandBase):
         return f'KanoWand(Name: {self.device.name}, Address: {self.device.address})'
     
     def _handle_quaternion(self, data):
-        print('quat', data)
         self.last_update = time.time()
         y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
         x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
@@ -262,7 +261,6 @@ class KanoWand(WandBase):
             self.vibrate(KANO_PATTERN.SHORT)
 
     def _handle_button(self, data):
-        print('button', data)
         self.last_update = time.time()
         self.button = data[0] == 1
         self.reset_cal = True
