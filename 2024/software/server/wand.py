@@ -2,18 +2,15 @@
 
 import enum
 import colorsys
-import pygame
 import pyquaternion
 import sierpinski
 import laser_point
 import numpy as np
 import pyautogui
 import time
-import simplepyble
+import bleak
 import threading
-
-BLE_WAND_CONNECT = pygame.USEREVENT + 1
-BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
+import asyncio
 
 class WandBase:
     def __init__(self) -> None:
@@ -32,6 +29,7 @@ class WandBase:
         self.watchdog_thread = threading.Thread(target=self._watchdog, daemon=True)
         self._watchdog_event = threading.Event()
         self.watchdog_running = False
+        self._bleak_loop = None
         
     def start_watchdog(self) -> None:
         if not self.watchdog_running:
@@ -104,6 +102,12 @@ class WandBase:
         result = self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD
         self.prev_speed = new_speed
         return result
+    
+    def _await_bleak(self, coro):
+        try:
+            return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
+        except Exception as ex:
+            print(f'Bleak error! {type(ex).__name__} {ex}')
         
 class WandSimulator(WandBase):
     def __init__(self) -> None:
@@ -136,35 +140,34 @@ class WandSimulator(WandBase):
                 self.callback()
 
 class MATH_CAMP_WAND_IO(enum.Enum):
-    SERVICE_CHAR     = '64a70011-f691-4b93-a6f4-0968f5b648f8'
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
     QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
 
 class MathCampWand(WandBase):
     """A wand class to interact with the Math Camp wand"""
 
-    def __init__(self, device):
+    def __init__(self, device, bleak_loop, disconnected_callback=None):
         super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=-1)
-        self.device = device
+        self.device = bleak.BleakClient(device)
+        self._bleak_loop = bleak_loop
         self.connected = False
+        self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.device.identifier()} ({self.device.address()})...')
-        try:
-            self.device.connect()
-        except:
-            print(f'Could not connect to {self.device.identifier()}')
+        print(f'Connecting to {self.device.name} ({self.device.address})...')
+        if not self._await_bleak(self.device.connect()):
+            print(f'Could not connect to {self.name}')
             return
         
-        self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
-        self.device.notify(MATH_CAMP_WAND_IO.SERVICE_CHAR.value, MATH_CAMP_WAND_IO.USER_BUTTON_CHAR.value, self._handle_button)
+        self._await_bleak(self.device.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
+        self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.identifier()}')
+        print(f'Connected to {self.device.name}')
 
     def __repr__(self):
-        return f'MathCampWand(Name: {self.device.identifier()}, Address: {self.device.address()})'
+        return f'MathCampWand(Name: {self.device.name}, Address: {self.device.address})'
     
     def _handle_quaternion(self, data):
         self.last_update = time.time()
@@ -190,58 +193,55 @@ class MathCampWand(WandBase):
     def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
-            name = self.device.identifier()
+            name = self.device.name
             self.connected = False
             self.device.disconnect()
-            print(f'Disconnected from {name}')    
-            #pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))            
+            print(f'Disconnected from {name}')   
+            if self.disconnected_callback:
+                self.disconnected_callback(name)          
         
 
 class KANO_IO(enum.Enum):
-    QUAT_SERVICE_CHAR     = '64a70011-f691-4b93-a6f4-0968f5b648f8'
-    QUATERNIONS_CHAR      = '64a70002-f691-4b93-a6f4-0968f5b648f8'
-    BUTTON_SERVICE_CHAR   = '64a70012-f691-4b93-a6f4-0968f5b648f8'
-    USER_BUTTON_CHAR      = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
-    VIBRATOR_SERVICE_CHAR = '64a70012-f691-4b93-a6f4-0968f5b648f8'
-    VIBRATOR_CHAR         = '64a70008-f691-4b93-a6f4-0968f5b648f8'
-    LED_SERVICE_CHAR      = '64a70012-f691-4b93-a6f4-0968f5b648f8'
-    LED_CHAR              = '64a70009-f691-4b93-a6f4-0968f5b648f8'
+    QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
+    USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
+    VIBRATOR_CHAR    = '64a70008-f691-4b93-a6f4-0968f5b648f8'
+    LED_CHAR         = '64a70009-f691-4b93-a6f4-0968f5b648f8'
 
 class KANO_PATTERN(enum.Enum):
-    REGULAR = 1
-    SHORT = 2
-    BURST = 3
-    LONG = 4
-    SHORT_LONG = 5
+    REGULAR     = 1
+    SHORT       = 2
+    BURST       = 3
+    LONG        = 4
+    SHORT_LONG  = 5
     SHORT_SHORT = 6
-    BIG_PAUSE = 7
+    BIG_PAUSE   = 7
 
 class KanoWand(WandBase):
     """A wand class to interact with the Kano wand"""
 
-    def __init__(self, device):
+    def __init__(self, device, bleak_loop, disconnected_callback=None):
         super().__init__()
         self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
         self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
-        self.device = device
+        self.device = bleak.BleakClient(device)
+        self._bleak_loop = bleak_loop
         self.connected = False
+        self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.device.identifier()} ({self.device.address()})...')
-        try:
-            self.device.connect()
-        except:
-            print(f'Could not connect to {self.device.identifier()}')
+        print(f'Connecting to {self.device.name} ({self.device.address})...')
+        if not self._await_bleak(self.device.connect()):
+            print(f'Could not connect to {self.name}')
             return
         
-        self.device.notify(KANO_IO.BUTTON_SERVICE_CHAR.value, KANO_IO.USER_BUTTON_CHAR.value, self._handle_button)
-        self.device.notify(KANO_IO.QUAT_SERVICE_CHAR.value, KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion)
+        self._await_bleak(self.device.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
+        self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
         self.set_led(0, 0, 255)
         self.connected = True
         self.start_watchdog()
-        print(f'Connected to {self.device.identifier()}')
+        print(f'Connected to {self.device.name}')
 
     def __repr__(self):
-        return f'KanoWand(Name: {self.device.identifier()}, Address: {self.device.address()})'
+        return f'KanoWand(Name: {self.device.name}, Address: {self.device.address})'
     
     def _handle_quaternion(self, data):
         print('quat', data)
@@ -270,62 +270,85 @@ class KanoWand(WandBase):
     def disconnect(self) -> None:
         if self.connected:
             self.stop_watchdog()
-            name = self.device.identifier()
+            name = self.device.name
             self.connected = False
             self.device.disconnect()
             print(f'Disconnected from {name}')
-            #pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name))
+            if self.disconnected_callback:
+                self.disconnected_callback(name)
         
     def vibrate(self, pattern):
         message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
-        self.device.write_request(KANO_IO.VIBRATOR_SERVICE_CHAR.value, KANO_IO.VIBRATOR_CHAR.value, bytes(message))
+        self._await_bleak(self.device.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
 
     def set_led(self, r: int, g: int, b: int, on=True):
         rgb = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3))
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
-        self.device.write_request(KANO_IO.LED_SERVICE_CHAR.value, KANO_IO.LED_CHAR.value, bytes(message))
+        self._await_bleak(self.device.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
 
 class BLEScanner:
     """A scanner class to connect to wands"""
 
-    def __init__(self):
+    def __init__(self, connected_callback=None, disconnected_callback=None):
+        self.connected_callback = connected_callback
+        self.disconnected_callback = disconnected_callback
+        self._bleak_loop = None
+        self._bleak_thread = threading.Thread(target=self._run_bleak_loop, daemon=True)
+        self._bleak_thread_ready = threading.Event()
+        self._bleak_thread.start()
+        self._bleak_thread_ready.wait()
         self.found_wands = {}
-        self.adapter = simplepyble.Adapter.get_adapters()[0]
-        self.adapter.set_callback_on_scan_found(self._device_found)
-        self.scanning = False
 
-    def _device_found(self, device):
-        print(device.identifier())
-        name = device.identifier()
-        if name is not None:
-            if name in self.found_wands and self.found_wands[name].connected:
-                return
-            wand = None
-            if name.startswith('Kano-Wand'):
-                wand = KanoWand(device)
-            elif name.startswith('Math Camp Wand'):
-                wand = MathCampWand(device)
-            if wand is not None and wand.connected:
-                self.found_wands[name] = wand
-                #pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand))
+        self.scan_thread = threading.Thread(target=self._scan_thread, daemon=True)
+        self._scan_event = threading.Event()
+        self.scanning = False
         
+    def _run_bleak_loop(self):
+        self._bleak_loop = asyncio.new_event_loop()
+        self._bleak_thread_ready.set()
+        self._bleak_loop.run_forever()
+
     def start(self):
         if not self.scanning:
             print('Starting wand scanner')
             self.scanning = True
-            self.adapter.scan_start()
+            self.scan_thread.start()
 
     def stop(self):
         if self.scanning:
             print('Stopping wand scanner')
             self.scanning = False
-            self.adapter.scan_stop()
+            self._scan_event.set()
+            self.scan_thread.join()
+    
+    def _scan_thread(self):
+        while self.scanning:
+            new_wands = self.scan()
+            if self.connected_callback:
+                for wand in new_wands:
+                    self.connected_callback(wand)
+            self._scan_event.wait(5)
+
+    def scan(self):
+        for wand in list(self.found_wands):
+            if not self.found_wands[wand].connected:
+                del self.found_wands[wand]
+
+        devices = asyncio.run_coroutine_threadsafe(bleak.BleakScanner.discover(timeout=2.0), self._bleak_loop).result()
+        devices = [d for d in devices if d.name is not None and d.name not in self.found_wands]
+
+        kano_wands = [KanoWand(d, self._bleak_loop, self.disconnected_callback) for d in devices if d.name.startswith("Kano-Wand")]
+        kano_wands = [w for w in kano_wands if wand.connected]
+
+        math_camp_wands = [MathCampWand(d, self._bleak_loop, self.disconnected_callback) for d in devices if d.name.startswith("Math Camp Wand")]
+        math_camp_wands = [w for w in math_camp_wands if wand.connected]
+
+        new_wands = [*kano_wands, *math_camp_wands]
+        for wand in new_wands:
+            self.found_wands[wand.name] = wand
+        return new_wands
 
 if __name__ == '__main__':
     ble_scanner = BLEScanner()
-    ble_scanner.start()
-    try:
-        time.sleep(60)
-    except KeyboardInterrupt:
-        ble_scanner.stop()
-    print('Found wands:', ble_scanner.found_wands)
+    wands = ble_scanner.scan()
+    print('Found wands:', wands)

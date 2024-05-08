@@ -5,15 +5,9 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 import wand
 import sierpinski
-import time
 
 ble_scanner = wand.BLEScanner()
-ble_scanner.start()
-time.sleep(10)
-ble_scanner.stop()
-time.sleep(5)
-
-wands = list(ble_scanner.found_wands.values())
+wands = ble_scanner.scan()
 if len(wands) == 0:
     wands.append(wand.WandSimulator())
 

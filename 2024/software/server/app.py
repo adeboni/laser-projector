@@ -6,6 +6,9 @@ import song_handler
 import sacn_handler
 import synthesizer
 import wand
+
+BLE_WAND_CONNECT = pygame.USEREVENT + 1
+BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
   
 class MainApp:
     """Class representing the GUI"""
@@ -17,7 +20,9 @@ class MainApp:
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip, self.wands)
         self.sacn = sacn_handler.SACNHandler(target_ip)
         self.synth = synthesizer.SynthServer(self.wands)
-        self.wand_scanner = wand.BLEScanner()
+        self.wand_scanner = wand.BLEScanner(
+            connected_callback=lambda wand: pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand)),
+            disconnected_callback=lambda name: pygame.event.post(pygame.event.Event(BLE_WAND_DISCONNECT, wand_name=name)))
 
         self.labels = { 'Mode': '0 - Invalid Mode',
                         'Song Input': 'A0',
@@ -106,12 +111,12 @@ class MainApp:
                     self.labels['Synthesizer'] = 'Running' if self.synth.running else 'Not Running'
                     self._update_lcds()
                     self._update_screen(screen)
-                elif event.type == wand.BLE_WAND_CONNECT:
+                elif event.type == BLE_WAND_CONNECT:
                     if -1 in self.wands:
                         del self.wands[-1]
                     self.wands[event.wand.name] = event.wand
                     self.labels['Wands'] = f'{len(self.wands)}'
-                elif event.type == wand.BLE_WAND_DISCONNECT:
+                elif event.type == BLE_WAND_DISCONNECT:
                     if event.wand_name in self.wands:
                         del self.wands[event.wand_name]
                         self.labels['Wands'] = f'{len(self.wands)}'

@@ -2,7 +2,6 @@
 
 import time
 import threading
-import pygame
 import sacn
 import robbie_generators
 
@@ -37,13 +36,13 @@ class SACNHandler:
         self._animation_event = threading.Event()
 
         self.button_key_map = {
-            pygame.K_UP: 190,
-            pygame.K_DOWN: 187,
-            pygame.K_LEFT: 186,
-            pygame.K_RIGHT: 188,
-            pygame.K_RETURN: 189,
-            pygame.K_SPACE: 185,
-            pygame.K_POWER: 191
+            1073741906: 190, # UP
+            1073741905: 187, # DOWN
+            1073741904: 186, # LEFT
+            1073741903: 188, # RIGHT
+            13: 189,         # RETURN
+            32: 185,         # SPACE
+            1073741926: 191  # POWER
         }
 
     def _key_thread(self, output_num: int) -> None:
