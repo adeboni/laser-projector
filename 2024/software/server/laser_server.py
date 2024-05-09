@@ -46,10 +46,10 @@ class LaserServer:
                 continue
 
             if not packet:
-                packet = [[seq] for _ in range(self.num_lasers)]
                 gen = self.mode_list[self.mode]
                 if gen is None:
                     continue
+                packet = [[seq] for _ in range(self.num_lasers)]
                 for _ in range(170):
                     p = next(gen)
                     for i in range(self.num_lasers):
