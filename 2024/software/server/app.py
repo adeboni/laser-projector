@@ -7,6 +7,7 @@ import sacn_handler
 import synthesizer
 import wand
 
+UPDATE_SONGS = pygame.USEREVENT
 BLE_WAND_CONNECT = pygame.USEREVENT + 1
 BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
   
@@ -60,7 +61,6 @@ class MainApp:
     def show_screen(self) -> None:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption('Laser Control Station')
-        UPDATE_SONGS = pygame.USEREVENT
         pygame.time.set_timer(UPDATE_SONGS, 100)
         clock = pygame.time.Clock()
 
