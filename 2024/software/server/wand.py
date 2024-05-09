@@ -148,8 +148,6 @@ class MathCampWand(WandBase):
 
     def __init__(self, device, bleak_loop, disconnected_callback=None):
         super().__init__()
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=0, y=0, z=1)
         self.name = device.name
         self.address = device.address
         self.device = bleak.BleakClient(device)
@@ -173,16 +171,16 @@ class MathCampWand(WandBase):
     
     def _handle_quaternion(self, sender, data):
         self.last_update = time.time()
-        x = (np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) - 16384) / 16384
-        y = (np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) - 16384) / 16384
-        z = (np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) - 16384) / 16384
-        w = (np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) - 16384) / 16384
+        x = (data[0] + (data[1] << 8) - 16384) / 16384
+        y = (data[2] + (data[3] << 8) - 16384) / 16384
+        z = (data[4] + (data[5] << 8) - 16384) / 16384
+        w = (data[6] + (data[7] << 8) - 16384) / 16384
         position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
+            self.cal_offset = position_raw.conjugate
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
+        self.position = self.cal_offset * position_raw
 
         if self.check_for_impact() and self.callback:
             self.callback()
@@ -196,7 +194,7 @@ class MathCampWand(WandBase):
         if self.connected:
             self.stop_watchdog()
             self.connected = False
-            self.device.disconnect()
+            self._await_bleak(self.device.disconnect())
             print(f'Disconnected from {self.name}')   
             if self.disconnected_callback:
                 self.disconnected_callback(self.name)          
@@ -222,8 +220,6 @@ class KanoWand(WandBase):
 
     def __init__(self, device, bleak_loop, disconnected_callback=None):
         super().__init__()
-        self.BASE_1 = pyquaternion.Quaternion(w=1, x=0, y=-1, z=0)
-        self.BASE_2 = pyquaternion.Quaternion(w=1, x=1, y=0, z=0)
         self.name = device.name
         self.address = device.address
         self.device = bleak.BleakClient(device)
@@ -248,16 +244,16 @@ class KanoWand(WandBase):
     
     def _handle_quaternion(self, sender, data):
         self.last_update = time.time()
-        y = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
-        x = -1 * np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
-        w = -1 * np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
-        z = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
+        w = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
+        x = np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
+        z = np.int16(np.uint16(int.from_bytes(data[4:6], byteorder='little'))) / 1000
+        y = np.int16(np.uint16(int.from_bytes(data[6:8], byteorder='little'))) / 1000
         position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
 
         if not self.cal_offset or self.reset_cal:
-            self.cal_offset = self.BASE_2.rotate(self.BASE_1.rotate(position_raw)).inverse
+            self.cal_offset = position_raw.conjugate
             self.reset_cal = False
-        self.position = self.cal_offset * self.BASE_2.rotate(self.BASE_1.rotate(position_raw))
+        self.position = self.cal_offset * position_raw
 
         if self.check_for_impact() and self.callback:
             self.callback()
@@ -272,7 +268,7 @@ class KanoWand(WandBase):
         if self.connected:
             self.stop_watchdog()
             self.connected = False
-            self.device.disconnect()
+            self._await_bleak(self.device.disconnect())
             print(f'Disconnected from {self.name}')
             if self.disconnected_callback:
                 self.disconnected_callback(self.name)
