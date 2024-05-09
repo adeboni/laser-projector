@@ -45,10 +45,7 @@ class LaserServer:
             if self.mode not in self.mode_list or self.mode_list[self.mode] is None:
                 continue
 
-            if not packet:
-                gen = self.mode_list[self.mode]
-                if gen is None:
-                    continue
+            if not packet and (gen := self.mode_list[self.mode]):
                 packet = [[seq] for _ in range(self.num_lasers)]
                 for _ in range(170):
                     p = next(gen)
@@ -57,7 +54,7 @@ class LaserServer:
                 seq = (seq + 1) % 255
 
             new_time = time.time()
-            if new_time - last_sent > PACKET_DELAY:
+            if packet and new_time - last_sent > PACKET_DELAY:
                 for i in range(self.num_lasers):
                     self.sock.sendto(bytearray(packet[i]), self.targets[i])
                 last_sent = new_time
