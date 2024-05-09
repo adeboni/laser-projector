@@ -104,10 +104,7 @@ class WandBase:
         return result
     
     def _await_bleak(self, coro):
-        try:
-            return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
-        except Exception as ex:
-            print(f'Bleak error! {type(ex).__name__} {ex}')
+        return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
         
 class WandSimulator(WandBase):
     def __init__(self) -> None:
@@ -135,9 +132,9 @@ class WandSimulator(WandBase):
                           * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
                           * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
                           * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
-            self._notify_event.wait(0.02)
             if self.check_for_impact() and self.callback:
                 self.callback()
+            self._notify_event.wait(0.02)
 
 class MATH_CAMP_WAND_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
@@ -155,16 +152,17 @@ class MathCampWand(WandBase):
         self.connected = False
         self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.name} ({self.address})...')
-        if not self._await_bleak(self.device.connect()):
+        try:
+            print(f'Connecting to {self.name} ({self.address})...')
+            self._await_bleak(self.device.connect())
+            self._await_bleak(self.device.start_notify(MATH_CAMP_WAND_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
+            self._await_bleak(self.device.start_notify(MATH_CAMP_WAND_IO.USER_BUTTON_CHAR.value, self._handle_button))
+        except:
             print(f'Could not connect to {self.name}')
-            return
-        
-        self._await_bleak(self.device.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
-        self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
-        self.connected = True
-        self.start_watchdog()
-        print(f'Connected to {self.name}')
+        else:
+            self.connected = True
+            self.start_watchdog()
+            print(f'Connected to {self.name}')
 
     def __repr__(self):
         return f'MathCampWand(Name: {self.name}, Address: {self.address})'
@@ -194,7 +192,10 @@ class MathCampWand(WandBase):
         if self.connected:
             self.stop_watchdog()
             self.connected = False
-            self._await_bleak(self.device.disconnect())
+            try:
+                self._await_bleak(self.device.disconnect())
+            except:
+                pass
             print(f'Disconnected from {self.name}')   
             if self.disconnected_callback:
                 self.disconnected_callback(self.name)          
@@ -227,17 +228,18 @@ class KanoWand(WandBase):
         self.connected = False
         self.disconnected_callback = disconnected_callback
         
-        print(f'Connecting to {self.name} ({self.address})...')
-        if not self._await_bleak(self.device.connect()):
+        try:
+            print(f'Connecting to {self.name} ({self.address})...')
+            self._await_bleak(self.device.connect())
+            self._await_bleak(self.device.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
+            self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
+            self.set_led(0, 0, 255)
+        except:
             print(f'Could not connect to {self.name}')
-            return
-        
-        self._await_bleak(self.device.start_notify(KANO_IO.QUATERNIONS_CHAR.value, self._handle_quaternion))
-        self._await_bleak(self.device.start_notify(KANO_IO.USER_BUTTON_CHAR.value, self._handle_button))
-        self.set_led(0, 0, 255)
-        self.connected = True
-        self.start_watchdog()
-        print(f'Connected to {self.name}')
+        else:
+            self.connected = True
+            self.start_watchdog()
+            print(f'Connected to {self.name}')
 
     def __repr__(self):
         return f'KanoWand(Name: {self.name}, Address: {self.address})'
@@ -268,14 +270,20 @@ class KanoWand(WandBase):
         if self.connected:
             self.stop_watchdog()
             self.connected = False
-            self._await_bleak(self.device.disconnect())
+            try:
+                self._await_bleak(self.device.disconnect())
+            except:
+                pass
             print(f'Disconnected from {self.name}')
             if self.disconnected_callback:
                 self.disconnected_callback(self.name)
         
     def vibrate(self, pattern):
-        message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
-        self._await_bleak(self.device.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
+        try:
+            message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
+            self._await_bleak(self.device.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
+        except:
+            pass
 
     def set_led(self, r: int, g: int, b: int, on=True):
         rgb = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3))
