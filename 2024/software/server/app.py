@@ -11,6 +11,7 @@ import utilities
 UPDATE_SONGS = pygame.USEREVENT
 BLE_WAND_CONNECT = pygame.USEREVENT + 1
 BLE_WAND_DISCONNECT = pygame.USEREVENT + 2
+REFOCUS = pygame.USEREVENT + 3
   
 class MainApp:
     """Class representing the GUI"""
@@ -64,6 +65,7 @@ class MainApp:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption(self.APP_NAME)
         pygame.time.set_timer(UPDATE_SONGS, 100)
+        pygame.time.set_timer(REFOCUS, 3000, 1)
         clock = pygame.time.Clock()
 
         while True:
@@ -125,9 +127,8 @@ class MainApp:
                         if len(self.wands) == 0:
                             self.wands[-1] = wand.WandSimulator()
                             self.labels['Wands'] = '1 (Simulated)'
-                elif event.type == pygame.ACTIVEEVENT and event.state & 2 == 2 and not event.gain:
+                elif event.type == REFOCUS or (event.type == pygame.ACTIVEEVENT and event.state & 2 == 2 and not event.gain):
                     utilities.focus(self.APP_NAME)
-                        
                                             
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():

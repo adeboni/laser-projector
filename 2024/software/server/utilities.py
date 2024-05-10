@@ -1,7 +1,6 @@
 import platform
 import subprocess
-import win32gui
-import win32com.client
+import pyautogui
 
 def ping(host: str) -> bool:
     """Returns True if host responds to a ping request"""
@@ -29,15 +28,9 @@ def ping(host: str) -> bool:
     else:
         return True
 
-def window_enumeration_handler(hwnd, windows):
-    windows.append((hwnd, win32gui.GetWindowText(hwnd)))
-
 def focus(win_name):
-    windows = []
-    win32gui.EnumWindows(window_enumeration_handler, windows)
-    for i in windows:
-        if i[1] == win_name:
-            win32com.client.Dispatch("WScript.Shell").SendKeys('%')
-            win32gui.ShowWindow(i[0], 5)
-            win32gui.SetForegroundWindow(i[0])
-            return
+    if platform.system().lower() == 'windows':
+        w = pyautogui.getWindowsWithTitle(win_name)
+        if len(w) > 0:
+            pyautogui.click()
+            w[0].activate()
