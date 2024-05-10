@@ -62,12 +62,12 @@ class MainApp:
         pygame.display.update()
 
     def show_screen(self) -> None:
+        clock = pygame.time.Clock()
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
         pygame.display.set_caption(self.APP_NAME)
         pygame.time.set_timer(UPDATE_SONGS, 100)
         pygame.time.set_timer(REFOCUS, 3000, 1)
-        clock = pygame.time.Clock()
-
+        
         while True:
             clock.tick(30)
             for event in pygame.event.get():
