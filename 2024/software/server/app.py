@@ -6,6 +6,7 @@ import song_handler
 import sacn_handler
 import synthesizer
 import wand
+import utilities
 
 UPDATE_SONGS = pygame.USEREVENT
 BLE_WAND_CONNECT = pygame.USEREVENT + 1
@@ -15,6 +16,7 @@ class MainApp:
     """Class representing the GUI"""
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
+        self.APP_NAME = 'Laser Control Station'
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
 
@@ -60,7 +62,7 @@ class MainApp:
 
     def show_screen(self) -> None:
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
-        pygame.display.set_caption('Laser Control Station')
+        pygame.display.set_caption(self.APP_NAME)
         pygame.time.set_timer(UPDATE_SONGS, 100)
         clock = pygame.time.Clock()
 
@@ -123,6 +125,9 @@ class MainApp:
                         if len(self.wands) == 0:
                             self.wands[-1] = wand.WandSimulator()
                             self.labels['Wands'] = '1 (Simulated)'
+                elif event.type == pygame.ACTIVEEVENT and event.state & 2 == 2 and not event.gain:
+                    utilities.focus(self.APP_NAME)
+                        
                                             
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
@@ -145,7 +150,6 @@ class MainApp:
         self.sacn.update_output()
        
 if __name__ == '__main__':
-    import utilities
     if utilities.ping('10.0.0.2'):
         app = MainApp(num_lasers=3, host_ip='10.0.0.2', target_ip='10.0.0.20')
     else:

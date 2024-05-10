@@ -13,6 +13,9 @@ class SynthServer:
         self.wands = wands
         self.update_thread = threading.Thread(target=self._update_thread, daemon=True)
         self._update_event = threading.Event()
+        self.connecting = False
+        self.connect_thread = threading.Thread(target=self._connect_thread, daemon=True)
+        self._connect_event = threading.Event()
 
     def _update_thread(self) -> None:
         while self.running:
@@ -22,16 +25,26 @@ class SynthServer:
                         self.update_synth(wand, x=sp[0], y=sp[1], r=sp[2])
             self._update_event.wait(0.02)
 
-    def start_server(self) -> None:
-        if not self.running:
+    def _connect_thread(self) -> None:
+        while self.connecting:
             try:
                 self.server = supercollider.Server()
                 self.running = True
                 self.update_thread.start()
+                return
             except:
-                pass
+                self._connect_event.wait(2)
+
+    def start_server(self) -> None:
+        if not self.running and not self.connecting:
+            self.connecting = True
+            self.connect_thread.start()
         
     def stop_server(self) -> None:
+        if self.connecting:
+            self.connecting = False
+            self._connect_event.set()
+            self.connect_thread.join()
         if self.running:
             self.stop_all_synths()
             self.server = None
@@ -64,6 +77,7 @@ if __name__ == '__main__':
     wands = { -1: wand.WandSimulator() }
     server = SynthServer(wands)
     server.start_server()
+    time.sleep(2)
     if not server.running:
         print('Failed to connect to server!')
         quit()
