@@ -69,7 +69,7 @@ class MainApp:
         clock = pygame.time.Clock()
 
         while True:
-            clock.tick(50)
+            clock.tick(30)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.sacn.stop()
