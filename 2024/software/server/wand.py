@@ -169,12 +169,12 @@ class MathCampWand(WandBase):
     
     def _handle_quaternion(self, sender, data):
         self.last_update = time.time()
-        x = (data[0] + (data[1] << 8) - 16384) / 16384
-        y = (data[2] + (data[3] << 8) - 16384) / 16384
+        y = (data[0] + (data[1] << 8) - 16384) / 16384
+        x = (data[2] + (data[3] << 8) - 16384) / 16384
         z = (data[4] + (data[5] << 8) - 16384) / 16384
         w = (data[6] + (data[7] << 8) - 16384) / 16384
         position_raw = pyquaternion.Quaternion(w=w, x=x, y=y, z=z)
-
+        
         if not self.cal_offset or self.reset_cal:
             self.cal_offset = position_raw.conjugate
             self.reset_cal = False
@@ -185,7 +185,7 @@ class MathCampWand(WandBase):
 
     def _handle_button(self, sender, data):
         self.last_update = time.time()
-        self.button = data[0] == 1
+        self.button = data[0] == 0
         self.reset_cal = True
 
     def disconnect(self) -> None:

@@ -30,7 +30,10 @@ def ping(host: str) -> bool:
 
 def focus(win_name):
     if platform.system().lower() == 'windows':
-        w = pyautogui.getWindowsWithTitle(win_name)
-        if len(w) > 0:
-            pyautogui.click()
-            w[0].activate()
+        try:
+            w = pyautogui.getWindowsWithTitle(win_name)
+            if len(w) > 0:
+                pyautogui.click()
+                w[0].activate()
+        except:
+            pass
