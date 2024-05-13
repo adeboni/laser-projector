@@ -347,7 +347,7 @@ class BLEScanner:
         math_camp_wands = [MathCampWand(d, self._bleak_loop, self.disconnected_callback) for d in devices if d.name.startswith("Math Camp Wand")]
         math_camp_wands = [w for w in math_camp_wands if w.connected]
 
-        new_wands = [*kano_wands, *math_camp_wands]
+        new_wands = kano_wands + math_camp_wands
         for wand in new_wands:
             self.found_wands[wand.name] = wand
         return new_wands
