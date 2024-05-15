@@ -18,6 +18,7 @@ class MainApp:
     def __init__(self, num_lasers: int, host_ip: str, target_ip: str) -> None:
         pygame.init()
         self.APP_NAME = 'Laser Control Station'
+        self.focusing = True
         self.font = pygame.font.SysFont('Arial', 32)
         self.wands = { -1: wand.WandSimulator() }
 
@@ -33,7 +34,8 @@ class MainApp:
                         'Playing': 'None',
                         'Song Queue': 'Empty',
                         'Wands': '1 (Simulated)',
-                        'Synthesizer': 'Not Running' }
+                        'Synthesizer': 'Not Running',
+                        'Focusing': 'True' }
 
         self.songs = song_handler.SongHandler(self.laser_server)
         self.current_letter = ord('A')
@@ -102,6 +104,9 @@ class MainApp:
                     elif event.key == pygame.K_SPACE:
                         if self.current_mode in self.modes and self.modes[self.current_mode][1]:
                             self.songs.play_next_song()
+                    elif event.key == pygame.K_f:
+                        self.focusing = not self.focusing
+                        self.labels['Focusing'] = self.focusing
                     self._update_screen(screen)
                     self.sacn.key_down(event.key)
                 elif event.type == UPDATE_SONGS:
@@ -128,7 +133,8 @@ class MainApp:
                             self.wands[-1] = wand.WandSimulator()
                             self.labels['Wands'] = '1 (Simulated)'
                 elif event.type == REFOCUS or (event.type == pygame.ACTIVEEVENT and event.state & 2 == 2 and not event.gain):
-                    utilities.focus(self.APP_NAME)
+                    if self.focusing:
+                        utilities.focus(self.APP_NAME)
                                             
     def _update_selection(self, key: int) -> None:
         if key == pygame.K_UP and chr(self.current_letter) != self.songs.get_booklet_letter_limit():
