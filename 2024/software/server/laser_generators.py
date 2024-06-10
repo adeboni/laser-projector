@@ -32,13 +32,33 @@ def drums_graphics(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [255, 255, 255]]
 
     graphic_list = {
-        "notify": EQN_01,
-        "effect 2": EQN_02,
-        "effect 3": EQN_03
+        "SOUND bicycle horn": EFFECT_BICYCLE_HORN,
+        "SOUND big gong": EFFECT_BIG_GONG,
+        "SOUND bongo drums": EFFECT_BONGO_DRUMS,
+        "SOUND breaking glass": EFFECT_BREAKING_GLASS,
+        "SOUND car horn": EFFECT_CAR_HORN,
+        "SOUND cow": EFFECT_COW,
+        "SOUND cymbal hifreq": EFFECT_CYMBAL_HIFREQ,
+        "SOUND cymbal lofreq": EFFECT_CYMBAL_LOFREQ,
+        "SOUND fart": EFFECT_FART,
+        "SOUND firework": EFFECT_FIREWORK,
+        "SOUND gong bell": EFFECT_GONG_BELL,
+        "SOUND kick drum": EFFECT_KICK_DRUM,
+        "SOUND scream": EFFECT_SCREAM,
+        "SOUND sneeze": EFFECT_SNEEZE,
+        "SOUND spring": EFFECT_SPRING,
+        "SOUND triangle": EFFECT_TRIANGLE,
+        "SOUND trombone": EFFECT_TROMBONE,
+        "SOUND trumpet": EFFECT_TRUMPET,
+        "SOUND vintage car horn": EFFECT_VINTAGE_CAR_HORN,
+        "SOUND xylophone": EFFECT_XYLOPHONE,
+        "SOUND drum SINGLE": EFFECT_DRUM,
+        "SOUND duck SINGLE": EFFECT_DUCK,
+        "SOUND faucet SINGLE": EFFECT_FAUCET
     }
 
-    for effect_name in graphic_list:
-        graphic_list[effect_name] = interpolate_objects(convert_to_xy(graphic_list[effect_name]))
+    for g in graphic_list:
+        graphic_list[g] = interpolate_objects(convert_to_xy(graphic_list[g], x_scale=0.4, y_scale=0.4))
     
     point_idxs = [0 for _ in range(num_lasers)]
     current_graphic = None
@@ -47,7 +67,7 @@ def drums_graphics(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     
     while True:
         effect_name = current_effect.name if current_effect and current_effect.is_playing() else None
-        if effect_name:
+        if effect_name and effect_name in graphic_list:
             if effect_name != last_effect_name:
                 last_effect_name = effect_name
                 point_idxs = [0 for _ in range(num_lasers)]
