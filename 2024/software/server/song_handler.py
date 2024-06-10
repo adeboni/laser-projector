@@ -6,6 +6,7 @@ import time
 import soundfile
 import laser_server
 import pygame
+import pathlib
 
 class Song:
     """Class implementing a song"""
@@ -110,6 +111,7 @@ class Song:
 class Effect:
     def __init__(self, path: str) -> None:
         self.path = path
+        self.name = pathlib.Path(path).stem
         self.data, self.sr = soundfile.read(self.path)
         self.length_s = len(self.data) / self.sr
         self.sound_obj = pygame.mixer.Sound(self.path)
@@ -124,9 +126,13 @@ class Effect:
         """Stops the file"""
         self.sound_obj.stop()
 
+    def is_playing(self) -> bool:
+        """Returns True if the audio is still playing"""
+        return time.time() < self.start_time + self.length_s
+
     def get_data(self, blocksize: int, interval: int) -> list[float]:
         """Returns a block of data from the current audio"""
-        if self.data is not None and time.time() < self.start_time + self.length_s:
+        if self.data is not None and self.is_playing():
             start_index = int((time.time() - self.start_time) * self.sr)
             return [x[0] for x in self.data[start_index:start_index + blocksize]][::interval]
         else:

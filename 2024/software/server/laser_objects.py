@@ -26,14 +26,13 @@ def get_midpoint(obj: list[list[int]]) -> tuple[int, int]:
     min_x, max_x, min_y, max_y = get_bounds(obj)
     return ((max_x + min_x) // 2, (max_y + min_y) // 2)
 
-def convert_to_xy(obj: list[int], x_offset: int=0, y_offset: int=0, 
-                                  x_scale: float=1, y_scale: float=1) -> list[list[int]]:
+def convert_to_xy(obj: list[int], x_scale: float=1, y_scale: float=1) -> list[list[int]]:
     result = [[int((obj[i] & 0x7FFF) * x_scale), int(obj[i+1] * y_scale), 1 if obj[i] & 0x8000 else 0]
                for i in range(0, len(obj), 2)]
     mid_x, mid_y = get_midpoint(result)
     for p in result:
-        p[0] = p[0] - mid_x + x_offset
-        p[1] = p[1] - mid_y + y_offset
+        p[0] -= mid_x
+        p[1] -= mid_y
     result.append(result[0])
     return result
 

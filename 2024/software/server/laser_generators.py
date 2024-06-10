@@ -23,7 +23,48 @@ def verify_points(points: list[LaserPoint]) -> list[LaserPoint]:
         p.b = int(min(max(p.b, 0), 255))
     return points
 
-def drums(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+def drums_graphics(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    """Generates a graphic based on the audio played"""
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
+    x_offset = (min_x + max_x) // 2
+    y_offset = (min_y + max_y) // 2
+
+    colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [255, 255, 255]]
+
+    graphic_list = {
+        "notify": EQN_01,
+        "effect 2": EQN_02,
+        "effect 3": EQN_03
+    }
+
+    for effect_name in graphic_list:
+        graphic_list[effect_name] = interpolate_objects(convert_to_xy(graphic_list[effect_name]))
+    
+    point_idxs = [0 for _ in range(num_lasers)]
+    current_graphic = None
+    current_color = None
+    last_effect_name = None
+    
+    while True:
+        effect_name = current_effect.name if current_effect and current_effect.is_playing() else None
+        if effect_name:
+            if effect_name != last_effect_name:
+                last_effect_name = effect_name
+                point_idxs = [0 for _ in range(num_lasers)]
+                current_graphic = graphic_list[effect_name]
+                current_color = random.choice(colors)
+            output = []
+            for i in range(num_lasers):
+                x, y, on = current_graphic[point_idxs[i]]
+                x += x_offset
+                y += y_offset
+                output.append(LaserPoint(i, x, y, *(current_color if on else [0, 0, 0])))
+                point_idxs[i] = (point_idxs[i] + 1) % len(current_graphic)
+            yield verify_points(output)
+        else:
+            yield verify_points([LaserPoint(i) for i in range(num_lasers)])
+
+def drums_simple(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an audio-reactive rgb circle"""
     min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
     x_offset = (min_x + max_x) // 2

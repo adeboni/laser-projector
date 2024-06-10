@@ -28,7 +28,7 @@ class LaserServer:
             5: laser_generators.pong(num_lasers),
             6: laser_generators.wand_drawing(num_lasers),
             7: laser_generators.wand_drawing(num_lasers),
-            8: laser_generators.drums(num_lasers),
+            8: laser_generators.drums_graphics(num_lasers),
             9: laser_generators.calibration(num_lasers)
         }
 
