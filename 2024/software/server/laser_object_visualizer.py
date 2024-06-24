@@ -1,8 +1,11 @@
-import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import animation
 from laser_objects import *
 
 # X and Y values should range from 0 to 1100
+
+x_offset = 2048 - 550
+y_offset = 2048 - 550
 
 eqns = [ EQN_01, EQN_02, EQN_03, EQN_04, EQN_05, EQN_06, EQN_07, EQN_08, 
          EQN_09, EQN_10, EQN_11, EQN_12, EQN_13, EQN_14, EQN_15, EQN_16, 
@@ -24,25 +27,8 @@ effects = [ EFFECT_BICYCLE_HORN, EFFECT_BIG_GONG, EFFECT_BONGO_DRUMS,
             EFFECT_SPRING, EFFECT_TRIANGLE, EFFECT_TROMBONE, EFFECT_TRUMPET, 
             EFFECT_VINTAGE_CAR_HORN, EFFECT_XYLOPHONE ]
 
-graphic_raw = effects
-simple = True
-
-x_offset = 2048 - 550
-y_offset = 2048 - 550
-x, y, c = [], [], []
-
-def print_bounds():
-    min_x, max_x = 4095, 0
-    min_y, max_y = 4095, 0
-    for xx, yy in zip(x, y):
-        min_x = min(min_x, xx)
-        max_x = max(max_x, xx)
-        min_y = min(min_y, yy)
-        max_y = max(max_y, yy)
-    print(f"X = [{min_x}, {max_x}], Y = [{min_y}, {max_y}]")
-
-if simple:
-    for g in graphic_raw:
+def plot_all(graphics):
+    for g in graphics:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.set_xlim([0, 4095])
@@ -51,31 +37,45 @@ if simple:
         x, y, c = [], [], []
         for i in range(0, len(g), 2):
             x.append((g[i] & 0x7FFF))
-            y.append(g[i+1])
+            y.append(g[i + 1])
             c.append(True if g[i] & 0x8000 else False)
         for i in range(1, len(x)):
             if c[i]:
-                ax.plot([x[i-1] + x_offset, x[i] + x_offset], 
-                        [y[i-1] + y_offset, y[i] + y_offset], c='k')
-        print_bounds()        
-else:
-    g = graphic_raw[0]
-    fig = plt.figure()
-    grid_size = int(np.sqrt(len(g) // 2)) + 1
-    axs = [fig.add_subplot(grid_size, grid_size, i + 1) for i in range(len(g) // 2)]
-    for i in range(0, len(g), 2):
-        x.append((g[i] & 0x7FFF))
-        y.append(g[i+1])
-        c.append('r' if g[i] & 0x8000 else 'k')
-        axs[i // 2].set_xlim([0, 4095])
-        axs[i // 2].set_ylim([0, 4095])
-        axs[i // 2].set_aspect('equal')
-        axs[i // 2].set_title(f'Step {i // 2 + 1}')
-        for xx, yy, cc in zip(x, y, c):
-            axs[i // 2].plot([xx + x_offset], [yy + y_offset], c=cc, linestyle='', marker='o')
-        for j in range(1, len(x)):
-            axs[i // 2].plot([x[j - 1] + x_offset, x[j] + x_offset], 
-                             [y[j - 1] + y_offset, y[j] + y_offset], c=c[j])
-    print_bounds()
+                ax.plot([x[i - 1] + x_offset, x[i] + x_offset], 
+                        [y[i - 1] + y_offset, y[i] + y_offset], c='k')
+    plt.show()
 
-plt.show()
+def plot_animated(graphic):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlim([0, 4095])
+    ax.set_ylim([0, 4095])
+    ax.set_aspect('equal')
+    x, y, c = [], [], []
+    steps = []
+    for i in range(0, len(graphic), 2):
+        x.append((graphic[i] & 0x7FFF))
+        y.append(graphic[i + 1])
+        c.append('r' if graphic[i] & 0x8000 else 'k')
+        steps.append([(x[j - 1] + x_offset, x[j] + x_offset, 
+                       y[j - 1] + y_offset, y[j] + y_offset, c[j]) 
+                       for j in range(1, len(x))])
+
+    global ani_index
+    ani_index = 0
+    def animate(_):
+        global ani_index
+        ax.clear()
+        ax.set_xlim([0, 4095])
+        ax.set_ylim([0, 4095])
+        ax.set_aspect('equal')
+        for x1, x2, y1, y2, cc in steps[ani_index]:
+            ax.plot([x1, x2], [y1, y2], c=cc)
+        ani_index = (ani_index + 1) % len(steps)
+
+    ani = animation.FuncAnimation(fig, animate, interval=250, cache_frame_data=False)
+    plt.show()
+
+
+#plot_all(effects)
+plot_animated(EFFECT_BICYCLE_HORN)
