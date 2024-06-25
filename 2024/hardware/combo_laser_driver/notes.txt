@@ -1,0 +1,4 @@
+Laser Diode Settings:
+Red = 3.3 V / 46 mA
+Green = 7.2 V / 27 mA
+Blue = 7.2 V / 44 mA
