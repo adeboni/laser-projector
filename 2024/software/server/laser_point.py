@@ -26,11 +26,11 @@ class LaserPoint:
     def get_bytes(self) -> list[int]:
         return xy_to_bytes(self.x, self.y) + [self.r, self.g, self.b]
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'LaserPoint(ID: {self.id}, Point: [{self.x}, {self.y}], Color: [{self.r}, {self.g}, {self.b}])'
     
     @property
-    def rgb(self):
+    def rgb(self) -> list[int]:
         return [self.r, self.g, self.b]
     
 class LaserSegment:
@@ -39,7 +39,7 @@ class LaserSegment:
         self.end = p2 if p2 else LaserPoint(id)
         self.color = color if color else [0, 0, 0]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'LaserSegment(Start: [{self.start.x}, {self.start.y}], End: [{self.end.x}, {self.end.y}], Color: {self.color})'
     
     def show_in_simulator(self) -> bool:

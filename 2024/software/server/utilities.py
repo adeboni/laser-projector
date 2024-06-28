@@ -28,7 +28,7 @@ def ping(host: str) -> bool:
     else:
         return True
 
-def focus(win_name):
+def focus(win_name) -> None:
     if platform.system().lower() == 'windows':
         try:
             w = pyautogui.getWindowsWithTitle(win_name)

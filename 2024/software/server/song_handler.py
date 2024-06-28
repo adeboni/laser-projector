@@ -117,6 +117,9 @@ class Effect:
         self.sound_obj = pygame.mixer.Sound(self.path)
         self.start_time = 0
 
+    def __repr__(self) -> str:
+        return f'Effect(Name: {self.name}, Length: {self.length_s})'
+
     def play(self) -> None:
         """Plays the file"""
         self.start_time = time.time()

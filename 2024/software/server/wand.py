@@ -105,6 +105,17 @@ class WandBase:
         self.prev_speed = new_speed
         return result
     
+    def update_button_data(self, pressed: bool) -> None:
+        self.last_update = time.time()
+        self.button = pressed
+        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
+            self.reset_cal = True
+            print('Calibration reset')
+        if not self.button:
+            self.button_pressed_time = None
+        elif self.button_pressed_time is None:
+            self.button_pressed_time = time.time()
+    
     def _await_bleak(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self._bleak_loop).result()
         
@@ -117,7 +128,7 @@ class WandSimulator(WandBase):
         self._notify_event = threading.Event()
         self.notify_thread.start()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'WandSimulator()'
 
     def disconnect(self) -> None:
@@ -138,14 +149,8 @@ class WandSimulator(WandBase):
                 self.impact_callback()
             self._notify_event.wait(0.02)
 
-    def press_button(self, data: bool):
-        self.button = data
-        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
-            print('Calibration reset')
-        if not self.button:
-            self.button_pressed_time = None
-        elif self.button_pressed_time is None:
-            self.button_pressed_time = time.time()
+    def press_button(self, pressed: bool) -> None:
+        self.update_button_data(pressed)
 
 class MATH_CAMP_WAND_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
@@ -154,7 +159,7 @@ class MATH_CAMP_WAND_IO(enum.Enum):
 class MathCampWand(WandBase):
     """A wand class to interact with the Math Camp wand"""
 
-    def __init__(self, device, bleak_loop, disconnected_callback=None):
+    def __init__(self, device, bleak_loop, disconnected_callback=None) -> None:
         super().__init__()
         self.name = device.name
         self.address = device.address
@@ -175,10 +180,10 @@ class MathCampWand(WandBase):
             self.start_watchdog()
             print(f'Connected to {self.name}')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'MathCampWand(Name: {self.name}, Address: {self.address})'
     
-    def _handle_quaternion(self, sender, data):
+    def _handle_quaternion(self, sender, data) -> None:
         self.last_update = time.time()
         y = (data[0] + (data[1] << 8) - 16384) / 16384
         x = (data[2] + (data[3] << 8) - 16384) / 16384
@@ -194,15 +199,8 @@ class MathCampWand(WandBase):
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
 
-    def _handle_button(self, sender, data):
-        self.last_update = time.time()
-        self.button = data[0] == 0
-        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
-            self.reset_cal = True
-        if not self.button:
-            self.button_pressed_time = None
-        elif self.button_pressed_time is None:
-            self.button_pressed_time = time.time()
+    def _handle_button(self, sender, data) -> None:
+        self.update_button_data(data[0] == 0)
 
     def disconnect(self) -> None:
         if self.connected:
@@ -235,7 +233,7 @@ class KANO_PATTERN(enum.Enum):
 class KanoWand(WandBase):
     """A wand class to interact with the Kano wand"""
 
-    def __init__(self, device, bleak_loop, disconnected_callback=None):
+    def __init__(self, device, bleak_loop, disconnected_callback=None) -> None:
         super().__init__()
         self.name = device.name
         self.address = device.address
@@ -257,10 +255,10 @@ class KanoWand(WandBase):
             self.start_watchdog()
             print(f'Connected to {self.name}')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'KanoWand(Name: {self.name}, Address: {self.address})'
     
-    def _handle_quaternion(self, sender, data):
+    def _handle_quaternion(self, sender, data) -> None:
         self.last_update = time.time()
         w = np.int16(np.uint16(int.from_bytes(data[0:2], byteorder='little'))) / 1000
         x = np.int16(np.uint16(int.from_bytes(data[2:4], byteorder='little'))) / 1000
@@ -277,15 +275,8 @@ class KanoWand(WandBase):
             self.impact_callback()
             self.vibrate(KANO_PATTERN.SHORT)
 
-    def _handle_button(self, sender, data):
-        self.last_update = time.time()
-        self.button = data[0] == 1
-        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
-            self.reset_cal = True
-        if not self.button:
-            self.button_pressed_time = None
-        elif self.button_pressed_time is None:
-            self.button_pressed_time = time.time()
+    def _handle_button(self, sender, data) -> None:
+        self.update_button_data(data[0] == 1)
 
     def disconnect(self) -> None:
         if self.connected:
@@ -299,14 +290,14 @@ class KanoWand(WandBase):
             if self.disconnected_callback:
                 self.disconnected_callback(self.name)
         
-    def vibrate(self, pattern):
+    def vibrate(self, pattern) -> None:
         try:
             message = [pattern.value if isinstance(pattern, KANO_PATTERN) else pattern]
             self._await_bleak(self.device.write_gatt_char(KANO_IO.VIBRATOR_CHAR.value, bytearray(message), response=True))
         except:
             pass
 
-    def set_led(self, r: int, g: int, b: int, on=True):
+    def set_led(self, r: int, g: int, b: int, on=True) -> None:
         rgb = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3))
         message = [1 if on else 0, rgb >> 8, rgb & 0xff]
         self._await_bleak(self.device.write_gatt_char(KANO_IO.LED_CHAR.value, bytearray(message), response=True))
@@ -314,7 +305,7 @@ class KanoWand(WandBase):
 class BLEScanner:
     """A scanner class to connect to wands"""
 
-    def __init__(self, connected_callback=None, disconnected_callback=None):
+    def __init__(self, connected_callback=None, disconnected_callback=None) -> None:
         self.connected_callback = connected_callback
         self.disconnected_callback = disconnected_callback
         self._bleak_loop = None
@@ -328,25 +319,25 @@ class BLEScanner:
         self._scan_event = threading.Event()
         self.scanning = False
         
-    def _run_bleak_loop(self):
+    def _run_bleak_loop(self) -> None:
         self._bleak_loop = asyncio.new_event_loop()
         self._bleak_thread_ready.set()
         self._bleak_loop.run_forever()
 
-    def start(self):
+    def start(self) -> None:
         if not self.scanning:
             print('Starting wand scanner')
             self.scanning = True
             self.scan_thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         if self.scanning:
             print('Stopping wand scanner')
             self.scanning = False
             self._scan_event.set()
             self.scan_thread.join()
     
-    def _scan_thread(self):
+    def _scan_thread(self) -> None:
         while self.scanning:
             new_wands = self.scan()
             if self.connected_callback:
@@ -354,7 +345,7 @@ class BLEScanner:
                     self.connected_callback(wand)
             self._scan_event.wait(5)
 
-    def scan(self):
+    def scan(self) -> list[WandBase]:
         for wand in list(self.found_wands):
             if not self.found_wands[wand].connected:
                 del self.found_wands[wand]
