@@ -435,7 +435,6 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             current_path = current_path % len(paths)
             p = list(paths.values())[current_path]
             if len(p) == 0:
-                # print('Skipping path')
                 continue
             path_index = path_index % len(p)
 
@@ -457,7 +456,6 @@ def calibration(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     points.append(points[0])
     points = interpolate_objects(points)
     index = 0
-    
     while True:
         x, y, on = points[index]
         yield [LaserPoint(i, x, y, 0, 255 if on else 0, 0) for i in range(num_lasers)]
