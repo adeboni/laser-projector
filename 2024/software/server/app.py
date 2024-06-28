@@ -91,7 +91,7 @@ class MainApp:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
                         for k, w in self.wands.items():
-                            w.callback = self.songs.play_effect if self.current_mode == 8 else None
+                            w.impact_callback = self.songs.play_effect if self.current_mode == 8 else None
                             if self.current_mode == 7:
                                 self.synth.start_synth(k)
                             else:

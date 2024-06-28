@@ -18,13 +18,15 @@ class WandBase:
         self.SPEED_THRESHOLD = 6
         self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.position = pyquaternion.Quaternion()
-        self.callback = None
         self.pos_queue = []
         self.prev_speed = 0
         self.cal_offset = None
         self.reset_cal = False
         self.last_angle = 0
         self.last_update = time.time()
+        self.impact_callback = None
+        self.button_callback = None
+        self.button_pressed_time = None
 
         self.watchdog_thread = threading.Thread(target=self._watchdog, daemon=True)
         self._watchdog_event = threading.Event()
@@ -132,8 +134,8 @@ class WandSimulator(WandBase):
                           * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
                           * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
                           * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
-            if self.check_for_impact() and self.callback:
-                self.callback()
+            if self.check_for_impact() and self.impact_callback:
+                self.impact_callback()
             self._notify_event.wait(0.02)
 
 class MATH_CAMP_WAND_IO(enum.Enum):
@@ -180,13 +182,22 @@ class MathCampWand(WandBase):
             self.reset_cal = False
         self.position = self.cal_offset * position_raw
 
-        if self.check_for_impact() and self.callback:
-            self.callback()
+        if self.check_for_impact() and self.impact_callback:
+            self.impact_callback()
 
     def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 0
-        self.reset_cal = True
+        if not self.button:
+            self.button_pressed_time = None
+        else:
+            if self.button_callback:
+                self.button_callback()
+            if self.button_pressed_time is None:
+                self.button_pressed_time = time.time()
+            else:
+                if time.time() - self.button_pressed_time > 2:
+                    self.reset_cal = True
 
     def disconnect(self) -> None:
         if self.connected:
@@ -257,8 +268,8 @@ class KanoWand(WandBase):
             self.reset_cal = False
         self.position = self.cal_offset * position_raw
 
-        if self.check_for_impact() and self.callback:
-            self.callback()
+        if self.check_for_impact() and self.impact_callback:
+            self.impact_callback()
             self.vibrate(KANO_PATTERN.SHORT)
 
     def _handle_button(self, sender, data):

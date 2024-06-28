@@ -27,7 +27,7 @@ target_line = ax.plot([], [], [], c='k')
 lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
 endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
-wands[0].callback = lambda: print('Hit')
+wands[0].impact_callback = lambda: print('Hit')
 
 def animate(_):
     q = wands[0].position
