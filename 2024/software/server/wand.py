@@ -25,6 +25,7 @@ class WandBase:
         self.last_angle = 0
         self.last_update = time.time()
         self.impact_callback = None
+        self.button = False
         self.button_callback = None
         self.button_pressed_time = None
 
@@ -275,7 +276,16 @@ class KanoWand(WandBase):
     def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 1
-        self.reset_cal = True
+        if not self.button:
+            self.button_pressed_time = None
+        else:
+            if self.button_callback:
+                self.button_callback()
+            if self.button_pressed_time is None:
+                self.button_pressed_time = time.time()
+            else:
+                if time.time() - self.button_pressed_time > 2:
+                    self.reset_cal = True
 
     def disconnect(self) -> None:
         if self.connected:

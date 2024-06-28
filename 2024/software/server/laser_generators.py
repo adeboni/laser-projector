@@ -423,6 +423,9 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                         paths[wand] = []
                     if lp := current_wands[wand].get_laser_point():
                         paths[wand].append(lp)
+                        if current_wands[wand].button:
+                            yield from add_fireworks(num_lasers, lp.id, lp.x, lp.y)
+                            paths[wand] = []
             for path in paths.values():
                 while len(path) > PATH_TIME / DELTA_TIME:
                     path.pop(0)
@@ -460,3 +463,34 @@ def calibration(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         x, y, on = points[index]
         yield [LaserPoint(i, x, y, 0, 255 if on else 0, 0) for i in range(num_lasers)]
         index = (index + 1) % len(points)
+
+def add_fireworks(num_lasers: int, laser_id: int, x_offset: int, y_offset: int) -> Generator[list[LaserPoint], None, None]:
+    data = [LaserPoint(i) for i in range(num_lasers)]
+    for _ in range(20):
+        for rotation in range(0, 360 * 4, 8):
+            radius = rotation / 8
+            x = radius * np.sin(rotation * np.pi / 180) + x_offset
+            y = radius * np.cos(rotation * np.pi / 180) + y_offset
+            if random.uniform(0, 200) > 3:
+                r, g, b = 0, 0, 0
+            else:
+                r, g, b = colorsys.hsv_to_rgb(random.uniform(0, 1), 1, 1)
+            data[laser_id] = LaserPoint(laser_id, x, y, r * 255, g * 255, b * 255)
+            yield verify_points(data)
+    data = [LaserPoint(i) for i in range(num_lasers)]
+    yield verify_points(data)
+    yield verify_points(data)
+    yield verify_points(data)
+
+def firework_test(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
+    x_offset = (min_x + max_x) // 2
+    y_offset = (min_y + max_y) // 2
+    empty_data = [LaserPoint(i) for i in range(num_lasers)]
+    next_update = 0
+    while True:
+        if time.time() > next_update:
+            yield from add_fireworks(num_lasers, 0, x_offset, y_offset)
+            next_update = time.time() + 5
+        else:
+            yield verify_points(empty_data)
