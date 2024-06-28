@@ -26,7 +26,6 @@ class WandBase:
         self.last_update = time.time()
         self.impact_callback = None
         self.button = False
-        self.button_callback = None
         self.button_pressed_time = None
 
         self.watchdog_thread = threading.Thread(target=self._watchdog, daemon=True)
@@ -139,6 +138,15 @@ class WandSimulator(WandBase):
                 self.impact_callback()
             self._notify_event.wait(0.02)
 
+    def press_button(self, data: bool):
+        self.button = data
+        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
+            print('Calibration reset')
+        if not self.button:
+            self.button_pressed_time = None
+        elif self.button_pressed_time is None:
+            self.button_pressed_time = time.time()
+
 class MATH_CAMP_WAND_IO(enum.Enum):
     USER_BUTTON_CHAR = '64a7000d-f691-4b93-a6f4-0968f5b648f8'
     QUATERNIONS_CHAR = '64a70002-f691-4b93-a6f4-0968f5b648f8'
@@ -189,16 +197,12 @@ class MathCampWand(WandBase):
     def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 0
+        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
+            self.reset_cal = True
         if not self.button:
             self.button_pressed_time = None
-        else:
-            if self.button_callback:
-                self.button_callback()
-            if self.button_pressed_time is None:
-                self.button_pressed_time = time.time()
-            else:
-                if time.time() - self.button_pressed_time > 2:
-                    self.reset_cal = True
+        elif self.button_pressed_time is None:
+            self.button_pressed_time = time.time()
 
     def disconnect(self) -> None:
         if self.connected:
@@ -276,16 +280,12 @@ class KanoWand(WandBase):
     def _handle_button(self, sender, data):
         self.last_update = time.time()
         self.button = data[0] == 1
+        if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
+            self.reset_cal = True
         if not self.button:
             self.button_pressed_time = None
-        else:
-            if self.button_callback:
-                self.button_callback()
-            if self.button_pressed_time is None:
-                self.button_pressed_time = time.time()
-            else:
-                if time.time() - self.button_pressed_time > 2:
-                    self.reset_cal = True
+        elif self.button_pressed_time is None:
+            self.button_pressed_time = time.time()
 
     def disconnect(self) -> None:
         if self.connected:

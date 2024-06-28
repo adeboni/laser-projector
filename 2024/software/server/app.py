@@ -107,8 +107,13 @@ class MainApp:
                     elif event.key == pygame.K_f:
                         self.focusing = not self.focusing
                         self.labels['Focusing'] = self.focusing
+                    elif event.key == pygame.K_m and -1 in self.wands:
+                        self.wands[-1].press_button(True)
                     self._update_screen(screen)
                     self.sacn.key_down(event.key)
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_m and -1 in self.wands:
+                        self.wands[-1].press_button(False)
                 elif event.type == UPDATE_SONGS:
                     if self.current_mode in self.modes and self.modes[self.current_mode][1]:
                         self.songs.update()
