@@ -477,10 +477,6 @@ def add_fireworks(num_lasers: int, laser_id: int, x_offset: int, y_offset: int) 
                 r, g, b = colorsys.hsv_to_rgb(random.uniform(0, 1), 1, 1)
             data[laser_id] = LaserPoint(laser_id, x, y, r * 255, g * 255, b * 255)
             yield verify_points(data)
-    data = [LaserPoint(i) for i in range(num_lasers)]
-    yield verify_points(data)
-    yield verify_points(data)
-    yield verify_points(data)
 
 def firework_test(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
