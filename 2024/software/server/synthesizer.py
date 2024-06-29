@@ -20,8 +20,8 @@ class SynthServer:
     def _update_thread(self) -> None:
         while self.running:
             if self.wands:
-                for wand in self.wands:
-                    if sp := self.wands[wand].get_synth_point():
+                for wand in list(self.wands):
+                    if (w := self.wands[wand]) and (sp := w.get_synth_point()):
                         self.update_synth(wand, x=sp[0], y=sp[1], r=sp[2])
             self._update_event.wait(0.02)
 

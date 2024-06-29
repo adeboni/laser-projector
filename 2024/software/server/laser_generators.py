@@ -411,6 +411,7 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     current_path = 0
     path_index = 0
     next_update = 0
+    prev_id = None
     
     while True:
         if time.time() > next_update:
@@ -441,7 +442,7 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 continue
             path_index = path_index % len(p)
 
-            if path_index == len(p) - 1 or path_index == 0:
+            if path_index == len(p) - 1 or path_index == 0 or p[path_index].id != prev_id:
                 data[p[path_index].id] = LaserPoint(p[path_index].id, p[path_index].x, p[path_index].y, 0, 0, 0)
                 yield verify_points(data)
                 yield verify_points(data)
@@ -449,6 +450,8 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
             else:
                 data[p[path_index].id] = p[path_index]
                 yield verify_points(data)
+                
+            prev_id = p[path_index].id
 
             if (path_index := (path_index + 1) % len(p)) == 0:
                 current_path = (current_path + 1) % len(paths)
