@@ -23,7 +23,13 @@ class MainApp:
         self.wands = { -1: wand.WandSimulator() }
 
         self.laser_server = laser_server.LaserServer(num_lasers, host_ip, self.wands)
-        self.sacn = sacn_handler.SACNHandler(target_ip)
+
+        self.songs = song_handler.SongHandler(self.laser_server)
+        self.current_letter = ord('A')
+        self.current_number = 0
+        self.current_mode = 0
+
+        self.sacn = sacn_handler.SACNHandler(target_ip, self.songs)
         self.synth = synthesizer.SynthServer(self.wands)
         self.wand_scanner = wand.BLEScanner(
             connected_callback=lambda wand: pygame.event.post(pygame.event.Event(BLE_WAND_CONNECT, wand=wand)),
@@ -37,20 +43,15 @@ class MainApp:
                         'Synthesizer': 'Not Running',
                         'Focusing': 'True' }
 
-        self.songs = song_handler.SongHandler(self.laser_server)
-        self.current_letter = ord('A')
-        self.current_number = 0
-        self.current_mode = 0
-
         # Maps mode number to name and whether the jukebox music is playing
         self.modes = { 1: ('Jukebox', True), 
                        2: ('Audio Visualization', True), 
                        3: ('Equations', True), 
                        4: ('Spirograph', True), 
                        5: ('Pong', True), 
-                       6: ('Wand Drawing', True), 
+                       6: ('Drums', False), 
                        7: ('Wand Music', False), 
-                       8: ('Drums', False),
+                       8: ('Robbie', False),
                        9: ('Calibration', False) }
 
     def _update_screen(self, screen: pygame.Surface) -> None:
@@ -87,17 +88,19 @@ class MainApp:
                         if self.current_mode in self.modes:
                             mode_name = f'{self.current_mode} - {self.modes[self.current_mode][0]}'
                             self.songs.set_music_playing(self.modes[self.current_mode][1])
+                            self.sacn.enable_robbie_sounds = self.modes[self.current_mode][0] == 'Robbie'
                         else:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
                         for k, w in self.wands.items():
-                            w.impact_callback = self.songs.play_effect if self.current_mode == 8 else None
-                            if self.current_mode == 7:
+                            w.impact_callback = self.songs.play_effect if self.modes[self.current_mode][0] == 'Drums' else None
+                            if self.modes[self.current_mode][0] == 'Wand Music':
                                 self.synth.start_synth(k)
                             else:
                                 self.synth.stop_all_synths()
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
+                        self.sacn.force_animation(event.key)
                     elif event.key == pygame.K_RETURN:
                         if self.current_mode in self.modes and self.modes[self.current_mode][1]:
                             self.songs.add_to_queue(self.current_letter, self.current_number)

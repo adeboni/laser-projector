@@ -26,9 +26,9 @@ class LaserServer:
             3: laser_generators.equations(num_lasers),
             4: laser_generators.spirograph(num_lasers),
             5: laser_generators.pong(num_lasers),
-            6: laser_generators.wand_drawing(num_lasers),
+            6: laser_generators.drums_graphics(num_lasers),
             7: laser_generators.wand_drawing(num_lasers),
-            8: laser_generators.drums_graphics(num_lasers),
+            8: None,
             9: laser_generators.calibration(num_lasers)
         }
 
@@ -77,6 +77,9 @@ class LaserServer:
 
     def set_song(self, song) -> None:
         laser_generators.current_song = song
+
+    def set_song_handler(self, song_handler) -> None:
+        laser_generators.song_handler = song_handler
 
 if __name__ == '__main__':
     if utilities.ping('10.0.0.2'):

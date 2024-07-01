@@ -76,7 +76,7 @@ class WandBase:
         if lp := self.get_laser_point():
             x = np.interp(lp.x, [self.min_x, self.max_x], [0, 1])
             y = np.interp(lp.y, [self.min_y, self.max_y], [0, 1])
-            r = np.interp(self.get_rotation_angle(), [0, 360], [0, 1])
+            r = np.interp(abs(self.get_rotation_angle() - 180), [0, 180], [0, 1])
             return (x, y, r)
         else:
             return None
@@ -107,10 +107,11 @@ class WandBase:
     
     def update_button_data(self, pressed: bool) -> None:
         self.last_update = time.time()
+        if not self.button and pressed and self.impact_callback:
+            self.impact_callback()
         self.button = pressed
         if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
             self.reset_cal = True
-            print('Calibration reset')
         if not self.button:
             self.button_pressed_time = None
         elif self.button_pressed_time is None:

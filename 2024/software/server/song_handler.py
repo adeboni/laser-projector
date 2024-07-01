@@ -158,18 +158,26 @@ class SongHandler:
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
         self.song_queue = []
         self.current_song = None
-        self.last_song_ended = None
 
         if not os.path.exists('effects'):
             os.mkdir('effects')
         self.effects = [Effect(os.path.join('effects', file)) for file in os.listdir('effects')]
+        self.last_effect_time = 0
 
         if not os.path.exists('robbie_sounds'):
             os.mkdir('robbie_sounds')
         self.robbie_sounds = [Effect(os.path.join('robbie_sounds', file)) for file in os.listdir('robbie_sounds')]
-        self.robbie_sound_index = None
+
+        self.pong_sounds = {
+            'Wall': 'pong_sounds/wall.wav',
+            'Paddle': 'pong_sounds/paddle.wav',
+            'Game Over': 'pong_sounds/game_over.wav'
+        }
+        for sound in self.pong_sounds:
+            self.pong_sounds[sound] = Effect(self.pong_sounds[sound]) if os.path.exists(self.pong_sounds[sound]) else None
 
         self.laser_server = laser_server
+        self.laser_server.set_song_handler(self)
 
     def play_next_song(self) -> None:
         """Plays the next song in the queue"""
@@ -208,18 +216,6 @@ class SongHandler:
         if self.current_song is None and any(self.song_queue):
             self.play_next_song()
 
-        if self.current_song is not None:
-            self.last_song_ended = None
-            if self.robbie_sound_index is not None:
-                self.stop_robbie_sound(self.robbie_sound_index)
-                self.robbie_sound_index = None
-        else:
-            if self.last_song_ended is None:
-                self.last_song_ended = time.time()
-            elif time.time() > self.last_song_ended + 5 * 60:
-                self.last_song_ended = time.time()
-                self.robbie_sound_index = self.play_robbie_sound()
-
     def set_music_playing(self, playing: bool) -> None:
         """Pauses or unpauses music"""
         if playing:
@@ -231,6 +227,9 @@ class SongHandler:
         """Plays a file from the effects folder"""
         if len(self.effects) == 0:
             return
+        if time.time() - self.last_effect_time < 0.3:
+            return
+        self.last_effect_time = time.time()
         if index is None:
             index = random.randrange(len(self.effects))
         if self.laser_server:
@@ -254,4 +253,9 @@ class SongHandler:
                 sound.stop()
         else:
             self.robbie_sounds[index].stop()
+
+    def play_pong_sound(self, key: str) -> None:
+        """Plays a pong sound effect"""
+        if key in self.pong_sounds and self.pong_sounds[key]:
+            self.pong_sounds[key].play()
             

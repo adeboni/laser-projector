@@ -9,6 +9,7 @@ from laser_objects import *
 from typing import Generator
 import sierpinski
 
+song_handler = None
 current_effect = None
 current_song = None
 current_wands = None
@@ -314,19 +315,24 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
 
             if (ball_y + ball_radius > max_y and dy > 0) or (ball_y - ball_radius < min_y and dy < 0):
                 dy *= -1
+                song_handler.play_pong_sound('Wall')
 
             if ball_laser == 0 and center_x - paddle_gap < ball_x < center_x and dx > 0:
                 if abs(ball_y - left_paddle) < paddle_half_height:
                     dx, dy = calculate_new_angle()
+                    song_handler.play_pong_sound('Paddle')
                 else:
                     score_timeout = True
                     game_reset_time = time.time() + 3
+                    song_handler.play_pong_sound('Game Over')
             elif ball_laser == 0 and center_x < ball_x < center_x + paddle_gap and dx < 0:
                 if abs(ball_y - right_paddle) < paddle_half_height:
                     dx, dy = calculate_new_angle()
+                    song_handler.play_pong_sound('Paddle')
                 else:
                     score_timeout = True
                     game_reset_time = time.time() + 3
+                    song_handler.play_pong_sound('Game Over')
 
         data = [LaserPoint(i) for i in range(num_lasers)]
 
@@ -382,9 +388,7 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     xs = np.linspace(min_x, max_x, num=sample_blocksize)
     ys = [base_y for _ in range(sample_blocksize)]
     index = 0
-    colors = [colorsys.hsv_to_rgb(abs(i - base_y) / 600, 1, 1) for i in range(4095)]
-    for i in range(len(colors)):
-        colors[i] = (colors[i][0] * 255, colors[i][1] * 255, colors[i][2] * 255)
+    color_delta = 0
 
     while True:
         if index == 0:
@@ -400,9 +404,10 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
             yield verify_points([LaserPoint(i, xs[-1], ys[-1], 0, 0, 0) for i in range(num_lasers)])
             yield verify_points([LaserPoint(i, xs[0], ys[0], 0, 0, 0) for i in range(num_lasers)])
         else:
-            rgb = colors[int(ys[index])] if ys[index] < len(colors) else [0, 0, 0]
-            yield verify_points([LaserPoint(i, xs[index], ys[index], *rgb) for i in range(num_lasers)])
+            r, g, b = colorsys.hsv_to_rgb((int(index + color_delta) % 360) / 360, 1, 1)
+            yield verify_points([LaserPoint(i, xs[index], ys[index], r * 255, g * 255, b * 255) for i in range(num_lasers)])
         index = (index + 1) % sample_blocksize
+        color_delta += 0.2
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     PATH_TIME = 3
@@ -471,7 +476,7 @@ def add_fireworks(num_lasers: int, laser_id: int, x_offset: int, y_offset: int) 
     data = [LaserPoint(i) for i in range(num_lasers)]
     for _ in range(20):
         for rotation in range(0, 360 * 4, 8):
-            radius = rotation / 8
+            radius = rotation / 16
             x = radius * np.sin(rotation * np.pi / 180) + x_offset
             y = radius * np.cos(rotation * np.pi / 180) + y_offset
             if random.uniform(0, 200) > 3:
