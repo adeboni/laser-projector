@@ -407,7 +407,7 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
             r, g, b = colorsys.hsv_to_rgb((int(index + color_delta) % 360) / 360, 1, 1)
             yield verify_points([LaserPoint(i, xs[index], ys[index], r * 255, g * 255, b * 255) for i in range(num_lasers)])
         index = (index + 1) % sample_blocksize
-        color_delta += 0.2
+        color_delta += 0.002
 
 def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     PATH_TIME = 3
