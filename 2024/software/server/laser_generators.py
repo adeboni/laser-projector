@@ -390,11 +390,18 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     index = 0
     color_delta = 360
 
+    scaling = [(0.1, 0.1), (0.2, 0.2), (0.3, 0.5), (0.4, 0.75), (0.5, 1)]
+    def scale(v):
+        for x, s in scaling:
+            if abs(v) < x:
+                return v * s
+        return v
+
     while True:
         if index == 0:
             if current_song and (audio_data := current_song.get_envelope(sample_blocksize * sample_interval, sample_interval, 0.05)):
                 audio_data = current_song.center_on_peak(audio_data, sample_blocksize // 10)
-                ys = [base_y + v * 300 for v in audio_data]
+                ys = [base_y + scale(v) * 300 for v in audio_data]
                 while len(ys) < sample_blocksize:
                     ys.append(base_y)
             else:
