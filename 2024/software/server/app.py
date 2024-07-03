@@ -64,6 +64,12 @@ class MainApp:
             screen.blit(text, rect)
         pygame.display.update()
 
+    def music_allowed(self) -> bool:
+        return self.current_mode in self.modes and self.modes[self.current_mode][1]
+    
+    def in_mode(self, mode: str) -> bool:
+        return self.current_mode in self.modes and self.modes[self.current_mode][0] == mode
+
     def show_screen(self) -> None:
         clock = pygame.time.Clock()
         screen = pygame.display.set_mode((750, 300), pygame.RESIZABLE)
@@ -87,26 +93,26 @@ class MainApp:
                         self.laser_server.mode = self.current_mode
                         if self.current_mode in self.modes:
                             mode_name = f'{self.current_mode} - {self.modes[self.current_mode][0]}'
-                            self.songs.set_music_playing(self.modes[self.current_mode][1])
-                            self.sacn.enable_robbie_sounds = self.modes[self.current_mode][0] == 'Robbie'
+                            self.songs.set_music_playing(self.music_allowed())
+                            self.sacn.enable_robbie_sounds = self.in_mode('Robbie')
                         else:
                             mode_name = 'Invalid Mode'
                         self.labels['Mode'] = mode_name
                         for k, w in self.wands.items():
-                            w.impact_callback = self.songs.play_effect if self.modes[self.current_mode][0] == 'Drums' else None
-                            if self.modes[self.current_mode][0] == 'Wand Music':
+                            w.impact_callback = self.songs.play_effect if self.in_mode('Drums') else None
+                            if self.in_mode('Wand Music'):
                                 self.synth.start_synth(k)
                             else:
                                 self.synth.stop_all_synths()
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
-                        if self.current_mode in self.modes and self.modes[self.current_mode][0] == 'Robbie':
+                        if self.in_mode('Robbie'):
                             self.sacn.force_animation(event.key)
                     elif event.key == pygame.K_RETURN:
-                        if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                        if self.music_allowed():
                             self.songs.add_to_queue(self.current_letter, self.current_number)
                     elif event.key == pygame.K_SPACE:
-                        if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                        if self.music_allowed():
                             self.songs.play_next_song()
                     elif event.key == pygame.K_f:
                         self.focusing = not self.focusing
@@ -119,7 +125,7 @@ class MainApp:
                     if event.key == pygame.K_m and -1 in self.wands:
                         self.wands[-1].press_button(False)
                 elif event.type == UPDATE_SONGS:
-                    if self.current_mode in self.modes and self.modes[self.current_mode][1]:
+                    if self.music_allowed():
                         self.songs.update()
                     song_queue = ' '.join([x.song_id_str for x in self.songs.song_queue])
                     if len(song_queue) > 28:
