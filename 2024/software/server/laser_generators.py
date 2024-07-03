@@ -390,12 +390,11 @@ def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, No
     index = 0
     color_delta = 360
 
-    scaling = [(0.1, 0.1), (0.2, 0.2), (0.3, 0.5), (0.4, 0.75), (0.5, 1)]
     def scale(v):
-        for x, s in scaling:
-            if abs(v) < x:
-                return v * s
-        return v
+        if v < 0:
+            return -2 * v * v
+        else:
+            return 2 * v * v
 
     while True:
         if index == 0:
