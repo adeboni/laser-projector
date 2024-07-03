@@ -100,7 +100,8 @@ class MainApp:
                                 self.synth.stop_all_synths()
                     elif event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]:
                         self._update_selection(event.key)
-                        self.sacn.force_animation(event.key)
+                        if self.current_mode in self.modes and self.modes[self.current_mode][0] == 'Robbie':
+                            self.sacn.force_animation(event.key)
                     elif event.key == pygame.K_RETURN:
                         if self.current_mode in self.modes and self.modes[self.current_mode][1]:
                             self.songs.add_to_queue(self.current_letter, self.current_number)
