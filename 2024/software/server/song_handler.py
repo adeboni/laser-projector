@@ -169,9 +169,9 @@ class SongHandler:
         self.robbie_sounds = [Effect(os.path.join('robbie_sounds', file)) for file in os.listdir('robbie_sounds')]
 
         self.pong_sounds = {
-            'Wall': 'pong_sounds/wall.wav',
-            'Paddle': 'pong_sounds/paddle.wav',
-            'Game Over': 'pong_sounds/game_over.wav'
+            'Wall': 'pong_sounds/wall.mp3',
+            'Paddle': 'pong_sounds/paddle.mp3',
+            'Game Over': 'pong_sounds/game_over.mp3'
         }
         for sound in self.pong_sounds:
             self.pong_sounds[sound] = Effect(self.pong_sounds[sound]) if os.path.exists(self.pong_sounds[sound]) else None
