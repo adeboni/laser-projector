@@ -339,7 +339,8 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         for d in range(0, 420, 30):
             x = ball_radius * np.sin(d * np.pi / 180) + ball_x
             y = ball_radius * np.cos(d * np.pi / 180) + ball_y
-            data[ball_laser] = LaserPoint(ball_laser, x, y, 0, 0, 255 if d != 0 else 0)
+            color = 255 if d != 0 else 0
+            data[ball_laser] = LaserPoint(ball_laser, x, y, color, color, color)
             yield verify_points(data)
 
         paddle_points = [ [int(center_x - paddle_gap), int(left_paddle - paddle_half_height), 0], 
@@ -354,7 +355,8 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
         paddle_points = interpolate_objects(paddle_points)
 
         for paddle_point in paddle_points:
-            p = LaserPoint(0, paddle_point[0], paddle_point[1], 0, 255 * paddle_point[2], 0)
+            color = 255 * paddle_point[2]
+            p = LaserPoint(0, paddle_point[0], paddle_point[1], color, color, color)
             yield verify_points([LaserPoint(i) if i > 0 else p for i in range(num_lasers)])
 
         if not score_timeout:
