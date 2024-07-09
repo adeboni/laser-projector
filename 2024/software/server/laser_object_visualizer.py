@@ -77,5 +77,5 @@ def plot_animated(graphic):
     plt.show()
 
 
-#plot_all(effects)
-plot_animated(EFFECT_BICYCLE_HORN)
+plot_all(eqns)
+#plot_animated(EFFECT_BICYCLE_HORN)
