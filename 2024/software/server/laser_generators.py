@@ -432,12 +432,12 @@ def wand_drawing(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                 for path in list(paths):
                     if path not in current_wands:
                         del paths[path]
-                for wand in current_wands:
+                for wand in list(current_wands):
                     if wand not in paths:
                         paths[wand] = []
-                    if lp := current_wands[wand].get_laser_point():
+                    if (w := current_wands[wand]) and (lp := w.get_laser_point()):
                         paths[wand].append(lp)
-                        if current_wands[wand].button:
+                        if w.button:
                             yield from add_fireworks(num_lasers, lp.id, lp.x, lp.y)
                             paths[wand] = []
             for path in paths.values():
