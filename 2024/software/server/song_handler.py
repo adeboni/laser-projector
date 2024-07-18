@@ -158,15 +158,18 @@ class SongHandler:
         self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
         self.song_queue = []
         self.current_song = None
+        print(f'Found {len(self.songs)} songs')
 
         if not os.path.exists('effects'):
             os.mkdir('effects')
         self.effects = [Effect(os.path.join('effects', file)) for file in os.listdir('effects')]
         self.last_effect_time = 0
+        print(f'Found {len(self.effects)} effect sounds')
 
         if not os.path.exists('robbie_sounds'):
             os.mkdir('robbie_sounds')
         self.robbie_sounds = [Effect(os.path.join('robbie_sounds', file)) for file in os.listdir('robbie_sounds')]
+        print(f'Found {len(self.robbie_sounds)} Robbie sounds')
 
         self.pong_sounds = {
             'Wall': 'pong_sounds/wall.mp3',
