@@ -177,7 +177,8 @@ class SongHandler:
             self.pong_sounds[sound] = Effect(self.pong_sounds[sound]) if os.path.exists(self.pong_sounds[sound]) else None
 
         self.laser_server = laser_server
-        self.laser_server.set_song_handler(self)
+        if self.laser_server:
+            self.laser_server.set_song_handler(self)
 
     def play_next_song(self) -> None:
         """Plays the next song in the queue"""
