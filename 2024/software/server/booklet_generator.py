@@ -116,4 +116,14 @@ if __name__ == '__main__':
             c.showPage()
             format_page(c)
         add_song(c, i % 20, song, assigned_colors)
+
+    if i < 40:
+        song = Song('Artist - Title - 2024.mp3', 0)
+        for i in range(i + 1, 40):
+            if i % 20 == 0 and i != 0:
+                assigned_colors.clear()
+                c.showPage()
+                format_page(c)
+            add_song(c, i % 20, song, assigned_colors)
+
     c.save()

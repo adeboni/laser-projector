@@ -155,7 +155,7 @@ class SongHandler:
 
         if not os.path.exists('songs'):
             os.mkdir('songs')
-        self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(os.listdir('songs'))]
+        self.songs = [Song(os.path.join('songs', file), i) for i, file in enumerate(sorted(os.listdir('songs')))]
         self.song_queue = []
         self.current_song = None
         print(f'Found {len(self.songs)} songs')
