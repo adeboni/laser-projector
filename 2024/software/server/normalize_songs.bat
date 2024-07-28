@@ -1,0 +1,1 @@
+for %%i in (*.mp3) do (ffmpeg-normalize "%%i" -c:a libmp3lame -b:a 320k -o "normalized/%%i")

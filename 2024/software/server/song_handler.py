@@ -7,6 +7,7 @@ import soundfile
 import laser_server
 import pygame
 import pathlib
+import datetime
 
 class Song:
     """Class implementing a song"""
@@ -191,6 +192,8 @@ class SongHandler:
         if any(self.song_queue):
             self.current_song = self.song_queue.pop(0)
             self.current_song.play()
+            with open('song_log.txt', 'a') as f:
+                f.write(f'{datetime.datetime.now()}: Started {self.current_song.author} - {self.current_song.title}\r\n')
         else:
             self.current_song = None
             
@@ -215,6 +218,8 @@ class SongHandler:
         if self.current_song is not None:
             self.current_song.update_time()
             if self.current_song.played_length_s < 0:
+                with open('song_log.txt', 'a') as f:
+                    f.write(f'{datetime.datetime.now()}: Finished {self.current_song.author} - {self.current_song.title}\r\n')
                 self.current_song = None
 
         if self.current_song is None and any(self.song_queue):
