@@ -7,6 +7,7 @@ from song_handler import SongHandler, Song
 
 MARGIN_MM = 20
 BLACK = (0.0, 0.0, 0.0, 1.0)
+WHITE = (0.0, 0.0, 0.0, 0.0)
 LIGHT_GREY = (0.0, 0.0, 0.0, 0.3)
 BORDERS = [ 
     (0.0, 0.98, 0.98, 0.0),  # red
@@ -94,11 +95,12 @@ def add_song(c: canvas.Canvas, i: int, song: Song, assigned_colors: dict[int, tu
     path.lineTo(mm_to_pt_x(x + col * 65 + 1.64), mm_to_pt_y(y + row * 19 + 1.64))
     c.drawPath(path, stroke=1, fill=1)
 
-    c.setFillColorCMYK(*BLACK)
-    c.setFont("Helvetica-Bold", 11.0)
+    c.setFillColorCMYK(*WHITE)
+    c.setFont("Helvetica-Bold", 13.0)
     c.drawCentredString(mm_to_pt_x(x + col * 65 + 4.64), mm_to_pt_y(y + row * 19 + 10.5), song.song_id_str)
     c.setFont("Helvetica", 11.0)
-    c.drawCentredString(mm_to_pt_x(x + col * 65 + 59.36), mm_to_pt_y(y + row * 19 + 10.5), song.year)
+    #c.drawCentredString(mm_to_pt_x(x + col * 65 + 59.36), mm_to_pt_y(y + row * 19 + 10.5), song.year)
+    c.setFillColorCMYK(*BLACK)
     c.setFont("Helvetica-Bold", 8.0 if len(song.title) > 20 else 12.0)
     c.drawCentredString(mm_to_pt_x(x + col * 65 + 32), mm_to_pt_y(y + row * 19 + 8), song.title)
     c.setFont("Helvetica", 8.0 if len(song.author) > 20 else 12.0)
