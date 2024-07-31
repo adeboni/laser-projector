@@ -2,6 +2,7 @@ import psutil
 import time
 import os
 
+time.sleep(60)
 while True:
     if not psutil.sensors_battery().power_plugged:
         os.system('shutdown -s -t 0')
