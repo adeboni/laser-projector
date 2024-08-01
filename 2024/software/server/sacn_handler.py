@@ -1,5 +1,6 @@
 """This module handles all the sACN ouputs"""
 
+import random
 import time
 import threading
 import sacn
@@ -146,18 +147,20 @@ class SACNHandler:
     def _animation_thread(self) -> None:
         sound_idx = None
         while self.animation_running:
-            for set_func, gen in self.animations:
-                if self.enable_robbie_sounds:
-                    if sound_idx is None or not self.song_handler.robbie_sounds[sound_idx].is_playing():
-                        sound_idx = self.song_handler.play_robbie_sound()
-                start_time = time.time()
-                while time.time() - start_time < 30 and self.animation_running:
+            selected_animations = random.sample(self.animations, random.randrange(1, len(self.animations)))
+            if self.enable_robbie_sounds:
+                if sound_idx is None or not self.song_handler.robbie_sounds[sound_idx].is_playing():
+                    sound_idx = self.song_handler.play_robbie_sound()
+            start_time = time.time()
+            while time.time() - start_time < 30 and self.animation_running:
+                for set_func, gen in selected_animations:
                     set_func(next(gen))
-                    self.update_output()
-                    time.sleep(0.02)
-                set_func(None)
                 self.update_output()
-                self._animation_event.wait(30)
+                time.sleep(0.02)
+            for set_func, gen in selected_animations:
+                set_func(None)
+            self.update_output()
+            self._animation_event.wait(30)
 
 if __name__ == '__main__':
     sacn = SACNHandler('127.0.0.1')
