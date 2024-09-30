@@ -9,7 +9,7 @@ from laser_point import *
 
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
-LASER_PROJECTION_ANGLE = 45 * np.pi / 180
+LASER_PROJECTION_ANGLE = 55 * np.pi / 180
 
 triangle_height = np.sqrt(SIDE_LENGTH**2 - (SIDE_LENGTH/2)**2)
 tetra_height = SIDE_LENGTH * np.sqrt(2/3)

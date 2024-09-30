@@ -381,6 +381,55 @@ def pong(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
                     right_paddle, right_paddle_speed = new_paddle_pos(right_paddle, right_paddle_speed, -ai_paddle_speed)
         
 
+def audio_visualization_circle(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
+    """Generates an audio visualization"""
+    min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
+    base_y = (max_y + min_y) / 2
+    base_x = (max_x + min_x) / 2
+    sample_blocksize = 256
+    sample_interval = 8
+    thetas = np.linspace(0, np.pi*2, num=sample_blocksize)
+    ys = [base_y for _ in range(sample_blocksize)]
+    index = 0
+    color_delta = 360
+    r = 1
+    print(min_x, max_x, min_y, max_y)
+
+    def scale(v, factor=12):
+        if v < 0:
+            return -factor * pow(v, 2)
+        else:
+            return factor * pow(v, 2)
+    time = 0
+    vel_x = 0.03
+    vel_y = 0.02
+    
+    while True:
+        time += 1
+        base_x += vel_x
+        base_y += vel_y
+        if base_x > max_x or base_x < min_x:
+            vel_x = -vel_x
+        if base_y > max_y or base_y < min_y:
+            vel_y = -vel_y
+        if index == 0:
+            if current_song and (audio_data := current_song.get_envelope(sample_blocksize * sample_interval, sample_interval, 0.05)):
+                audio_data = current_song.center_on_peak(audio_data, sample_blocksize // 10)
+                ys = [scale(v, 10000) for v in audio_data]
+                while len(ys) < sample_blocksize:
+                    ys.append(0)
+            else:
+                ys = [0 for _ in range(sample_blocksize)]
+        
+        if index == -1: # skipping
+            yield verify_points([LaserPoint(i, base_x, base_y, 0, 0, 0) for i in range(num_lasers)])
+            yield verify_points([LaserPoint(i, base_x, base_y, 0, 0, 0) for i in range(num_lasers)])
+        else:
+            r, g, b = colorsys.hsv_to_rgb((int(index + color_delta) % 360) / 360, 1, 1)
+            yield verify_points([LaserPoint(i, base_x + np.sin(thetas[index])*(100+ys[index]),base_y + np.cos(thetas[index])*(100+ys[index]), r * 255, g * 255, b * 255) for i in range(num_lasers)])
+        index = (index + 1) % sample_blocksize
+        color_delta += 0.002
+
 def audio_visualization(num_lasers: int) -> Generator[list[LaserPoint], None, None]:
     """Generates an audio visualization"""
     min_x, max_x, min_y, max_y = sierpinski.get_laser_min_max_interior()
