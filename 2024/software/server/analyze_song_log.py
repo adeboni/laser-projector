@@ -1,17 +1,20 @@
 import os
 import re
 import csv
+import song_handler
 
 pattern = re.compile('(.*): ([^ ]+) (.*)')
 song_data = dict()
+
+sh = song_handler.SongHandler()
+for song in sh.songs:
+    song_data[f"{song.author} - {song.title}"] = [0, 0]
 
 if os.path.isfile("song_log.txt"):
     with open("song_log.txt") as file:
         for line in file:
             if m := pattern.match(line):
                 timestamp, type, name = m.group(1), m.group(2), m.group(3)
-                if name not in song_data:
-                    song_data[name] = [0, 0]
                 if type == "Started":
                     song_data[name][0] += 1
                 elif type == "Finished":
