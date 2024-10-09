@@ -164,9 +164,7 @@ class Wand:
         self.charged = udp_data[2] == 1
         self.battery_volts = udp_data[3] / 4095 * 3.7
         self.update_button_data(udp_data[4] == 1)
-        q = (udp_data[5:9] - 16384) / 16384
-        #self.position = pyquaternion.Quaternion(w=q[0], x=q[2], y=q[1], z=q[3])
-        self.position = pyquaternion.Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
+        self.position = pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384)
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
 

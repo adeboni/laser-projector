@@ -35,7 +35,7 @@ ax.view_init(20, 50)
 
 target_line = ax.plot([], [], [], c='k')
 lines = sum([ax.plot([], [], [], c=c) for c in ['r', 'g', 'b']], [])
-endpoints = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+endpoints = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, -1]])
 
 found_wand.impact_callback = lambda: print('Hit')
 
