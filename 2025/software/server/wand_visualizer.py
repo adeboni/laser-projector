@@ -8,11 +8,11 @@ import sierpinski
 import time
 
 found_wand = None
-use_tcp = False
+use_wifi = True
 
-if use_tcp:
+if use_wifi:
     ws = wand.WandServer()
-    ws.start_tcp()
+    ws.start_udp()
     start_time = time.time()
     while time.time() - start_time < 5:
         connected_wands = ws.get_connected_wands()

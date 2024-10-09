@@ -30,8 +30,8 @@ class WandServer():
     def __init__(self, connected_callback=None, disconnected_callback=None) -> None:
         self.connected_callback = connected_callback
         self.disconnected_callback = disconnected_callback
-        self.tcp_thread_running = False
-        self.tcp_thread = threading.Thread(target=self._tcp_thread, daemon=True)
+        self.udp_thread_running = False
+        self.udp_thread = threading.Thread(target=self._udp_thread, daemon=True)
         self.audio_thread_running = False
         self.audio_thread = threading.Thread(target=self._audio_thread, daemon=True)
         self.stream = None
@@ -71,77 +71,49 @@ class WandServer():
             self.pa.close(self.stream)
             self.stream = None
 
-    def start_tcp(self) -> None:
-        self.tcp_thread_running = True
-        self.tcp_thread.start()
+    def start_udp(self) -> None:
+        self.udp_thread_running = True
+        self.udp_thread.start()
 
-    def stop_tcp(self) -> None:
-        if self.tcp_thread_running:
-            self.tcp_thread_running = False
-            sock = socket.socket()
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    def stop_udp(self) -> None:
+        if self.udp_thread_running:
+            self.udp_thread_running = False
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.connect(('127.0.0.1', PORT))
+            sock.sendto(bytes([]), ('127.0.0.1', 5005))
             sock.close()
-            self.tcp_thread.join()
-
-    def _tcp_thread(self) -> None:
-        sock = socket.socket()
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        sock.bind(('0.0.0.0', PORT))
-        sock.listen(5)
-
-        while self.tcp_thread_running:
-            print('Waiting for wand TCP connection...')
-            conn, addr = sock.accept()
-            print(f'Connected to wand at {addr}')
-
-            if addr not in self.wands:
-                self.wands[addr] = Wand(addr)
-            self.wands[addr].connected = True
-            if self.connected_callback:
-                self.connected_callback(self.wands[addr])
-            self.buffer[addr] = []
-            self.prev_audio_data[addr] = np.zeros(FADE_LENGTH)
-            self.buffering[addr] = False
-            self.addresses[addr] = AddressState.OPEN
-
-            thread = threading.Thread(target=self._read_data_from_socket, args=(conn, addr), daemon=True)
-            thread.start()
-
-    def _try_parse_buffer(self, tcp_buffer, addr) -> int:
-        for i in range(1, len(tcp_buffer)):
-            if tcp_buffer[i] == -21846 and tcp_buffer[i-1] == -21846:
-                data = tcp_buffer[:i-2]
-                self.wands[addr].update_data(data)
-                if self.audio_thread_running:
-                    self.buffer[addr].append(data[8:])
-                    if len(self.buffer[addr]) > BUFFER_LIMIT and self.buffering[addr]:
-                        self.buffering[addr] = False
-                return i + 1
-        return None
-
-    def _read_data_from_socket(self, conn, addr) -> None:
-        tcp_buffer = None
-        while self.tcp_thread_running:
-            raw_data = conn.recv(4096)
-            if raw_data == b"":
-                print(f"Lost connection from wand at {addr}")
-                self.addresses[addr] = AddressState.CLOSED
-                self.wands[addr].connected = False
-                if self.disconnected_callback:
-                    self.disconnected_callback(addr)
-                break
+            self.udp_thread.join()
             
-            if tcp_buffer is None:
-                tcp_buffer = np.frombuffer(raw_data, np.int16)
-            else:
-                tcp_buffer = np.concatenate((tcp_buffer, np.frombuffer(raw_data, np.int16)))
-            if (start_index := self._try_parse_buffer(tcp_buffer, addr)):
-                tcp_buffer = tcp_buffer[start_index:]
+    def _udp_thread(self) -> None:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', PORT))
 
-    def _transition_audio_data(self, x, y) -> np.array:
-        transition = x[-FADE_LENGTH:] * FADE_OUT + y[:FADE_LENGTH] * FADE_IN
-        return np.concatenate((transition, y[FADE_LENGTH:-FADE_LENGTH]))
+        while self.udp_thread_running:
+            raw_data, addr = sock.recvfrom(4096)
+            if len(raw_data) == 0:
+                continue
+
+            addr = addr[0]
+            if addr not in self.wands:
+                print(f"Found new wand at {addr}")
+                self.wands[addr] = Wand(addr)
+                self.buffer[addr] = []
+                self.prev_audio_data[addr] = np.zeros(FADE_LENGTH)
+                self.buffering[addr] = False
+                if self.connected_callback:
+                    self.connected_callback(self.wands[addr])
+
+            data = np.frombuffer(raw_data, np.int16)
+            seq_num_diff = data[0] - self.wands[addr].seq_num
+            if seq_num_diff > -20 and seq_num_diff <= 0:
+                self.wands[addr].seq_num = data[0]
+                continue
+
+            self.wands[addr].update_data(data)
+            if self.audio_thread_running:
+                self.buffer[addr].append(data[9:])
+                if len(self.buffer[addr]) > BUFFER_LIMIT and self.buffering[addr]:
+                    self.buffering[addr] = False
 
     def _audio_thread(self) -> None:
         while self.audio_thread_running:
@@ -150,7 +122,8 @@ class WandServer():
                 if not self.buffering[addr] and len(self.buffer[addr]) > 0:
                     curr_packet = self.buffer[addr].pop(0).astype(np.int32)
                     prev_packet = self.prev_audio_data[addr]
-                    audio_buffer.append(self._transition_audio_data(prev_packet, curr_packet))
+                    transition = prev_packet[-FADE_LENGTH:] * FADE_OUT + curr_packet[:FADE_LENGTH] * FADE_IN
+                    audio_buffer.append(np.concatenate((transition, curr_packet[FADE_LENGTH:-FADE_LENGTH])))
                     self.prev_audio_data[addr] = curr_packet
                     if len(self.buffer[addr]) == 0:
                         self.buffering[addr] = True
@@ -183,13 +156,16 @@ class Wand:
         self.charged = False
         self.battery_volts = 0
         self.connected = True
+        self.seq_num = 0
 
-    def update_data(self, tcp_data) -> None:
-        self.plugged_in = tcp_data[0] == 1
-        self.charged = tcp_data[1] == 1
-        self.battery_volts = tcp_data[2] / 4095 * 3.7
-        self.update_button_data(tcp_data[3] == 1)
-        self.position = pyquaternion.Quaternion((tcp_data[4:8] - 16384) / 16384)
+    def update_data(self, udp_data) -> None:
+        self.seq_num = udp_data[0]
+        self.plugged_in = udp_data[1] == 1
+        self.charged = udp_data[2] == 1
+        self.battery_volts = udp_data[3] / 4095 * 3.7
+        self.update_button_data(udp_data[4] == 1)
+        q = (udp_data[5:9] - 16384) / 16384
+        self.position = pyquaternion.Quaternion(q[0], q[2], q[1], q[3])
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
 
@@ -304,11 +280,11 @@ class WandSimulator(Wand):
 
 if __name__ == '__main__':
     ws = WandServer()
-    ws.start_tcp()
+    ws.start_udp()
     #ws.start_audio_output(4)
     try:
         while True:
             time.sleep(0.5)
     except KeyboardInterrupt:
         ws.stop_audio_output()
-        ws.stop_tcp()
+        ws.stop_udp()
