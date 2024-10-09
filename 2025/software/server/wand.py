@@ -111,7 +111,7 @@ class WandServer():
 
             self.wands[addr].update_data(data)
             if self.audio_thread_running:
-                self.buffer[addr].append(data[9:])
+                self.buffer[addr].append(data[9:-2])
                 if len(self.buffer[addr]) > BUFFER_LIMIT and self.buffering[addr]:
                     self.buffering[addr] = False
 
