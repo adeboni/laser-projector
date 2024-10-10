@@ -170,7 +170,6 @@ class Wand:
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
 
-    # TODO: probably doesn't work anymore
     def get_rotation_angle(self) -> int:
         if self.position is None:
             return self.last_angle
