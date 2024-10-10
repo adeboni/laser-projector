@@ -1,6 +1,5 @@
 """Defines various Wand implementations"""
 
-import enum
 import colorsys
 import pyquaternion
 import sierpinski
@@ -21,11 +20,6 @@ FADE_IN = np.linspace(0, 1, FADE_LENGTH)
 BUFFER_LIMIT = 10
 PORT = 5005
 
-class AddressState(enum.Enum):
-    OPEN = 1
-    CLOSED = 2
-
-
 class WandServer():
     def __init__(self, connected_callback=None, disconnected_callback=None) -> None:
         self.connected_callback = connected_callback
@@ -35,7 +29,6 @@ class WandServer():
         self.audio_thread_running = False
         self.audio_thread = threading.Thread(target=self._audio_thread, daemon=True)
         self.stream = None
-        self.addresses = {}
         self.buffer = {}
         self.prev_audio_data = {}
         self.buffering = {}
@@ -118,7 +111,7 @@ class WandServer():
     def _audio_thread(self) -> None:
         while self.audio_thread_running:
             audio_buffer = []
-            for addr in [a for a in self.addresses if self.addresses[a] != AddressState.CLOSED]:
+            for addr in self.buffer:
                 if not self.buffering[addr] and len(self.buffer[addr]) > 0:
                     curr_packet = self.buffer[addr].pop(0).astype(np.int32)
                     prev_packet = self.prev_audio_data[addr]
@@ -164,10 +157,20 @@ class Wand:
         self.charged = udp_data[2] == 1
         self.battery_volts = udp_data[3] / 4095 * 3.7
         self.update_button_data(udp_data[4] == 1)
-        self.position = pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384)
+        self.update_quaternion_data(pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384))
+
+    def update_quaternion_data(self, position_raw) -> None:
+        self.last_update = time.time()
+        
+        if not self.cal_offset or self.reset_cal:
+            self.cal_offset = position_raw.conjugate
+            self.reset_cal = False
+        self.position = self.cal_offset * position_raw
+
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
 
+    # TODO: probably doesn't work anymore
     def get_rotation_angle(self) -> int:
         if self.position is None:
             return self.last_angle
@@ -210,7 +213,7 @@ class Wand:
             return None
 
     def check_for_impact(self) -> bool:
-        tip_pos = self.position.rotate([1, 0, 0])[2]
+        tip_pos = self.position.rotate([0, -1, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
         self.pos_queue.append((tip_pos, time.time()))
@@ -262,12 +265,9 @@ class WandSimulator(Wand):
     def _notify(self) -> None:
         while self.connected:
             mouse = pyautogui.position()
-            x = np.interp(mouse.x, [0, self.screen_width], [1, -1])
-            y = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
-            self.position = pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
-                          * pyquaternion.Quaternion(w=1, x=0, y=y, z=0) \
-                          * pyquaternion.Quaternion(w=1, x=0, y=0, z=x) \
-                          * pyquaternion.Quaternion(w=1, x=0, y=0, z=x)
+            z = np.interp(mouse.x, [0, self.screen_width], [1, -1])
+            x = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
+            self.position = pyquaternion.Quaternion(w=1, x=x, y=0, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=z) 
             if self.check_for_impact() and self.impact_callback:
                 self.impact_callback()
             self._notify_event.wait(0.02)

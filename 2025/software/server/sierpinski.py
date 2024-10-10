@@ -58,8 +58,9 @@ center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
 center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
 target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
 target_vector = target_vector / np.linalg.norm(target_vector)
-target_yaw = np.arctan2(target_vector[1], target_vector[0])
-target_pitch = np.arctan2(-target_vector[2], np.sqrt(target_vector[0]**2 + target_vector[1]**2))
+wand_vector = np.array([0, -1, 0])
+target_yaw = np.arctan2(np.cross(wand_vector, target_vector)[2], np.dot(wand_vector, target_vector))
+target_pitch = np.arcsin(wand_vector[2]) - np.arcsin(target_vector[2])
 yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
 pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
 
@@ -77,8 +78,7 @@ lasers = [
     np.array(find_edge_pos(edges[4], projection_bottom)),
     np.array(find_edge_pos(edges[5], projection_bottom))
 ]
-laser_centers = [laser - np.dot(laser - pp, pn) * pn 
-                 for laser, pn, pp in zip(lasers, plane_normals, plane_points)]
+laser_centers = [laser - np.dot(laser - pp, pn) * pn for laser, pn, pp in zip(lasers, plane_normals, plane_points)]
 laser_distance = np.linalg.norm(laser_centers[0] - lasers[0])
 half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
 
@@ -119,7 +119,12 @@ def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
 def apply_quaternion(quaternion):
-    return np.dot(yaw_matrix, np.dot(pitch_matrix, quaternion.rotate([1, 0, 0])))
+    qv = quaternion.rotate(wand_vector)
+    v1 = np.dot(yaw_matrix, np.array([qv[0], qv[1], 0]))
+    v2 = np.dot(pitch_matrix, np.array([np.sqrt(1 - qv[2]**2), 0, qv[2]]))
+    v3 = np.array([v1[0], v1[1], v2[2]])
+    v3 = v3 / np.linalg.norm(v3)
+    return v3
 
 def get_wand_projection(quaternion):
     start = np.array([0, 0, HUMAN_HEIGHT])

@@ -8,7 +8,7 @@ import sierpinski
 import time
 
 found_wand = None
-use_wifi = True
+use_wifi = False
 
 if use_wifi:
     ws = wand.WandServer()
@@ -39,23 +39,8 @@ endpoints = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, -1]])
 
 found_wand.impact_callback = lambda: print('Hit')
 
-
-def get_euler_angles(w, x, y, z):
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x * x + y * y)
-    rotation = np.arctan2(t0, t1)
-    t2 = +2.0 * (w * y - z * x)
-    t2 = np.clip(t2, a_min=-1.0, a_max=1.0)
-    pitch = np.arcsin(t2)
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    yaw = np.arctan2(t3, t4)
-    print((rotation, pitch, yaw))
-
-
 def animate(_):
     q = found_wand.position
-    #get_euler_angles(q[0], q[1], q[2], q[3])
     for line, end in zip(lines, endpoints):
         v = q.rotate(end)
         line.set_data([0, v[0]], [0, v[1]])

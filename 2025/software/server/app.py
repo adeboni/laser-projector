@@ -84,7 +84,7 @@ class MainApp:
                     self.sacn.stop()
                     self.laser_server.stop()
                     self.synth.stop_server()
-                    self.wand_server.stop_tcp()
+                    self.wand_server.stop_udp()
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
@@ -178,6 +178,6 @@ if __name__ == '__main__':
         app = MainApp(num_lasers=3, host_ip='127.0.0.1', target_ip='127.0.0.1')
     app.laser_server.start()
     app.synth.start_server()
-    app.wand_server.start_tcp()
+    app.wand_server.start_udp()
     app.sacn.start()
     app.show_screen()
