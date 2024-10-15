@@ -35,6 +35,7 @@ class WandServer():
         self.wands = {}
         self.pa = pyaudio.PyAudio()
 
+    @property
     def get_connected_wands(self):
         return [w for w in self.wands.values() if w.connected]
 
@@ -76,7 +77,7 @@ class WandServer():
             sock.sendto(bytes([]), ('127.0.0.1', 5005))
             sock.close()
             self.udp_thread.join()
-            
+
     def _udp_thread(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', PORT))
@@ -89,12 +90,10 @@ class WandServer():
             addr = addr[0]
             if addr not in self.wands:
                 print(f"Found new wand at {addr}")
-                self.wands[addr] = Wand(addr)
+                self.wands[addr] = Wand(addr, self.connected_callback, self.disconnected_callback)
                 self.buffer[addr] = []
                 self.prev_audio_data[addr] = np.zeros(FADE_LENGTH)
                 self.buffering[addr] = False
-                if self.connected_callback:
-                    self.connected_callback(self.wands[addr])
 
             data = np.frombuffer(raw_data, np.int16)
             seq_num_diff = data[0] - self.wands[addr].seq_num
@@ -127,48 +126,58 @@ class WandServer():
                 data = [np.clip(sum(group), INT16_MIN, INT16_MAX) for group in itertools.zip_longest(*audio_buffer, fillvalue=0)]
                 self.stream.write(np.array(data).astype(np.int16).tobytes())
 
-
-
 class Wand:
-    def __init__(self, address=None) -> None:
+    def __init__(self, address=None, connected_callback=None, disconnected_callback=None) -> None:
+        self.address = address
+        self.connected_callback = connected_callback
+        self.disconnected_callback = disconnected_callback
+
+        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 6
-        self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
-        self.position = pyquaternion.Quaternion()
         self.pos_queue = []
         self.prev_speed = 0
-        self.cal_offset = None
-        self.reset_cal = False
         self.last_angle = 0
-        self.last_update = time.time()
+
+        self.position = pyquaternion.Quaternion()
         self.impact_callback = None
         self.button = False
         self.button_pressed_time = None
-        self.address = address
         self.plugged_in = False
         self.charged = False
         self.battery_volts = 0
         self.connected = True
         self.seq_num = 0
 
+        self.last_update = time.time()
+        self.watchdog_thread = threading.Thread(target=self._watchdog, daemon=True)
+        self.watchdog_thread.start()
+        if self.connected_callback:
+            self.connected_callback(self)
+
+    def _watchdog(self) -> None:
+        while True:
+            time.sleep(1)
+            if time.time() > self.last_update + 10:
+                if self.connected:
+                    self.connected = False
+                    if self.disconnected_callback:
+                        self.disconnected_callback(self.address)
+
     def update_data(self, udp_data) -> None:
+        self.last_update = time.time()
         self.seq_num = udp_data[0]
         self.plugged_in = udp_data[1] == 1
         self.charged = udp_data[2] == 1
         self.battery_volts = udp_data[3] / 4095 * 3.7
         self.update_button_data(udp_data[4] == 1)
-        self.update_quaternion_data(pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384))
-
-    def update_quaternion_data(self, position_raw) -> None:
-        self.last_update = time.time()
-        
-        if not self.cal_offset or self.reset_cal:
-            self.cal_offset = position_raw.conjugate
-            self.reset_cal = False
-        self.position = self.cal_offset * position_raw
-
+        self.position = pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384)
         if self.check_for_impact() and self.impact_callback:
             self.impact_callback()
+        if not self.connected:
+            self.connected = True
+            if self.connected_callback:
+                self.connected_callback(self)
 
     def get_rotation_angle(self) -> int:
         if self.position is None:
@@ -226,12 +235,11 @@ class Wand:
         return result
 
     def update_button_data(self, pressed: bool) -> None:
-        self.last_update = time.time()
         if not self.button and pressed and self.impact_callback:
             self.impact_callback()
         self.button = pressed
         if self.button_pressed_time and time.time() - self.button_pressed_time > 2:
-            self.reset_cal = True
+            sierpinski.calibrate_wand_position(self.position)
         if not self.button:
             self.button_pressed_time = None
         elif self.button_pressed_time is None:
@@ -249,12 +257,12 @@ class WandSimulator(Wand):
 
     def __repr__(self) -> str:
         return 'WandSimulator()'
-    
+
     def connect(self) -> None:
         if not self.connected:
             self.connected = True
             self.notify_thread.start()
-            
+
     def disconnect(self) -> None:
         if self.connected:
             self.connected = False
@@ -263,10 +271,11 @@ class WandSimulator(Wand):
 
     def _notify(self) -> None:
         while self.connected:
+            self.last_update = time.time()
             mouse = pyautogui.position()
             z = np.interp(mouse.x, [0, self.screen_width], [1, -1])
             x = np.interp(mouse.y, [0, self.screen_height], [-1, 1])
-            self.position = pyquaternion.Quaternion(w=1, x=x, y=0, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=z) 
+            self.position = pyquaternion.Quaternion(w=1, x=x, y=0, z=0) * pyquaternion.Quaternion(w=1, x=0, y=0, z=z)
             if self.check_for_impact() and self.impact_callback:
                 self.impact_callback()
             self._notify_event.wait(0.02)

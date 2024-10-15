@@ -3,6 +3,7 @@
 import threading
 import socket
 import numpy as np
+import pyquaternion
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
@@ -59,10 +60,18 @@ center_point = find_edge_pos(center_line, projection_bottom + (projection_top - 
 target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
 target_vector = target_vector / np.linalg.norm(target_vector)
 wand_vector = np.array([0, -1, 0])
-target_yaw = np.arctan2(np.cross(wand_vector, target_vector)[2], np.dot(wand_vector, target_vector))
-target_pitch = np.arcsin(wand_vector[2]) - np.arcsin(target_vector[2])
-yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
-pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
+yaw_matrix = None
+pitch_matrix = None
+
+def calibrate_wand_position(quat):
+    global yaw_matrix, pitch_matrix
+    wand_pos = quat.rotate(wand_vector)
+    target_yaw = np.arctan2(np.cross(wand_pos, target_vector)[2], np.dot(wand_pos, target_vector))
+    target_pitch = np.arcsin(wand_pos[2]) - np.arcsin(target_vector[2])
+    yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
+    pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
+
+calibrate_wand_position(pyquaternion.Quaternion())
 
 tp_orig = np.array([
     [0, 2048, 0],

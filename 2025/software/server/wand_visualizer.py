@@ -15,9 +15,8 @@ if use_wifi:
     ws.start_udp()
     start_time = time.time()
     while time.time() - start_time < 5:
-        connected_wands = ws.get_connected_wands()
-        if len(connected_wands) > 0:
-            found_wand = connected_wands[0]
+        if len(ws.get_connected_wands) > 0:
+            found_wand = ws.get_connected_wands[0]
             break
 
 if found_wand is None:
