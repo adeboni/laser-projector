@@ -221,15 +221,15 @@ class Wand:
             return None
 
     def check_for_impact(self) -> bool:
-        tip_pos = self.position.rotate([0, -1, 0])[2]
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
+        tip_pos = self.position.rotate(sierpinski.wand_vector)
         self.pos_queue.append((tip_pos, time.time()))
-        d = self.pos_queue[-1][0] - self.pos_queue[0][0]
+        d = np.linalg.norm(self.pos_queue[-1][0] - self.pos_queue[0][0])
         t = self.pos_queue[-1][1] - self.pos_queue[0][1]
         if t < 0.01:
             return False
-        new_speed = -d / t
+        new_speed = d / t
         result = self.prev_speed > self.SPEED_THRESHOLD and new_speed < self.SPEED_THRESHOLD
         self.prev_speed = new_speed
         return result
