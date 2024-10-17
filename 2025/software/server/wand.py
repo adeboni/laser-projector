@@ -135,12 +135,14 @@ class Wand:
         self.min_x, self.max_x, self.min_y, self.max_y = sierpinski.get_laser_min_max_interior()
         self.POS_QUEUE_LIMIT = 5
         self.SPEED_THRESHOLD = 6
+        self.TIME_KEEPOUT = 0.2
         self.pos_queue = []
         self.prev_speed = 0
         self.last_angle = 0
 
         self.position = pyquaternion.Quaternion()
         self.impact_callback = None
+        self.impact_time = time.time()
         self.button = False
         self.button_pressed_time = None
         self.plugged_in = False
@@ -172,8 +174,9 @@ class Wand:
         self.battery_volts = udp_data[3] / 4095 * 3.7
         self.update_button_data(udp_data[4] == 1)
         self.position = pyquaternion.Quaternion((udp_data[5:9] - 16384) / 16384)
-        if self.check_for_impact() and self.impact_callback:
+        if self.check_for_impact() and self.impact_callback and time.time() - self.impact_time > self.TIME_KEEPOUT:
             self.impact_callback()
+            self.impact_time = time.time()
         if not self.connected:
             self.connected = True
             if self.connected_callback:
