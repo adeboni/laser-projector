@@ -4,7 +4,6 @@ add_executable(laser
 
 target_sources(laser PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/socket.c
-        ${CMAKE_CURRENT_LIST_DIR}/timer.c
         ${CMAKE_CURRENT_LIST_DIR}/w5x00_gpio_irq.c
         ${CMAKE_CURRENT_LIST_DIR}/w5x00_spi.c
         ${CMAKE_CURRENT_LIST_DIR}/w5500.c

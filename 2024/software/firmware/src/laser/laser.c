@@ -196,7 +196,6 @@ int main() {
 
     queue_init(&data_buf, sizeof(laser_point_t), POINT_BUFFER_SIZE);
     multicore_launch_core1(core1_entry);
-    while (queue_get_level(&data_buf) < 500) ; //prime the queue
     
     laser_point_t new_point;
     uint32_t last_update = to_ms_since_boot(get_absolute_time());
