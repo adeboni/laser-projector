@@ -39,12 +39,20 @@ def find_edge_pos(edge, z):
     return (x, y, z)
 
 surfaces = [
-    np.array([find_edge_pos(edges[4], projection_bottom), find_edge_pos(edges[4], projection_top), 
-              find_edge_pos(edges[5], projection_top), find_edge_pos(edges[5], projection_bottom)]),
-    np.array([find_edge_pos(edges[3], projection_bottom), find_edge_pos(edges[3], projection_top), 
-              find_edge_pos(edges[5], projection_top), find_edge_pos(edges[5], projection_bottom)]),
-    np.array([find_edge_pos(edges[3], projection_bottom), find_edge_pos(edges[3], projection_top), 
-              find_edge_pos(edges[4], projection_top), find_edge_pos(edges[4], projection_bottom)])
+    np.array([find_edge_pos(edges[4], projection_bottom), 
+              find_edge_pos(edges[4], projection_top), 
+              find_edge_pos(edges[5], projection_top), 
+              find_edge_pos(edges[5], projection_bottom)]),
+
+    np.array([find_edge_pos(edges[3], projection_bottom), 
+              find_edge_pos(edges[3], projection_top), 
+              find_edge_pos(edges[5], projection_top), 
+              find_edge_pos(edges[5], projection_bottom)]),
+
+    np.array([find_edge_pos(edges[3], projection_bottom), 
+              find_edge_pos(edges[3], projection_top), 
+              find_edge_pos(edges[4], projection_top), 
+              find_edge_pos(edges[4], projection_bottom)])
 ]
 
 def find_surface_normal(surface):
@@ -73,15 +81,6 @@ def calibrate_wand_position(quat):
 
 calibrate_wand_position(pyquaternion.Quaternion())
 
-tp_orig = np.array([
-    [0, 2048, 0],
-    [2048, 4095, 0],
-    [4095, 2048, 0],
-    [2048, 0, 0],
-])
-transforms = []
-inv_transforms = []
-
 lasers = [
     np.array(find_edge_pos(edges[3], projection_bottom)),
     np.array(find_edge_pos(edges[4], projection_bottom)),
@@ -91,12 +90,21 @@ laser_centers = [laser - np.dot(laser - pp, pn) * pn for laser, pn, pp in zip(la
 laser_distance = np.linalg.norm(laser_centers[0] - lasers[0])
 half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
 
+tp_orig = np.array([
+    [0, 2048, 0, 1],
+    [2048, 4095, 0, 1],
+    [4095, 2048, 0, 1],
+    [2048, 0, 0, 1],
+])
+transforms = []
+inv_transforms = []
+
 for lc, pn in zip(laser_centers, plane_normals):
     v1 = np.array([-pn[1], pn[0], 0])
     v1 = v1 / np.linalg.norm(v1)
     v2 = np.cross(pn, v1) 
     tp_new = np.array([lc + half_width * (tpo[0] * v1 + tpo[1] * v2) for tpo in [(1, 0), (0, 1), (-1, 0), (0, -1)]])
-    a = np.concatenate((tp_orig, np.ones((tp_orig.shape[0], 1))), axis=1)
+    a = tp_orig
     b = np.concatenate((tp_new, np.ones((tp_new.shape[0], 1))), axis=1)
     t, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
     transforms.append(t.T)
