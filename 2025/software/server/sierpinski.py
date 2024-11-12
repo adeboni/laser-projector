@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
 
+np.set_printoptions(suppress=True)
+
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 55 * np.pi / 180
@@ -110,6 +112,18 @@ for lc, pn in zip(laser_centers, plane_normals):
     transforms.append(t.T)
     t, _, _, _ = np.linalg.lstsq(b, a, rcond=None)
     inv_transforms.append(t.T)
+
+def print_c_matrix(mat_list, name):
+    print(f"float {name}[3][4][4] = {{")
+    for mat in mat_list:
+        print("\t{")
+        for row in mat:
+            print(f"\t\t{{{', '.join([f"{x:.6f}" for x in row])}}},")
+        print("\t},")
+    print("};")
+
+print_c_matrix(transforms, "trans_matrix")
+print_c_matrix(inv_transforms, "inv_trans_matrix")
 
 def sierpinski_to_laser_coords(laser_index, x, y, z):
     return np.dot(inv_transforms[laser_index], [x, y, z, 1])[:2]
