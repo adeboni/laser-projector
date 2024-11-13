@@ -226,7 +226,7 @@ class Wand:
     def check_for_impact(self) -> bool:
         if len(self.pos_queue) > self.POS_QUEUE_LIMIT:
             self.pos_queue.pop(0)
-        tip_pos = self.position.rotate(sierpinski.wand_vector)
+        tip_pos = self.position.rotate(sierpinski.WAND_VECTOR)
         self.pos_queue.append((tip_pos, time.time()))
         d = np.linalg.norm(self.pos_queue[-1][0] - self.pos_queue[0][0])
         t = self.pos_queue[-1][1] - self.pos_queue[0][1]

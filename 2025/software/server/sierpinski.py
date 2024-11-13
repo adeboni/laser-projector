@@ -13,6 +13,18 @@ np.set_printoptions(suppress=True)
 HUMAN_HEIGHT = 5
 SIDE_LENGTH = 39
 LASER_PROJECTION_ANGLE = 55 * np.pi / 180
+WAND_VECTOR = np.array([0, -1, 0])
+
+def find_edge_pos(edge, z):
+    x = edge[0][0] + (z - edge[0][2]) * (edge[1][0] - edge[0][0]) / (edge[1][2] - edge[0][2])
+    y = edge[0][1] + (z - edge[0][2]) * (edge[1][1] - edge[0][1]) / (edge[1][2] - edge[0][2])
+    return (x, y, z)
+
+def find_surface_normal(surface):
+    pn = np.cross(surface[1] - surface[0], surface[2] - surface[0])
+    if pn[2] < 0:
+        pn = -pn
+    return pn / np.linalg.norm(pn)
 
 triangle_height = np.sqrt(SIDE_LENGTH**2 - (SIDE_LENGTH/2)**2)
 tetra_height = SIDE_LENGTH * np.sqrt(2/3)
@@ -35,47 +47,41 @@ edges = [
     (vertices[2], vertices[3])
 ]
 
-def find_edge_pos(edge, z):
-    x = edge[0][0] + (z - edge[0][2]) * (edge[1][0] - edge[0][0]) / (edge[1][2] - edge[0][2])
-    y = edge[0][1] + (z - edge[0][2]) * (edge[1][1] - edge[0][1]) / (edge[1][2] - edge[0][2])
-    return (x, y, z)
-
 surfaces = [
-    np.array([find_edge_pos(edges[4], projection_bottom), 
-              find_edge_pos(edges[4], projection_top), 
-              find_edge_pos(edges[5], projection_top), 
+    np.array([find_edge_pos(edges[4], projection_bottom),
+              find_edge_pos(edges[4], projection_top),
+              find_edge_pos(edges[5], projection_top),
               find_edge_pos(edges[5], projection_bottom)]),
 
-    np.array([find_edge_pos(edges[3], projection_bottom), 
-              find_edge_pos(edges[3], projection_top), 
-              find_edge_pos(edges[5], projection_top), 
+    np.array([find_edge_pos(edges[3], projection_bottom),
+              find_edge_pos(edges[3], projection_top),
+              find_edge_pos(edges[5], projection_top),
               find_edge_pos(edges[5], projection_bottom)]),
 
-    np.array([find_edge_pos(edges[3], projection_bottom), 
-              find_edge_pos(edges[3], projection_top), 
-              find_edge_pos(edges[4], projection_top), 
+    np.array([find_edge_pos(edges[3], projection_bottom),
+              find_edge_pos(edges[3], projection_top),
+              find_edge_pos(edges[4], projection_top),
               find_edge_pos(edges[4], projection_bottom)])
 ]
 
-def find_surface_normal(surface):
-    pn = np.cross(surface[1] - surface[0], surface[2] - surface[0])
-    if pn[2] < 0:
-        pn = -pn
-    return pn / np.linalg.norm(pn)
-
 plane_normals = np.array([find_surface_normal(surface) for surface in surfaces])
-plane_points = np.array([surface[0] for surface in surfaces])
-center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
-center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
-target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
-target_vector = target_vector / np.linalg.norm(target_vector)
-wand_vector = np.array([0, -1, 0])
+
+lasers = [
+    np.array(find_edge_pos(edges[3], projection_bottom)),
+    np.array(find_edge_pos(edges[4], projection_bottom)),
+    np.array(find_edge_pos(edges[5], projection_bottom))
+]
+
 yaw_matrix = None
 pitch_matrix = None
 
 def calibrate_wand_position(quat):
     global yaw_matrix, pitch_matrix
-    wand_pos = quat.rotate(wand_vector)
+    center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
+    center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
+    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+    target_vector = target_vector / np.linalg.norm(target_vector)
+    wand_pos = quat.rotate(WAND_VECTOR)
     target_yaw = np.arctan2(np.cross(wand_pos, target_vector)[2], np.dot(wand_pos, target_vector))
     target_pitch = np.arcsin(wand_pos[2]) - np.arcsin(target_vector[2])
     yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
@@ -83,24 +89,17 @@ def calibrate_wand_position(quat):
 
 calibrate_wand_position(pyquaternion.Quaternion())
 
-lasers = [
-    np.array(find_edge_pos(edges[3], projection_bottom)),
-    np.array(find_edge_pos(edges[4], projection_bottom)),
-    np.array(find_edge_pos(edges[5], projection_bottom))
-]
-laser_centers = [laser - np.dot(laser - pp, pn) * pn for laser, pn, pp in zip(lasers, plane_normals, plane_points)]
-laser_distance = np.linalg.norm(laser_centers[0] - lasers[0])
-half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
-
 transforms = []
 inv_transforms = []
-
-for lc, pn in zip(laser_centers, plane_normals):
+for laser, pn, s in zip(lasers, plane_normals, surfaces):
+    laser_center = laser - np.dot(laser - s[0], pn) * pn
+    laser_distance = np.linalg.norm(laser_center - laser)
+    half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
     v1 = np.array([-pn[1], pn[0], 0])
     v1 = v1 / np.linalg.norm(v1)
-    v2 = np.cross(pn, v1) 
-    a = np.array([[0, 2048, 0, 1], [2048, 4095, 0, 1], [4095, 2048, 0, 1]])
-    b = np.array([lc + half_width * v1, lc + half_width * v2, lc - half_width * v1])
+    v2 = np.cross(pn, v1)
+    a = np.array([[0, 2048, 0, 1], [2048, 4095, 0, 1], [2048, 2048, 0, 1]])
+    b = np.array([laser_center + half_width * v1, laser_center + half_width * v2, laser_center])
     b = np.concatenate((b, np.ones((b.shape[0], 1))), axis=1)
     transforms.append(np.linalg.lstsq(a, b, rcond=None)[0].T)
     inv_transforms.append(np.linalg.lstsq(b, a, rcond=None)[0].T)
@@ -142,7 +141,7 @@ def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
 def apply_quaternion(quaternion):
-    qv = quaternion.rotate(wand_vector)
+    qv = quaternion.rotate(WAND_VECTOR)
     v1 = np.dot(yaw_matrix, np.array([qv[0], qv[1], 0]))
     v2 = np.dot(pitch_matrix, np.array([np.sqrt(1 - qv[2]**2), 0, qv[2]]))
     v3 = np.array([v1[0], v1[1], v2[2]])
@@ -156,11 +155,11 @@ def get_wand_projection(quaternion):
     v = end - start
     if v[2] < 0:
         return None
-    for i, (pn, pp, s) in enumerate(zip(plane_normals, plane_points, surfaces)):
+    for i, (pn, s) in enumerate(zip(plane_normals, surfaces)):
         denom = np.dot(v, pn)
         if denom < 0.01:
             continue
-        point = end + (np.dot(pp - end, pn / denom) * v)
+        point = end + (np.dot(s[0] - end, pn / denom) * v)
         if point_in_surface(s, point):
             return (i, point)
     return None
@@ -186,7 +185,7 @@ def _laser_thread(laser_index):
                 if len(chunk) != 6:
                     break
                 new_point = LaserPoint.from_bytes(laser_index, chunk)
-                segments.append([*laser_to_sierpinksi_coords(laser_index, new_point.x, new_point.y), 
+                segments.append([*laser_to_sierpinksi_coords(laser_index, new_point.x, new_point.y),
                                  new_point.r, new_point.g, new_point.b])
             laser_lines[laser_index] = segments
     except:
@@ -205,11 +204,12 @@ if __name__ == '__main__':
 
     for e1, e2 in edges:
         ax.plot([e1[0], e2[0]], [e1[1], e2[1]], [e1[2], e2[2]], color='k')
-        
+
     for surface in surfaces:
         ax.plot_trisurf(*[[s[i] for s in surface] for i in range(3)], color='y', alpha=0.2)
 
-    for laser, laser_center in zip(lasers, laser_centers):
+    for laser, pn, s in zip(lasers, plane_normals, surfaces):
+        laser_center = laser - np.dot(laser - s[0], pn) * pn
         ax.plot([laser[0]], [laser[1]], [laser[2]], c='k', linestyle='', marker='o', alpha=0.2)
         ax.plot([laser[0], laser_center[0]], [laser[1], laser_center[1]], [laser[2], laser_center[2]], color='k', alpha=0.2)
 
