@@ -92,12 +92,6 @@ laser_centers = [laser - np.dot(laser - pp, pn) * pn for laser, pn, pp in zip(la
 laser_distance = np.linalg.norm(laser_centers[0] - lasers[0])
 half_width = laser_distance * np.tan(LASER_PROJECTION_ANGLE)
 
-tp_orig = np.array([
-    [0, 2048, 0, 1],
-    [2048, 4095, 0, 1],
-    [4095, 2048, 0, 1],
-    [2048, 0, 0, 1],
-])
 transforms = []
 inv_transforms = []
 
@@ -105,21 +99,19 @@ for lc, pn in zip(laser_centers, plane_normals):
     v1 = np.array([-pn[1], pn[0], 0])
     v1 = v1 / np.linalg.norm(v1)
     v2 = np.cross(pn, v1) 
-    tp_new = np.array([lc + half_width * (tpo[0] * v1 + tpo[1] * v2) for tpo in [(1, 0), (0, 1), (-1, 0), (0, -1)]])
-    a = tp_orig
-    b = np.concatenate((tp_new, np.ones((tp_new.shape[0], 1))), axis=1)
-    t, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
-    transforms.append(t.T)
-    t, _, _, _ = np.linalg.lstsq(b, a, rcond=None)
-    inv_transforms.append(t.T)
+    a = np.array([[0, 2048, 0, 1], [2048, 4095, 0, 1], [4095, 2048, 0, 1]])
+    b = np.array([lc + half_width * v1, lc + half_width * v2, lc - half_width * v1])
+    b = np.concatenate((b, np.ones((b.shape[0], 1))), axis=1)
+    transforms.append(np.linalg.lstsq(a, b, rcond=None)[0].T)
+    inv_transforms.append(np.linalg.lstsq(b, a, rcond=None)[0].T)
 
 def print_c_matrix(mat_list, name):
     print(f"float {name}[3][4][4] = {{")
     for mat in mat_list:
-        print("\t{")
+        print("    {")
         for row in mat:
-            print(f"\t\t{{{', '.join([f"{x:.6f}" for x in row])}}},")
-        print("\t},")
+            print(f"        {{{', '.join([f"{x:.6f}" for x in row])}}},")
+        print("    },")
     print("};")
 
 print_c_matrix(transforms, "trans_matrix")
