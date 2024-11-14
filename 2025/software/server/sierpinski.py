@@ -89,6 +89,32 @@ def calibrate_wand_position(quat):
 
 calibrate_wand_position(pyquaternion.Quaternion())
 
+def eigen(a):
+    a = a.astype(float)
+    eigenvalues = []
+    eigenvectors = []
+
+    for _ in range(4):
+        eigenvector = np.random.rand(4)
+        for _ in range(1000):
+            temp = np.dot(a, eigenvector)
+            eigenvector = temp / np.linalg.norm(temp)
+        eigenvectors.append(eigenvector)
+
+        eigenvalue = max(np.dot(eigenvector, np.dot(a, eigenvector)), 0.001)
+        eigenvalues.append(eigenvalue)
+        a -= eigenvalue * np.outer(eigenvector, eigenvector)
+
+    return np.array(eigenvalues), np.array(eigenvectors).T
+
+def lstsq(a, b):
+    eigenvalues, V = eigen(a.T @ a)
+    S = np.sqrt(eigenvalues)
+    U = a @ V / S
+    U = np.delete(U, -1, axis=1)
+    S_inv = np.array([[1 / S[0], 0, 0], [0, 1 / S[1], 0], [0, 0, 1 / S[2]], [0, 0, 0]])
+    return V @ S_inv @ U.T @ b
+
 transforms = []
 inv_transforms = []
 for laser, pn, s in zip(lasers, plane_normals, surfaces):
@@ -100,21 +126,9 @@ for laser, pn, s in zip(lasers, plane_normals, surfaces):
     v2 = np.cross(pn, v1)
     a = np.array([[0, 2048, 0, 1], [2048, 4095, 0, 1], [2048, 2048, 0, 1]])
     b = np.array([laser_center + half_width * v1, laser_center + half_width * v2, laser_center])
-    b = np.concatenate((b, np.ones((b.shape[0], 1))), axis=1)
-    transforms.append(np.linalg.lstsq(a, b, rcond=None)[0].T)
-    inv_transforms.append(np.linalg.lstsq(b, a, rcond=None)[0].T)
-
-def print_c_matrix(mat_list, name):
-    print(f"float {name}[3][4][4] = {{")
-    for mat in mat_list:
-        print("    {")
-        for row in mat:
-            print(f"        {{{', '.join([f"{x:.6f}" for x in row])}}},")
-        print("    },")
-    print("};")
-
-print_c_matrix(transforms, "trans_matrix")
-print_c_matrix(inv_transforms, "inv_trans_matrix")
+    b = np.concatenate((b, np.ones((3, 1))), axis=1)
+    transforms.append(lstsq(a, b).T)
+    inv_transforms.append(lstsq(b, a).T)
 
 def sierpinski_to_laser_coords(laser_index, x, y, z):
     return np.dot(inv_transforms[laser_index], [x, y, z, 1])[:2]
