@@ -3,7 +3,6 @@
 import threading
 import socket
 import numpy as np
-import pyquaternion
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from laser_point import *
@@ -72,23 +71,6 @@ lasers = [
     np.array(find_edge_pos(edges[5], projection_bottom))
 ]
 
-yaw_matrix = None
-pitch_matrix = None
-
-def calibrate_wand_position(quat):
-    global yaw_matrix, pitch_matrix
-    center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
-    center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
-    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
-    target_vector = target_vector / np.linalg.norm(target_vector)
-    wand_pos = quat.rotate(WAND_VECTOR)
-    target_yaw = np.arctan2(np.cross(wand_pos, target_vector)[2], np.dot(wand_pos, target_vector))
-    target_pitch = np.arcsin(wand_pos[2]) - np.arcsin(target_vector[2])
-    yaw_matrix = np.array([[np.cos(target_yaw), -np.sin(target_yaw), 0], [np.sin(target_yaw), np.cos(target_yaw), 0], [0, 0, 1]])
-    pitch_matrix = np.array([[np.cos(target_pitch), 0, np.sin(target_pitch)], [0, 1, 0], [-np.sin(target_pitch), 0, np.cos(target_pitch)]])
-
-calibrate_wand_position(pyquaternion.Quaternion())
-
 def eigen(a):
     a = a.astype(float)
     eigenvalues = []
@@ -154,13 +136,29 @@ def point_in_triangle(a, b, c, p):
 def point_in_surface(s, p):
     return point_in_triangle(s[0], s[1], s[2], p) or point_in_triangle(s[2], s[3], s[0], p)
 
-def apply_quaternion(quaternion):
-    qv = quaternion.rotate(WAND_VECTOR)
-    v1 = np.dot(yaw_matrix, np.array([qv[0], qv[1], 0]))
-    v2 = np.dot(pitch_matrix, np.array([np.sqrt(1 - qv[2]**2), 0, qv[2]]))
-    v3 = np.array([v1[0], v1[1], v2[2]])
-    v3 = v3 / np.linalg.norm(v3)
-    return v3
+yaw_diff = 0
+pitch_diff = 0
+
+def calibrate_wand_position(quat):
+    global yaw_diff, pitch_diff
+    center_line = [(vertices[0] + vertices[2]) / 2, (0, 0, tetra_height)]
+    center_point = find_edge_pos(center_line, projection_bottom + (projection_top - projection_bottom) / 2)
+    target_vector = np.array([center_point[0], center_point[1], center_point[2] - HUMAN_HEIGHT])
+    target_vector = target_vector / np.linalg.norm(target_vector)
+    wand_pos = quat.rotate(WAND_VECTOR)
+
+    pitch_diff = np.arcsin(target_vector[2]) - np.arcsin(wand_pos[2])
+    yaw_diff = np.arctan2(target_vector[1], target_vector[0]) - np.arctan2(wand_pos[1], wand_pos[0])
+    
+def apply_quaternion(quat):
+    qv = quat.rotate(WAND_VECTOR)
+    pitch = np.arcsin(qv[2]) + pitch_diff
+    yaw = np.arctan2(qv[1], qv[0]) + yaw_diff
+    x = np.cos(pitch) * np.cos(yaw)
+    y = np.cos(pitch) * np.sin(yaw)
+    z = np.sin(pitch)
+    v = np.array([x, y, z])
+    return v / np.linalg.norm(v)
 
 def get_wand_projection(quaternion):
     start = np.array([0, 0, HUMAN_HEIGHT])
@@ -177,6 +175,7 @@ def get_wand_projection(quaternion):
         if point_in_surface(s, point):
             return (i, point)
     return None
+
 
 laser_lines = [None] * 3
 def _laser_thread(laser_index):
